@@ -51,8 +51,8 @@ class Neuron(nn.Module):
 
         # Fixed parameters
         self.v_rest = Parameter(torch.tensor(v_rest, dtype=torch.float))
-        self.alpha_v = Parameter(torch.tensor(alpha_v, dtype=torch.float))
-        self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
+        self.alpha_v = Parameter(torch.tensor(alpha_v, dtype=torch.float))  # TODO: Might want to move this out of base class
+        self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))  # TODO: Might want to move this out of base class
         self.dt = Parameter(torch.tensor(dt, dtype=torch.float))
         self.duration_refrac = Parameter(torch.tensor(duration_refrac + 1, dtype=torch.float))
         self.thresh_center = Parameter(torch.tensor(thresh, dtype=torch.float))

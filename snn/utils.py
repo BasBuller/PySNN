@@ -1,9 +1,11 @@
+from itertools import repeat
+
 import torch
 import torch.nn as nn
 
 
 #########################################################
-# Functions
+# Class initialization
 #########################################################
 def _set_no_grad(module):
     for param in module.parameters():
