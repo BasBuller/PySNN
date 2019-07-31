@@ -11,6 +11,11 @@ Important aspect of the package is the decorator for the forward function of the
 progresses over the layers not front to back, but propagates information based on the timesteps. This way the output signal from input 1 has
 not reached the end of the network before input 2 has been presented to the network.
 
+## Traces
+Defining which object keeps track of the traces is up to the user. For ease of use and lower memory footprint the cell can keep track of its
+traces. This directly assumes that the traces for every synapse originating from a single neuron are the same. It is possible to keep track
+of the traces in the connection object. In this case each synapse can have a separate trace.
+
 ## Delay through synapse
 Can do the following, have a tensor equal to the number of synapses. For an MLP of 5 pre-synaptic and 10 post-synaptic neurons this matrix
 is (10 x 5). Within this matrix store the number of milliseconds left before the spike has been propagated through the synapse. Once the
@@ -23,3 +28,14 @@ period of a cell should be equal or longer than the transmission time! If it is 
 ## To do
 - For connection class, make sure it can handle the transmission of multiple spike within the same synapse. Aka, it should be able to handle
   a new incoming spike while the previous one has not passed through the entire synapse or time delay.
+- Make sure all indexing operations are replace with matrix multiplications where possible. GPU is considerably better at floating point
+  operations than integer and bitwise operations.
+- Make both a LinearDelayed and LinearInstant layer
+- Move functionalities shared among multiple classes to functional folder.
+- Store traces in neuron or connection class? Neuron is more comprehensive, in connection would be more precise per synapse.
+- Add references to where the neuron and synaptic models are defined.
+
+## Notes
+- Is there a way to execute an update cycle for the entire network at once, instead of doing it sequentially like it is done now? Due to the
+  delay in a cell state input to a cell is dependent on previous time steps and not on previous layer activations. This should alleviate a
+  large part of the sequential computational burden. Just hope the entire network can be loaded onto the GPU at once.

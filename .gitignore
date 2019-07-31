@@ -1,3 +1,4 @@
 .vscode/*
 trial.py
 */__pycache__/*
+.mypy_cache/*
