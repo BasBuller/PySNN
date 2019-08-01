@@ -26,6 +26,9 @@ class FedeSTDP(nn.Module):
         _set_no_grad(self)
         self.train(False)
 
+    def reset_state(self):
+        pass
+
     def forward(self):
         for connection in self.connections:
             w = connection.weight.data

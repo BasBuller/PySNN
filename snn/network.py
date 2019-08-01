@@ -6,13 +6,15 @@ import torch.nn.functional as F
 
 
 #########################################################
-# Event stream decorator
+# SNN Network
 #########################################################
-def snn_forward(forward):
-    @wraps(forward)
-    def wrapper(self, input):
-        out = []
-        for x in input:
-            out.append(forward(x))
-        return torch.stack(out, dim=0)
-    return wrapper 
+class SNNNetwork(nn.Module):
+    r"""Simple base clase for defining SNN network, contains some convenience operators
+    for e.g. clearing network state after simulating a sample.
+    """
+    def __init__(self):
+        super(SNNNetwork, self).__init__()
+
+    def reset_state(self):
+        for child in self.children():
+            child.reset_state()
