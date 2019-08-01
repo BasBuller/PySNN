@@ -20,6 +20,10 @@ class FedeSTDP(nn.Module):
         self.lr = Parameter(torch.tensor(lr, dtype=torch.float))
         self.a = Parameter(torch.tensor(a, dtype=torch.float))
 
+        # TODO: within __init__ determine if dealing with conv or linear 
+        # and determine corresponding trace transform. Especially conv needs
+        # some funky transform before it can be summed.
+
         self.no_grad()
 
     def no_grad(self):
@@ -33,6 +37,7 @@ class FedeSTDP(nn.Module):
         for connection in self.connections:
             w = connection.weight.data
             trace = connection.trace.data
+            trace = trace.view(-1, *w.shape)
 
             # LTP computation
             ltp_w = torch.exp(-(w - self.w_init))
@@ -45,4 +50,4 @@ class FedeSTDP(nn.Module):
             ltd = ltd_w * ltd_t
 
             # Perform weight update
-            connection.weight.data += self.lr * (ltp + ltd)
+            connection.weight.data += self.lr * (ltp + ltd).mean(0)
