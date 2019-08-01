@@ -1,4 +1,7 @@
+# Cache folders
 .vscode/*
-trial.py
 */__pycache__/*
 .mypy_cache/*
+
+# Files
+trial.py

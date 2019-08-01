@@ -24,6 +24,10 @@ desired delay is achieved and it is not cut short by 1 due to implementation eff
 has a responsibility of making sure dt and synaptic delay match well, otherwise counting errors might occur. Also note, the refractory
 period of a cell should be equal or longer than the transmission time! If it is not the spike timing might be reset.
 
+## Module definitions
+Make sure each module has a reset_state(self) method! It is called from the SNNNetwork class and is needed for proper simulation of multiple
+inputs.
+
 
 ## To do
 - For connection class, make sure it can handle the transmission of multiple spike within the same synapse. Aka, it should be able to handle
@@ -34,6 +38,8 @@ period of a cell should be equal or longer than the transmission time! If it is 
 - Move functionalities shared among multiple classes to functional folder.
 - Store traces in neuron or connection class? Neuron is more comprehensive, in connection would be more precise per synapse.
 - Add references to where the neuron and synaptic models are defined.
+- Support for batching the number of images, should easily be possible. Only problem might be the quickly growing number of elements in the
+  decay and trace parameters. Still, batch 4 images is better than no batching.
 
 ## Notes
 - Is there a way to execute an update cycle for the entire network at once, instead of doing it sequentially like it is done now? Due to the
