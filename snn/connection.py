@@ -4,8 +4,8 @@ import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 from torch.nn.modules.utils import _pair
 
-from snn.utils import _set_no_grad
-import snn.functional as sf
+from snn.utils import _set_no_grad, conv2d_output_shape
+import snn.functional as sF
 
 
 #########################################################
@@ -21,7 +21,7 @@ class Connection(nn.Module):
                  dt,
                  delay):
         super(Connection, self).__init__()
-        self.shape = shape
+        self.synapse_shape = shape
 
         if isinstance(delay, int):
             if delay == 0:
@@ -57,12 +57,12 @@ class Connection(nn.Module):
 
     def reset_state(self):
         r"""Set state Parameters (e.g. trace) to their resting state."""
-        self.trace.data.fill_(0)
-        self.delay.data.fill_(0)
+        self.trace.fill_(0)
+        self.delay.fill_(0)
 
     def reset_parameters(self):
         r"""Reinnitialize learnable network Parameters (e.g. weights)."""
-        self.delay_init.data.fill_(0)
+        self.delay_init.fill_(0)
 
     def init_connection(self):
         r"""Collection of all intialization methods."""
@@ -70,9 +70,9 @@ class Connection(nn.Module):
             self.__class__.__name__)
         assert isinstance(self.weight, Parameter), "Weight attribute is not a PyTorch Parameter for {}.".format(
             self.__class__.__name__)
+        self.no_grad()
         self.reset_state()
         self.reset_parameters()
-        self.no_grad()
 
 
 #########################################################
@@ -83,19 +83,28 @@ class LinearExponentialDelayed(Connection):
     def __init__(self,
                  in_features,
                  out_features,
+                 batch_size,
                  dt,
                  delay,
                  tau_t,
                  alpha_t):
-        self.shape = (out_features, in_features)
-        super(LinearExponentialDelayed, self).__init__(self.shape, dt, delay)
+        # Assertions
+        assert delay != 0, "Delay is zero, please use LinearExponential instead."
+
+        # Dimensions
+        self.in_features = in_features
+        self.out_features = out_features
+        self.batch_size = batch_size
+
+        self.synapse_shape = (batch_size, out_features, in_features)
+        super(LinearExponentialDelayed, self).__init__(self.synapse_shape, dt, delay)
 
         # Fixed parameters
         self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
         self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
 
         # Learnable parameters
-        self.weight = Parameter(torch.Tensor(*self.shape))
+        self.weight = Parameter(torch.Tensor(out_features, in_features))
 
         # Initialize connection
         self.init_connection()
@@ -107,21 +116,26 @@ class LinearExponentialDelayed(Connection):
 
     def update_trace(self, x):
         r"""Update trace according to exponential decay function and incoming spikes."""
-        self.trace.data = sf._exponential_trace_update(self.trace, x.t(), self.alpha_t, self.tau_t,
-            self.dt)
+        sF._connection_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
+                                     self.dt)
 
     def propagate_spike(self, x):
         r"""Track propagation of spikes through synapses if the connection."""
-        self.delay[self.delay > 0] -= 1
-        spike_out = self.delay == 1
-        self.delay += torch.matmul(self.delay_init, x)
+        spike_out = sF._spike_delay_update(self.delay, self.delay_init, x)
         return self.convert_spikes(spike_out)
+
+    def activation_potential(self, x):
+        out = (x * self.weight).sum(2, keepdim=True)
+        return out.view(self.batch_size, -1, self.out_features)
+
+    def fold_traces(self):
+        return self.trace.data.view(self.batch_size, -1, self.out_features)
 
     def forward(self, x):
         x = self.convert_spikes(x)
-        self.update_trace(x)  # TODO: Check if this is correct position
+        self.update_trace(x)
         x = self.propagate_spike(x)
-        return (self.weight * x), self.trace.data
+        return self.activation_potential(x), self.fold_traces()
 
 
 #########################################################
@@ -133,6 +147,9 @@ class Conv2dExponentialDelayed(Connection):
                  in_channels,
                  out_channels,
                  kernel_size,
+                 h_in,
+                 w_in,
+                 batch_size,
                  dt,
                  delay,
                  tau_t,
@@ -140,23 +157,62 @@ class Conv2dExponentialDelayed(Connection):
                  stride=1,
                  padding=0,
                  dilation=1):
+        # Assertions
+        assert delay != 0, "Delay is zero, please use Conv2dExponential instead."
+
+        # Image paramters
+        self.batch_size = batch_size
+        self.in_channels = in_channels
+        self.h_in = h_in
+        self.w_in = w_in
+        self.image_size = (h_in, w_in)
+
+        # Convolution parameters
+        self.out_channels = out_channels
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)
         self.padding = _pair(padding)
         self.dilation = _pair(dilation)
-        self.shape = (out_channels, in_channels, *self.kernel_size)
-        super(Conv2dExponentialDelayed, self).__init__(self.shape, dt, delay)
+
+        # Synapse connections shape
+        empty_input = torch.zeros(batch_size, in_channels, h_in, w_in)
+        synapse_shape = list(self.unfold(empty_input).shape)
+        synapse_shape[1] = out_channels
+        self.synapse_shape = synapse_shape        
+        super(Conv2dExponentialDelayed, self).__init__(synapse_shape, dt, delay)
+
+        # Output image parameters
+        self.image_out_size = conv2d_output_shape(h_in, w_in, self.kernel_size, self.stride,
+                                                   self.padding, self.dilation)
 
         # Fixed parameters
         self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
         self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
 
         # Weight parameter
-        self.weight = Parameter(torch.Tensor(*self.shape))
+        self.weight = Parameter(torch.Tensor(out_channels, in_channels, *self.kernel_size))
         self.register_parameter("bias", None)
 
         # Intialize layer
         self.init_connection()
+
+    def unfold(self, x):
+        r"""Simply unfolds incoming image according to layer parameters."""
+        return F.unfold(x, self.kernel_size, self.dilation, self.padding, self.stride).unsqueeze(1)
+
+    def fold_im(self, x):
+        r"""Simply folds incoming image according to layer parameters."""
+        return x.view(-1, x.shape[1], *self.image_out_size)
+
+    def fold_traces(self):
+        r"""Simply folds incoming trace according to layer parameters."""
+        return self.trace.view(-1, self.batch_size, self.out_channels, *self.image_out_size)
+
+    def activation_potential(self, x):
+        x = x * self.weight.view(self.weight.shape[0], -1).unsqueeze(2)
+        x = x.sum(2, keepdim=True)
+        x = x.view(-1, x.shape[1], *self.image_out_size)
+        return x
 
     def reset_parameters(self):
         r"""Reinnitialize network Parameters (e.g. weights)."""
@@ -165,20 +221,17 @@ class Conv2dExponentialDelayed(Connection):
 
     def update_trace(self, x):
         r"""Update trace according to exponential decay function and incoming spikes."""
-        # TODO: Have to permute x before function call, currently dimensions ordered incorrectly
-        self.trace.data = sf._exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
+        sF._connection_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
             self.dt)
 
     def propagate_spike(self, x):
         r"""Track propagation of spikes through synapses if the connection."""
-        self.delay[self.delay > 0] -= 1
-        spike_out = self.delay == 1
-        self.delay += F.conv2d(x, self.delay_init, self.bias, self.stride, self.padding, self.dilation)
+        spike_out = sF._spike_delay_update(self.delay, self.delay_init, x)
         return self.convert_spikes(spike_out)
 
     def forward(self, x):
         x = self.convert_spikes(x)
+        x = self.unfold(x)  # Till here it is a rather easy set of steps
         self.update_trace(x)
-        x = self.propagate_spike(x)
-        x = F.conv2d(x, self.weight, self.bias, self.stride, self.padding, self.dilation)
-        return x, self.trace.data
+        x = self.propagate_spike(x)  # Output spikes
+        return self.activation_potential(x), self.fold_traces()
