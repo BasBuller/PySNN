@@ -28,17 +28,15 @@ period of a cell should be equal or longer than the transmission time! If it is 
 Make sure each module has a reset_state(self) method! It is called from the SNNNetwork class and is needed for proper simulation of multiple
 inputs.
 
-
 ## To do
+- Adjust learning rule such that it is able to select which weights are learnable and which are not. Also adjust layer class such that the
+  parameter __training__ is also used within STDP. Just make sure gradients are always turned off since we don't need those...
 - For connection class, make sure it can handle the transmission of multiple spike within the same synapse. Aka, it should be able to handle
   a new incoming spike while the previous one has not passed through the entire synapse or time delay.
 - Make sure all indexing operations are replace with matrix multiplications where possible. GPU is considerably better at floating point
   operations than integer and bitwise operations.
 - Make both a LinearDelayed and LinearInstant layer
 - Move functionalities shared among multiple classes to functional folder.
-- Store traces in neuron or connection class? Neuron is more comprehensive, in connection would be more precise per synapse.
-- Add references to where the neuron and synaptic models are defined.
-- Support for batching the number of images, should easily be possible. Only problem might be the quickly growing number of elements in the
   decay and trace parameters. Still, batch 4 images is better than no batching.
 
 ## Notes
