@@ -44,7 +44,6 @@ class Neuron(nn.Module):
                  dt,
                  duration_refrac):
         super(Neuron, self).__init__()
-        # TODO: Change cells_shape t0 shape of cells, does not have to linear 
         self.cells_shape = torch.tensor(cells_shape)
 
         # Check compatibility of dt and refrac counting
@@ -77,7 +76,7 @@ class Neuron(nn.Module):
         """
         self.refrac_counts.masked_fill_(self.refrac_counts > 0, self.dt)
         self.refrac_counts += self.duration_refrac * self.convert_spikes(spikes)
-        self.v_cell.masked_fill_(spikes, 0)  # TODO: See if we can speed this up
+        self.v_cell.masked_fill_(spikes, 0)
 
     def convert_spikes(self, spikes):
         return spikes.to(self.v_cell.dtype)
@@ -90,13 +89,12 @@ class Neuron(nn.Module):
 
     def reset_parameters(self):
         r"""Reset learnable cell parameters to initialization values."""
-        # self.thresh.data = torch.ones_like(self.thresh.data) * self.thresh_center
         self.thresh.copy_(torch.ones_like(self.thresh.data) * self.thresh_center)
 
     def no_grad(self):
         r"""Turn off learning and gradient storing."""
         _set_no_grad(self)
-        self.train(False)
+        # self.train(False)
 
     def init_neuron(self):
         r"""Initialize state, parameters and turn off gradients."""
@@ -119,6 +117,7 @@ class IFNeuronTrace(Neuron):
                  dt,
                  duration_refrac):
         super(IFNeuronTrace, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac)
+
         self.init_neuron()
 
     def update_trace(self, x):
@@ -151,6 +150,8 @@ class LIFNeuronTrace(Neuron):
                  tau_v,
                  tau_t):
         super(LIFNeuronTrace, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac)
+
+        # Fixed parameters
         self.tau_v = Parameter(torch.tensor(tau_v, dtype=torch.float))
         self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
         self.init_neuron()
@@ -195,18 +196,16 @@ class FedeNeuronTrace(Neuron):
         # Fixed parameters
         self.tau_v = Parameter(torch.tensor(tau_v, dtype=torch.float))
         self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
-        self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
-
         self.init_neuron()
 
     def update_trace(self, x):
         sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
 
-    def update_voltage(self, x, pre_trace):  # TODO: See how it can handle some different situations, so both 5D conv input as well as 3D linear input
+    def update_voltage(self, x, pre_trace):
         sf._fede_voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v,
             self.dt, self.refrac_counts, pre_trace)
 
-    def forward(self, x, pre_trace):  # The pre_trace is not really what I'm looking for, just whether a cell has spiked or not!
+    def forward(self, x, pre_trace):
         self.update_trace(x)
         self.update_voltage(x, pre_trace)
         spikes = self.spiking()
