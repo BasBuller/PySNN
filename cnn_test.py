@@ -1,4 +1,4 @@
-from time import time
+from tqdm import tqdm
 
 import torch
 import torch.nn as nn
@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 from snn.network import SNNNetwork
-from snn.connection import Conv2dExponentialDelayed
+from snn.connection import Conv2dExponential, AdaptiveMaxPool2d
 from snn.neuron import FedeNeuronTrace, InputNeuronTrace
 from snn.learning import FedeSTDP
 from snn.utils import conv2d_output_shape
@@ -27,8 +27,8 @@ n_out = 5
 dataset_path = "/home/basbuller/python_lib_sources/slayerPytorch/example/NMNISTsmall/"
 sample_file = "/home/basbuller/python_lib_sources/slayerPytorch/example/NMNISTsmall/train1K.txt"
 sample_length = 300
-num_workers = 2
-batch_size = 16
+num_workers = 0
+batch_size = 20
 
 # Neuronal Dynamics
 thresh = 0.8
@@ -60,19 +60,20 @@ class Network(SNNNetwork):
         self.input = InputNeuronTrace(n_in)
 
         # Layer 1
-        self.conv1 = Conv2dExponentialDelayed(2, 4, 5, 34, 34, *c_dynamics, padding=1)
+        self.conv1 = Conv2dExponential(2, 4, 5, 34, 34, *c_dynamics, padding=1)
         # conv1_out = conv2d_output_shape(34, 34, 5, padding=1)
         self.neuron1 = FedeNeuronTrace((batch_size, 4, 32, 32), *n_dynamics)
 
-        # # Layer 2
-        self.conv2 = Conv2dExponentialDelayed(4, 8, 5, 32, 32, *c_dynamics, padding=1)
+        # Layer 2
+        self.pool2 = AdaptiveMaxPool2d((16, 16))
+        self.conv2 = Conv2dExponential(4, 8, 5, 16, 16, *c_dynamics, padding=1)
         # conv2_out = conv2d_output_shape(*conv1_out, 3, padding=1)
-        self.neuron2 = FedeNeuronTrace((batch_size, 8, 30, 30), *n_dynamics)
+        self.neuron2 = FedeNeuronTrace((batch_size, 8, 14, 14), *n_dynamics)
 
         # # Layer out
-        self.conv3 = Conv2dExponentialDelayed(8, 1, 5, 30, 30, *c_dynamics, padding=1)
+        self.conv3 = Conv2dExponential(8, 1, 5, 14, 14, *c_dynamics, padding=1)
         # conv3_out = conv2d_output_shape(*conv2_out, 3, padding=1)
-        self.neuron3 = FedeNeuronTrace((batch_size, 1, 28, 28), *n_dynamics)
+        self.neuron3 = FedeNeuronTrace((batch_size, 1, 12, 12), *n_dynamics)
 
         # # Learning rule
         connections = [self.conv1, self.conv2, self.conv3]
@@ -86,7 +87,8 @@ class Network(SNNNetwork):
         x, t  = self.conv1(x)
         x = self.neuron1(x, t)
 
-        # # Layer 2
+        # Layer 2
+        x = self.pool2(x) 
         x, t = self.conv2(x)
         x = self.neuron2(x, t)
 
@@ -111,19 +113,14 @@ train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True
 # Training
 #########################################################
 device = torch.device("cuda")
-net = Network().cuda()
-input = torch.cat([train_dataset[i][0].unsqueeze(0) for i in range(batch_size)], 0).to(device)
+net = Network()
+net = net.to(torch.float16).cuda()
+
+# device = torch.device("cpu")
 # net = Network()
-# net = net.train(False)
-# input = torch.cat([train_dataset[i][0].unsqueeze(0) for i in range(batch_size)], 0)
 
-out = []
-start = time()
-for idx in range(input.shape[-1]):
-    x = input[:, :, :, :, idx]
-    out.append(net(x))
-
-print("Duration of inference: ", time() - start)
-
-output = torch.cat(out, dim=1)
-print(output.shape)
+for batch in tqdm(train_dataloader):
+    input = batch[0]
+    for idx in range(input.shape[-1]):
+        x = input[:, :, :, :, idx].to(device)
+        net(x)

@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 from torch.nn.modules.utils import _pair
+from torch.nn.modules.pooling import _MaxPoolNd, _AdaptiveMaxPoolNd
 
 from snn.utils import _set_no_grad, conv2d_output_shape
 import snn.functional as sF
@@ -99,9 +100,6 @@ class LinearExponentialDelayed(Connection):
                  delay,
                  tau_t,
                  alpha_t):
-        # Assertions
-        assert delay != 0, "Delay is zero, please use LinearExponential instead."
-
         # Dimensions
         self.in_features = in_features
         self.out_features = out_features
@@ -119,11 +117,6 @@ class LinearExponentialDelayed(Connection):
 
         # Initialize connection
         self.init_connection()
-
-    # def reset_parameters(self):
-    #     r"""Reinnitialize network Parameters (e.g. weights)."""
-    #     super().reset_parameters()
-    #     nn.init.uniform_(self.weight)
 
     # Support function
     def fold_traces(self):
@@ -148,9 +141,35 @@ class LinearExponentialDelayed(Connection):
 
 
 #########################################################
-# Convolutional layer
+# Convolutional base class
 #########################################################
-class Conv2dExponentialDelayed(Connection):
+class _ConvNd(Connection):
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 kernel_size,
+                 im_dims,
+                 batch_size,
+                 dt,
+                 delay,
+                 stride=1,
+                 padding=0,
+                 dilation=1):
+        super(_ConvNd, self).__init__()    
+
+        # Convolution parameters
+        self.batch_size = batch_size  # Cannot infer, needed to reserve memory for storing trace and delay timing
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.dilation = dilation
+
+
+#########################################################
+# 2d Convolutional layer
+#########################################################
+class Conv2dExponential(Connection):
     r"""Convolutional SNN layer interface comparable to torch.nn.Conv2d."""
     def __init__(self,
                  in_channels,
@@ -166,15 +185,6 @@ class Conv2dExponentialDelayed(Connection):
                  stride=1,
                  padding=0,
                  dilation=1):
-        # Assertions
-        assert delay != 0, "Delay is zero, please use Conv2dExponential instead."
-
-        # Image paramters
-        # self.in_channels = in_channels
-        # self.h_in = h_in
-        # self.w_in = w_in
-        # self.image_in_size = (h_in, w_in)
-
         # Convolution parameters
         self.batch_size = batch_size
         self.out_channels = out_channels
@@ -190,27 +200,22 @@ class Conv2dExponentialDelayed(Connection):
         self.synapse_shape = synapse_shape
 
         # Super init
-        super(Conv2dExponentialDelayed, self).__init__(synapse_shape, dt, delay)
+        super(Conv2dExponential, self).__init__(synapse_shape, dt, delay)
 
         # Output image size
         self.image_out_size = conv2d_output_shape(h_in, w_in, self.kernel_size, self.stride,
                                                    self.padding, self.dilation)
 
-        # Fixed parameters
-        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
-        self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
-
         # Weight parameter
         self.weight = Parameter(torch.Tensor(out_channels, in_channels, *self.kernel_size))
         self.register_parameter("bias", None)
 
+        # Fixed parameters
+        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
+        self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
+
         # Intialize layer
         self.init_connection()
-
-    # def reset_parameters(self):
-    #     r"""Reinnitialize network Parameters (e.g. weights)."""
-    #     super().reset_parameters()
-    #     nn.init.uniform_(self.weight)
 
     # Support functions
     def unfold(self, x):
@@ -244,3 +249,28 @@ class Conv2dExponentialDelayed(Connection):
         self.update_trace(x)
         x = self.propagate_spike(x)  # Output spikes
         return self.activation_potential(x), self.fold_traces()
+
+
+#########################################################
+# Pooling
+#########################################################
+class MaxPool2d(_MaxPoolNd):
+    r"""Simple port of PyTorch MaxPool2d with small adjustment for spiking operations.
+    
+    Currently pooling only supports operations on floating point numbers, thus it casts the uint8 spikes to floats back and forth.
+    """
+    def forward(self, x):
+        x = x.to(torch.float32, non_blocking=True)
+        x = F.max_pool2d(x, self.kernel_size, self.stride, self.padding, self.dilation, self.ceil_mode, self.return_indices)
+        return x > 0
+
+
+class AdaptiveMaxPool2d(_AdaptiveMaxPoolNd):
+    r"""Simple port of PyTorch AdaptiveMaxPool2d with small adjustment for spiking operations.
+    
+    Currently pooling only supports operations on floating point numbers, thus it casts the uint8 spikes to floats back and forth.
+    """
+    def forward(self, x):
+        x = x.to(torch.float32, non_blocking=True)
+        x = F.adaptive_max_pool2d(x, self.output_size, self.return_indices)
+        return x > 0

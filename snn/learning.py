@@ -9,6 +9,7 @@ from snn.utils import _set_no_grad
 # Fede STDP
 #########################################################
 class FedeSTDP(nn.Module):
+    r"""STDP version for Paredes Valles, performs mean operation over the batch dimension before weight update."""
     def __init__(self,
                  connections,
                  lr,
@@ -19,10 +20,6 @@ class FedeSTDP(nn.Module):
         self.w_init = Parameter(torch.tensor(w_init, dtype=torch.float))
         self.lr = Parameter(torch.tensor(lr, dtype=torch.float))
         self.a = Parameter(torch.tensor(a, dtype=torch.float))
-
-        # TODO: within __init__ determine if dealing with conv or linear 
-        # and determine corresponding trace transform. Especially conv needs
-        # some funky transform before it can be summed.
 
         self.no_grad()
 
