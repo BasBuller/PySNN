@@ -3,8 +3,8 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from snn.connection import LinearExponentialDelayed
-from snn.neuron import FedeNeuronTrace, InputNeuronTrace
+from snn.connection import LinearExponential
+from snn.neuron import FedeNeuronTrace
 from snn.learning import FedeSTDP
 
 from event_pytorch.event_dataloaders import (
@@ -59,19 +59,16 @@ class Network(nn.Module):
     def __init__(self):
         super(Network, self).__init__()
 
-        # layer in
-        self.input = InputNeuronTrace(n_in)
-
         # Layer 1
-        self.mlp1_c = LinearExponentialDelayed(n_in, n_hidden1, *c_dynamics)
+        self.mlp1_c = LinearExponential(n_in, n_hidden1, *c_dynamics)
         self.neuron1 = FedeNeuronTrace((batch_size, 1, n_hidden1), *n_dynamics)
 
         # Layer 2
-        self.mlp2_c = LinearExponentialDelayed(n_hidden1, n_hidden2, *c_dynamics)
+        self.mlp2_c = LinearExponential(n_hidden1, n_hidden2, *c_dynamics)
         self.neuron2 = FedeNeuronTrace((batch_size, 1, n_hidden2), *n_dynamics)
 
         # Layer out
-        self.mlp3_c = LinearExponentialDelayed(n_hidden2, n_out, *c_dynamics)
+        self.mlp3_c = LinearExponential(n_hidden2, n_out, *c_dynamics)
         self.neuron3 = FedeNeuronTrace((batch_size, 1, n_out), *n_dynamics)
 
         # Learning rule
@@ -80,11 +77,8 @@ class Network(nn.Module):
 
     # @torch.jit.script_method
     def forward(self, input):
-        # Layer in
-        x = self.input(input)
-
         # Layer 1
-        x, t  = self.mlp1_c(x)
+        x, t  = self.mlp1_c(input)
         x = self.neuron1(x, t)
 
         # Layer 2
@@ -133,6 +127,6 @@ for batch in train_dataloader:
     for idx in range(batch.shape[1]):
         input = batch[:, idx:idx+1, :]
         out.append(net(input))
-    
+
 output = torch.stack(out, dim=1)
 print(output.shape)
