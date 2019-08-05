@@ -43,6 +43,7 @@ delay = 1
 c_dynamics = (batch_size, dt, delay, tau_t, alpha_t)
 
 # Learning
+epochs = 50
 lr = 0.0001
 w_init = 0.5
 a = 0.5
@@ -129,27 +130,36 @@ net = net.to(torch.float16).cuda()
 # device = torch.device("cpu")
 # net = Network()
 
-# Train
-for batch in tqdm(train_dataloader):
-    input = batch[0]
-    label = batch[2]
-    for idx in range(input.shape[-1]):
-        x = input[:, :, :, :, idx].to(device)
-        label = label.to(device)
-        x = net(x)
-        net.update_weights(x, label)
-    net.reset_state()
+for epoch in range(epochs):
+    print("######################## Epoch {} ########################".format(epoch))
+    # Train
+    for batch in tqdm(train_dataloader):
+        input = batch[0]
+        label = batch[2]
+        for idx in range(input.shape[-1]):
+            x = input[:, :, :, :, idx].to(device)
+            label = label.to(device)
+            x = net(x)
+            net.update_weights(x, label)
+        net.reset_state()
 
-# Test
-correct = 0
-for batch in tqdm(test_dataloader):
-    input = batch[0]
-    label = batch[2]
-    for idx in range(input.shape[-1]):
-        x = input[:, :, :, :, idx].to(device)
-        label = label.to(device)
-        x = net(x)
-        _, max_idx = x.squeeze(1).max(-1)
+    # Test
+    correct = 0
+    for batch in tqdm(test_dataloader):
+        input = batch[0]
+        label = batch[2]
+
+        single_label = 0
+        for idx in range(input.shape[-1]):
+            x = input[:, :, :, :, idx].to(device)
+            label = label.to(device)
+            x = net(x)
+            single_label += x
+
+        _, max_idx = single_label.squeeze(1).max(-1)
         cor_out = max_idx == label
-        correct += cor_out.sum()
-    print("{}/{} correct outputs".format(correct, len(train_dataset)))
+        correct += cor_out.float().sum().cpu().numpy()
+
+        net.reset_state()
+    print("{}/{} correct outputs".format(correct, len(test_dataset)))
+    print("\n")
