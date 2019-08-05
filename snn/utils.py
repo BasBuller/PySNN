@@ -20,7 +20,7 @@ def _reset_state(module):
 #########################################################
 # Convolutional shapes
 #########################################################
-def conv2d_output_shape(h_in, w_in, kernel_size, stride=1, padding=0, dilation=0):
+def conv2d_output_shape(h_in, w_in, kernel_size, stride=1, padding=0, dilation=1):
     kernel_size = _pair(kernel_size)
     padding = _pair(padding)
     dilation = _pair(dilation)

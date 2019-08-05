@@ -24,13 +24,15 @@ class Connection(nn.Module):
         super(Connection, self).__init__()
         self.synapse_shape = shape
 
+        # Delay values are initiated with +1, reason for this is that a spike is 'generated' once the counter reaches 1
+        # A counter at 0 means the cell is not in refractory or spiking state
         if isinstance(delay, int):
             if delay == 0:
                 delay_init = None
             else:
-                delay_init = torch.ones(*shape) * delay
+                delay_init = torch.ones(*shape) * (delay + 1)
         elif isinstance(delay, torch.Tensor):
-            delay_init = delay
+            delay_init = delay + 1
         else:
             raise TypeError("Incorrect data type provided for delay_init, please provide an int or FloatTensor")
 
@@ -54,7 +56,6 @@ class Connection(nn.Module):
     def no_grad(self):
         r"""Set require_gradients to False and turn off training mode."""
         _set_no_grad(self)
-        # self.train(False)
 
     def reset_state(self):
         r"""Set state Parameters (e.g. trace) to their resting state."""
@@ -83,14 +84,18 @@ class Connection(nn.Module):
     def propagate_spike(self, x):
         r"""Track propagation of spikes through synapses if the connection."""
         if self.delay_init is not None:
-            x = sF._spike_delay_update(self.delay, self.delay_init, x)
-        return self.convert_spikes(x)
+            self.delay[self.delay > 0] -= 1
+            spike_out = self.delay == 1
+            self.delay += self.delay_init * x
+        else:
+            spike_out = x
+        return self.convert_spikes(spike_out)
 
 
 #########################################################
 # Linear layer
 #########################################################
-class LinearExponentialDelayed(Connection):
+class LinearExponential(Connection):
     r"""SNN linear (fully connected) layer with interface comparable to torch.nn.Linear."""
     def __init__(self,
                  in_features,
@@ -106,7 +111,7 @@ class LinearExponentialDelayed(Connection):
         self.batch_size = batch_size
 
         self.synapse_shape = (batch_size, out_features, in_features)
-        super(LinearExponentialDelayed, self).__init__(self.synapse_shape, dt, delay)
+        super(LinearExponential, self).__init__(self.synapse_shape, dt, delay)
 
         # Fixed parameters
         self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
@@ -155,28 +160,63 @@ class _ConvNd(Connection):
                  stride=1,
                  padding=0,
                  dilation=1):
-        super(_ConvNd, self).__init__()    
+        # Assertions
+        assert isinstance(im_dims, (tuple, list)), "Parameter im_dims should be a tuple or list of ints"
+        for i in im_dims:
+            assert isinstance(i, int), "Variables in im_dims should be int"
 
         # Convolution parameters
         self.batch_size = batch_size  # Cannot infer, needed to reserve memory for storing trace and delay timing
         self.out_channels = out_channels
-        self.kernel_size = kernel_size
-        self.stride = stride
-        self.padding = padding
-        self.dilation = dilation
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride)
+        self.padding = _pair(padding)
+        self.dilation = _pair(dilation)
+
+        # Synapse connections shape
+        empty_input = torch.zeros(batch_size, in_channels, *im_dims)
+        synapse_shape = list(self.unfold(empty_input).shape)
+        synapse_shape[1] = out_channels
+        self.synapse_shape = synapse_shape
+
+        # Super init
+        super(_ConvNd, self).__init__(synapse_shape, dt, delay)
+
+        # Output image shape
+        if len(im_dims) == 1:
+            self.image_out_shape = (0)
+        elif len(im_dims) == 2:
+            self.image_out_shape = conv2d_output_shape(*im_dims, self.kernel_size, stride=self.stride, 
+                                                       padding=self.padding, dilation=self.dilation)
+        elif len(im_dims) == 3:
+            self.image_out_shape = (0, 0, 0)
+        else:
+            raise ValueError("Input contains too many dimensions")
+
+        # Weight parameter
+        self.weight = Parameter(torch.Tensor(out_channels, in_channels, *self.kernel_size))
+        self.register_parameter("bias", None)
+
+    # Support functions
+    def fold_im(self, x):
+        r"""Simply folds incoming image according to layer parameters."""
+        return x.view(-1, x.shape[1], *self.image_out_shape)
+
+    def fold_traces(self):
+        r"""Simply folds incoming trace according to layer parameters."""
+        return self.trace.view(-1, self.batch_size, self.out_channels, *self.image_out_shape)
 
 
 #########################################################
-# 2d Convolutional layer
+# 2D Convolutional layer
 #########################################################
-class Conv2dExponential(Connection):
+class Conv2dExponential(_ConvNd):
     r"""Convolutional SNN layer interface comparable to torch.nn.Conv2d."""
     def __init__(self,
                  in_channels,
                  out_channels,
                  kernel_size,
-                 h_in,
-                 w_in,
+                 im_dims,
                  batch_size,
                  dt,
                  delay,
@@ -185,30 +225,8 @@ class Conv2dExponential(Connection):
                  stride=1,
                  padding=0,
                  dilation=1):
-        # Convolution parameters
-        self.batch_size = batch_size
-        self.out_channels = out_channels
-        self.kernel_size = _pair(kernel_size)
-        self.stride = _pair(stride)
-        self.padding = _pair(padding)
-        self.dilation = _pair(dilation)
-
-        # Synapse connections shape
-        empty_input = torch.zeros(batch_size, in_channels, h_in, w_in)
-        synapse_shape = list(self.unfold(empty_input).shape)
-        synapse_shape[1] = out_channels
-        self.synapse_shape = synapse_shape
-
-        # Super init
-        super(Conv2dExponential, self).__init__(synapse_shape, dt, delay)
-
-        # Output image size
-        self.image_out_size = conv2d_output_shape(h_in, w_in, self.kernel_size, self.stride,
-                                                   self.padding, self.dilation)
-
-        # Weight parameter
-        self.weight = Parameter(torch.Tensor(out_channels, in_channels, *self.kernel_size))
-        self.register_parameter("bias", None)
+        super(Conv2dExponential, self).__init__(in_channels, out_channels, kernel_size, im_dims, batch_size,
+                                                dt, delay, stride, padding, dilation)
 
         # Fixed parameters
         self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
@@ -217,31 +235,26 @@ class Conv2dExponential(Connection):
         # Intialize layer
         self.init_connection()
 
-    # Support functions
+    # Class specific support functions
     def unfold(self, x):
-        r"""Simply unfolds incoming image according to layer parameters."""
+        r"""Simply unfolds incoming image according to layer parameters.
+        
+        Cannot be placed in base class due to the fact that unfold only support 4D tensors.
+        """
         return F.unfold(x, self.kernel_size, self.dilation, self.padding, self.stride).unsqueeze(1)
 
-    def fold_im(self, x):
-        r"""Simply folds incoming image according to layer parameters."""
-        return x.view(-1, x.shape[1], *self.image_out_size)
-
-    def fold_traces(self):
-        r"""Simply folds incoming trace according to layer parameters."""
-        return self.trace.view(-1, self.batch_size, self.out_channels, *self.image_out_size)
+    def activation_potential(self, x):
+        r"""Determine activation potentials from each synapse for current time step."""
+        x = x * self.weight.view(self.weight.shape[0], -1).unsqueeze(2)
+        x = x.sum(2, keepdim=True)
+        x = x.view(-1, x.shape[1], *self.image_out_shape)
+        return x
 
     # Standard functions
     def update_trace(self, x):
         r"""Update trace according to exponential decay function and incoming spikes."""
         sF._connection_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
             self.dt)
-
-    def activation_potential(self, x):
-        r"""Determine activation potentials from each synapse for current time step."""
-        x = x * self.weight.view(self.weight.shape[0], -1).unsqueeze(2)
-        x = x.sum(2, keepdim=True)
-        x = x.view(-1, x.shape[1], *self.image_out_size)
-        return x
 
     def forward(self, x):
         x = self.convert_spikes(x)
@@ -259,6 +272,9 @@ class MaxPool2d(_MaxPoolNd):
     
     Currently pooling only supports operations on floating point numbers, thus it casts the uint8 spikes to floats back and forth.
     """
+    def reset_state(self):
+        pass
+
     def forward(self, x):
         x = x.to(torch.float32, non_blocking=True)
         x = F.max_pool2d(x, self.kernel_size, self.stride, self.padding, self.dilation, self.ceil_mode, self.return_indices)
@@ -270,7 +286,95 @@ class AdaptiveMaxPool2d(_AdaptiveMaxPoolNd):
     
     Currently pooling only supports operations on floating point numbers, thus it casts the uint8 spikes to floats back and forth.
     """
+    def reset_state(self):
+        pass
+
     def forward(self, x):
         x = x.to(torch.float32, non_blocking=True)
         x = F.adaptive_max_pool2d(x, self.output_size, self.return_indices)
         return x > 0
+
+
+# #########################################################
+# # 2D Convolutional layer
+# #########################################################
+# class Conv2dExponentialOld(Connection):
+#     r"""Convolutional SNN layer interface comparable to torch.nn.Conv2d."""
+#     def __init__(self,
+#                  in_channels,
+#                  out_channels,
+#                  kernel_size,
+#                  h_in,
+#                  w_in,
+#                  batch_size,
+#                  dt,
+#                  delay,
+#                  tau_t,
+#                  alpha_t,
+#                  stride=1,
+#                  padding=0,
+#                  dilation=1):
+#         # Convolution parameters
+#         self.batch_size = batch_size
+#         self.out_channels = out_channels
+#         self.kernel_size = _pair(kernel_size)
+#         self.stride = _pair(stride)
+#         self.padding = _pair(padding)
+#         self.dilation = _pair(dilation)
+
+#         # Synapse connections shape
+#         empty_input = torch.zeros(batch_size, in_channels, h_in, w_in)
+#         synapse_shape = list(self.unfold(empty_input).shape)
+#         synapse_shape[1] = out_channels
+#         self.synapse_shape = synapse_shape
+
+#         # Super init
+#         super(Conv2dExponentialOld, self).__init__(synapse_shape, dt, delay)
+
+#         # Output image size
+#         self.image_out_shape = conv2d_output_shape(h_in, w_in, self.kernel_size, self.stride,
+#                                                    self.padding, self.dilation)
+
+#         # Weight parameter
+#         self.weight = Parameter(torch.Tensor(out_channels, in_channels, *self.kernel_size))
+#         self.register_parameter("bias", None)
+
+#         # Fixed parameters
+#         self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
+#         self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
+
+#         # Intialize layer
+#         self.init_connection()
+
+#     # Support functions
+#     def unfold(self, x):
+#         r"""Simply unfolds incoming image according to layer parameters."""
+#         return F.unfold(x, self.kernel_size, self.dilation, self.padding, self.stride).unsqueeze(1)
+
+#     def fold_im(self, x):
+#         r"""Simply folds incoming image according to layer parameters."""
+#         return x.view(-1, x.shape[1], *self.image_out_shape)
+
+#     def fold_traces(self):
+#         r"""Simply folds incoming trace according to layer parameters."""
+#         return self.trace.view(-1, self.batch_size, self.out_channels, *self.image_out_shape)
+
+#     # Standard functions
+#     def update_trace(self, x):
+#         r"""Update trace according to exponential decay function and incoming spikes."""
+#         sF._connection_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
+#             self.dt)
+
+#     def activation_potential(self, x):
+#         r"""Determine activation potentials from each synapse for current time step."""
+#         x = x * self.weight.view(self.weight.shape[0], -1).unsqueeze(2)
+#         x = x.sum(2, keepdim=True)
+#         x = x.view(-1, x.shape[1], *self.image_out_shape)
+#         return x
+
+#     def forward(self, x):
+#         x = self.convert_spikes(x)
+#         x = self.unfold(x)  # Till here it is a rather easy set of steps
+#         self.update_trace(x)
+#         x = self.propagate_spike(x)  # Output spikes
+#         return self.activation_potential(x), self.fold_traces()

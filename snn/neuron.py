@@ -6,23 +6,6 @@ from snn.utils import _set_no_grad
 import snn.functional as sf
 
 
-########################################################
-# Input neuron
-########################################################
-class InputNeuronTrace(nn.Module):
-    r"""Input neuron, feeds through all its input to the next layer.
-
-    The reason this class exists is to allow for learning weights
-    from the input to the first real layer of the network.
-    """
-    def __init__(self, cells_shape):
-        super(InputNeuronTrace, self).__init__()
-        self.cells_shape = cells_shape
-
-    def forward(self, x):
-        return x > 0
-
-
 #########################################################
 # Base Neuron
 #########################################################
@@ -94,7 +77,6 @@ class Neuron(nn.Module):
     def no_grad(self):
         r"""Turn off learning and gradient storing."""
         _set_no_grad(self)
-        # self.train(False)
 
     def init_neuron(self):
         r"""Initialize state, parameters and turn off gradients."""
