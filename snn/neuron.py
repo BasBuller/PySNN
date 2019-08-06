@@ -57,7 +57,7 @@ class Neuron(nn.Module):
 
         Can be overwritten in case of the need of more refined functionality.
         """
-        self.refrac_counts.masked_fill_(self.refrac_counts > 0, self.dt)
+        self.refrac_counts[self.refrac_counts > 0] -= self.dt
         self.refrac_counts += self.duration_refrac * self.convert_spikes(spikes)
         self.v_cell.masked_fill_(spikes, 0)
 
