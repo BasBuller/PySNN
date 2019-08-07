@@ -2,11 +2,11 @@ import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
 
-from snn.utils import _set_no_grad
-import snn.functional as sf
+from pysnn.utils import _set_no_grad
+import pysnn.functional as sf
 
 
-#########################################################
+######################################################### 
 # Base Neuron
 #########################################################
 class Neuron(nn.Module):

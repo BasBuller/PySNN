@@ -1,7 +1,8 @@
 # Cache folders
 .vscode/*
-*/__pycache__/*
+__pycache__/*
 .mypy_cache/*
+PySNN.egg-info/*
 
 # Files
 trial.py
