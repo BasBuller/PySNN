@@ -84,6 +84,9 @@ class Neuron(nn.Module):
         self.reset_state()
         self.reset_parameters()
 
+    def forward(self):
+        return
+
 
 #########################################################
 # IF Neuron
