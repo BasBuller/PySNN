@@ -100,16 +100,19 @@ class IFNeuronTrace(Neuron):
                  alpha_v,
                  alpha_t,
                  dt,
-                 duration_refrac):
+                 duration_refrac,
+                 tau_t):
         super(IFNeuronTrace, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac)
 
+        #Fixed parameters
+        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
         self.init_neuron()
 
     def update_trace(self, x):
-        sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
+        self.trace = sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
 
     def update_voltage(self, x):
-        sf._if_voltage_update(self.v_cell, x, self.alpha_v, self.refrac_counts)
+        self.v_cell = sf._if_voltage_update(self.v_cell, x, self.alpha_v, self.refrac_counts)
 
     def forward(self, x):
         self.update_trace(x)
@@ -142,11 +145,11 @@ class LIFNeuronTrace(Neuron):
         self.init_neuron()
 
     def update_trace(self, x):
-        sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
+        self.trace = sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
 
     def update_voltage(self, x):
-        sf._lif_voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v,
-            self.dt, self.recfrac_counts)
+        self.v_cell = sf._lif_voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v,
+            self.dt, self.refrac_counts)
 
     def forward(self, x):
         self.update_trace(x)
@@ -184,10 +187,10 @@ class FedeNeuronTrace(Neuron):
         self.init_neuron()
 
     def update_trace(self, x):
-        sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
+        self.trace = sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
 
     def update_voltage(self, x, pre_trace):
-        sf._fede_voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v,
+        self.v_cell = sf._fede_voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v,
             self.dt, self.refrac_counts, pre_trace)
 
     def forward(self, x, pre_trace):

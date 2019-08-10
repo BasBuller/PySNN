@@ -5,8 +5,8 @@ from torch.nn.parameter import Parameter
 from torch.nn.modules.utils import _pair
 from torch.nn.modules.pooling import _MaxPoolNd, _AdaptiveMaxPoolNd
 
-from snn.utils import _set_no_grad, conv2d_output_shape
-import snn.functional as sF
+from pysnn.utils import _set_no_grad, conv2d_output_shape
+import pysnn.functional as sF
 
 
 #########################################################
@@ -36,14 +36,14 @@ class Connection(nn.Module):
         else:
             raise TypeError("Incorrect data type provided for delay_init, please provide an int or FloatTensor")
 
-        # Fixed parameters
-        self.dt = Parameter(torch.tensor(dt, dtype=torch.float))
-
         # Learnable parameters
         if delay_init is not None:
             self.delay_init = Parameter(delay_init)
         else:
             self.register_parameter("delay_init", None)
+
+        # Fixed parameters
+        self.dt = Parameter(torch.tensor(dt, dtype=torch.float))
 
         # State parameters
         self.trace = Parameter(torch.Tensor(*shape))
@@ -64,8 +64,6 @@ class Connection(nn.Module):
 
     def reset_parameters(self):
         r"""Reinnitialize learnable network Parameters (e.g. weights)."""
-        if self.delay_init is not None:
-            self.delay_init.fill_(0)
         nn.init.uniform_(self.weight)
 
     def init_connection(self):
@@ -125,7 +123,7 @@ class LinearExponential(Connection):
 
     # Support function
     def fold_traces(self):
-        return self.trace.data.view(self.batch_size, -1, self.out_features)
+        return self.trace.data.view(self.in_features, self.batch_size, -1, self.out_features)  # TODO: Add posibility for a channel dim at dim 2
 
     # Standard functions
     def update_trace(self, x):
