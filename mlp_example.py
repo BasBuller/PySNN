@@ -3,9 +3,9 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from snn.connection import LinearExponential
-from snn.neuron import FedeNeuronTrace
-from snn.learning import FedeSTDP
+from pysnn.connection import LinearExponential
+from pysnn.neuron import FedeNeuronTrace
+from pysnn.learning import FedeSTDP
 
 from event_pytorch.event_dataloaders import (
     SineData,
