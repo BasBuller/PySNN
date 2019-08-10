@@ -62,6 +62,7 @@ class Neuron(nn.Module):
         self.v_cell.masked_fill_(spikes, 0)
 
     def convert_spikes(self, spikes):
+        r"""Cast uint8 spikes to datatype that is used for voltage and weights"""
         return spikes.to(self.v_cell.dtype)
 
     def reset_state(self):
