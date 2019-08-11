@@ -53,7 +53,7 @@ class FedeSTDP(LearningRule):
                  lr,
                  w_init,
                  a):
-        # Make sure conncetions is an iterable for compatibility with forward function
+        # Make sure connections is an iterable for compatibility with forward function
         if isinstance(connections, Connection):
             connections = (connections)
         super(FedeSTDP, self).__init__(connections, lr)

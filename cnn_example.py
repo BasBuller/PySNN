@@ -5,11 +5,11 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from snn.network import SNNNetwork
-from snn.connection import Conv2dExponential, AdaptiveMaxPool2d
-from snn.neuron import FedeNeuronTrace
-from snn.learning import FedeSTDP
-from snn.utils import conv2d_output_shape
+from pysnn.network import SNNNetwork
+from pysnn.connection import Conv2dExponential, AdaptiveMaxPool2d
+from pysnn.neuron import FedeNeuronTrace
+from pysnn.learning import FedeSTDP
+from pysnn.utils import conv2d_output_shape
 
 from event_pytorch.event_dataloaders import NMNISTDataset
 
@@ -118,3 +118,4 @@ for batch in tqdm(train_dataloader):
     for idx in range(input.shape[-1]):
         x = input[:, :, :, :, idx].to(device)
         net(x)
+    net.reset_state()

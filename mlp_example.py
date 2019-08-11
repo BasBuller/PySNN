@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
+from pysnn.network import SNNNetwork
 from pysnn.connection import LinearExponential
 from pysnn.neuron import FedeNeuronTrace
 from pysnn.learning import FedeSTDP
@@ -54,7 +55,7 @@ a = 0.5
 #########################################################
 # Network
 #########################################################
-class Network(nn.Module):
+class Network(SNNNetwork):
 # class Network(torch.jit.ScriptModule):
     def __init__(self):
         super(Network, self).__init__()
