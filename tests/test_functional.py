@@ -62,8 +62,8 @@ def test_lif_voltage_update(v_cur, v_in, v_out):
 
 # Test fede voltage update
 @pytest.mark.parametrize("v_cur,v_in,trace_in,v_out", [
-    (torch.zeros(*cells_shape), torch.ones(*cells_shape)*3, torch.ones(2, *cells_shape), 
-        [torch.ones(*cells_shape)*0.5, torch.ones(*cells_shape)*0.75])
+    (torch.zeros(*cells_shape), torch.ones(*cells_shape, 2)*2, torch.ones(*cells_shape, 2), 
+        [torch.ones(*cells_shape), torch.ones(*cells_shape)*1.5])
 ])
 def test_fede_voltage_update(v_cur, v_in, trace_in, v_out):
     from pysnn.functional import _fede_voltage_update

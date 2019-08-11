@@ -108,7 +108,7 @@ class LinearExponential(Connection):
         self.out_features = out_features
         self.batch_size = batch_size
 
-        self.synapse_shape = (batch_size, out_features, in_features)
+        self.synapse_shape = (batch_size, out_features, in_features)  # TODO: Change the 1 to variable?
         super(LinearExponential, self).__init__(self.synapse_shape, dt, delay)
 
         # Fixed parameters
@@ -123,7 +123,7 @@ class LinearExponential(Connection):
 
     # Support function
     def fold_traces(self):
-        return self.trace.data.view(self.in_features, self.batch_size, -1, self.out_features)  # TODO: Add posibility for a channel dim at dim 2
+        return self.trace.data.view(self.batch_size, -1, self.out_features, self.in_features)  # TODO: Add posibility for a channel dim at dim 2
 
     # Standard functions
     def update_trace(self, x):
@@ -133,8 +133,8 @@ class LinearExponential(Connection):
 
     def activation_potential(self, x):
         r"""Determine activation potentials from each synapse for current time step."""
-        out = (x * self.weight).sum(2, keepdim=True)
-        return out.view(self.batch_size, -1, self.out_features)
+        out = x * self.weight
+        return out.view(self.batch_size, -1, self.out_features, self.in_features)
 
     def forward(self, x):
         x = self.convert_spikes(x)
@@ -198,11 +198,11 @@ class _ConvNd(Connection):
     # Support functions
     def fold_im(self, x):
         r"""Simply folds incoming image according to layer parameters."""
-        return x.view(-1, x.shape[1], *self.image_out_shape)
+        return x.view(self.batch_size, self.out_channels, *self.image_out_shape, -1)
 
     def fold_traces(self):
         r"""Simply folds incoming trace according to layer parameters."""
-        return self.trace.view(-1, self.batch_size, self.out_channels, *self.image_out_shape)
+        return self.trace.view(self.batch_size, self.out_channels, *self.image_out_shape, -1)
 
 
 #########################################################
@@ -244,8 +244,7 @@ class Conv2dExponential(_ConvNd):
     def activation_potential(self, x):
         r"""Determine activation potentials from each synapse for current time step."""
         x = x * self.weight.view(self.weight.shape[0], -1).unsqueeze(2)
-        x = x.sum(2, keepdim=True)
-        x = x.view(-1, x.shape[1], *self.image_out_shape)
+        x = self.fold_im(x)
         return x
 
     # Standard functions

@@ -61,6 +61,14 @@ class Neuron(nn.Module):
         self.refrac_counts += self.duration_refrac * self.convert_spikes(spikes)
         self.v_cell.masked_fill_(spikes, 0)
 
+    def unfold(self, x):
+        r"""Move the last dimension (all incoming to single neuron in current layer) to first dim.
+
+        This is done because PyTorch broadcasting does not support broadcasting over the last dim.
+        """
+        shape = x.shape
+        return x.view(shape[-1], *shape[:-1])
+
     def convert_spikes(self, spikes):
         r"""Cast uint8 spikes to datatype that is used for voltage and weights"""
         return spikes.to(self.v_cell.dtype)

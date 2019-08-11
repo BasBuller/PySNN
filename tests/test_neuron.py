@@ -63,28 +63,28 @@ def test_refrac(spikes, neuron):
 
 
 ##########################################################
-# Test Fede's neuron
+# Test IF neuron
 ##########################################################
 @pytest.fixture(scope="function", params=[
-    # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t
-    ((1, 2, 2, 2), 1.,     0.,     1.,      1.,      1., 1,               2.,    2.)
+    # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_t
+    ((1, 2, 2, 2), 1.,     0.,     1.,      1.,      1., 1,               2.)
 ])
-def fede_neuron(request):
-    from pysnn.neuron import FedeNeuronTrace
+def if_neuron(request):
+    from pysnn.neuron import IFNeuronTrace
 
     params = request.param
-    neuron = FedeNeuronTrace(*params)
+    neuron = IFNeuronTrace(*params)
     neuron.init_neuron()
     return neuron
 
 
 # Test forward
-@pytest.mark.parametrize("spikes,trace_in,spikes_out", [
-    [torch.ones(1, 2, 2, 2)*4, torch.ones(2, 1, 2, 2, 2), torch.ones(1, 2, 2, 2, dtype=torch.uint8)]
+@pytest.mark.parametrize("spikes,spikes_out", [
+    [torch.ones(1, 2, 2, 2)*4, torch.ones(1, 2, 2, 2, dtype=torch.uint8)]
 ])
-def test_fede_forward(spikes, trace_in, spikes_out, fede_neuron):
+def test_lif_forward(spikes, spikes_out, if_neuron):
     # Test correct output spiking pattern
-    cell_out = fede_neuron.forward(spikes, trace_in)
+    cell_out = if_neuron.forward(spikes)
     assert (cell_out == spikes_out).all()
     
 
@@ -115,26 +115,26 @@ def test_lif_forward(spikes, spikes_out, lif_neuron):
 
 
 ##########################################################
-# Test IF neuron
+# Test Fede's neuron
 ##########################################################
 @pytest.fixture(scope="function", params=[
-    # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_t
-    ((1, 2, 2, 2), 1.,     0.,     1.,      1.,      1., 1,               2.)
+    # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t
+    ((1, 2, 2, 2), 1.,     0.,     1.,      1.,      1., 1,               2.,    2.)
 ])
-def if_neuron(request):
-    from pysnn.neuron import IFNeuronTrace
+def fede_neuron(request):
+    from pysnn.neuron import FedeNeuronTrace
 
     params = request.param
-    neuron = IFNeuronTrace(*params)
+    neuron = FedeNeuronTrace(*params)
     neuron.init_neuron()
     return neuron
 
 
 # Test forward
-@pytest.mark.parametrize("spikes,spikes_out", [
-    [torch.ones(1, 2, 2, 2)*4, torch.ones(1, 2, 2, 2, dtype=torch.uint8)]
+@pytest.mark.parametrize("spikes,trace_in,spikes_out", [
+    [torch.ones(1, 2, 2, 2)*4, torch.ones(1, 2, 2, 2, 2), torch.ones(1, 2, 2, 2, dtype=torch.uint8)]
 ])
-def test_lif_forward(spikes, spikes_out, if_neuron):
+def test_fede_forward(spikes, trace_in, spikes_out, fede_neuron):
     # Test correct output spiking pattern
-    cell_out = if_neuron.forward(spikes)
+    cell_out = fede_neuron.forward(spikes, trace_in)
     assert (cell_out == spikes_out).all()
