@@ -91,35 +91,31 @@ class Connection(nn.Module):
 
 
 #########################################################
-# Linear layer
+# Linear Layers
 #########################################################
-class LinearExponential(Connection):
-    r"""SNN linear (fully connected) layer with interface comparable to torch.nn.Linear."""
+# Base class
+class _Linear(Connection):
+    r"""SNN linear base class, comparable to torch.nn.Linear in format.
+    
+    This class implements basic methods and parameters that are shared among all version of Linear layers.
+    By inhereting from this class one can easily change voltage update, trace update and forward functionalities. 
+    """
     def __init__(self,
                  in_features,
                  out_features,
                  batch_size,
                  dt,
-                 delay,
-                 tau_t,
-                 alpha_t):
+                 delay):
         # Dimensions
         self.in_features = in_features
         self.out_features = out_features
         self.batch_size = batch_size
 
         self.synapse_shape = (batch_size, out_features, in_features)
-        super(LinearExponential, self).__init__(self.synapse_shape, dt, delay)
-
-        # Fixed parameters
-        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
-        self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
+        super(_Linear, self).__init__(self.synapse_shape, dt, delay)
 
         # Learnable parameters
         self.weight = Parameter(torch.Tensor(out_features, in_features))
-
-        # Initialize connection
-        self.init_connection()
 
     # Support function
     def unfold(self, x):
@@ -129,6 +125,26 @@ class LinearExponential(Connection):
     def fold(self, x):
         r"""Simply folds incoming trace or activation potentials to output format."""
         return x.view(self.batch_size, -1, self.out_features, self.in_features)  # TODO: Add posibility for a channel dim at dim 2
+
+
+class LinearExponential(_Linear):
+    r"""SNN linear (fully connected) layer with interface comparable to torch.nn.Linear."""
+    def __init__(self,
+                 in_features,
+                 out_features,
+                 batch_size,
+                 dt,
+                 delay,
+                 tau_t,
+                 alpha_t):
+        super(LinearExponential, self).__init__(in_features, out_features, batch_size, dt, delay)
+
+        # Fixed parameters
+        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
+        self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
+
+        # Initialize connection
+        self.init_connection()
 
     # Standard functions
     def update_trace(self, x):
@@ -150,8 +166,9 @@ class LinearExponential(Connection):
 
 
 #########################################################
-# Convolutional base class
+# Convolutional Layers
 #########################################################
+# Base class
 class _ConvNd(Connection):
     def __init__(self,
                  in_channels,
@@ -215,9 +232,6 @@ class _ConvNd(Connection):
         return x.view(self.batch_size, self.out_channels, *self.image_out_shape, -1)
 
 
-#########################################################
-# 2D Convolutional layer
-#########################################################
 class Conv2dExponential(_ConvNd):
     r"""Convolutional SNN layer interface comparable to torch.nn.Conv2d."""
     def __init__(self,
@@ -263,7 +277,7 @@ class Conv2dExponential(_ConvNd):
 
 
 #########################################################
-# Pooling
+# Pooling Layers
 #########################################################
 class MaxPool2d(_MaxPoolNd):
     r"""Simple port of PyTorch MaxPool2d with small adjustment for spiking operations.
