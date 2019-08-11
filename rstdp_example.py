@@ -22,7 +22,7 @@ dataset_path = "/home/basbuller/python_lib_sources/slayerPytorch/example/NMNISTs
 sample_file = "/home/basbuller/python_lib_sources/slayerPytorch/example/NMNISTsmall/train1K.txt"
 test_file = "/home/basbuller/python_lib_sources/slayerPytorch/example/NMNISTsmall/test100.txt"
 sample_length = 300
-num_workers = 0
+num_workers = 4
 batch_size = 20
 
 # Time and trace decay
@@ -43,7 +43,7 @@ delay = 1
 c_dynamics = (batch_size, dt, delay, tau_t, alpha_t)
 
 # Learning
-epochs = 50
+epochs = 1
 lr = 0.0001
 w_init = 0.5
 a = 0.5
@@ -124,11 +124,8 @@ test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, 
 # Training
 #########################################################
 device = torch.device("cuda")
-net = Network()
-net = net.to(torch.float16).cuda()
-
-# device = torch.device("cpu")
-# net = Network()
+net = Network().cuda()
+# net = net.to(torch.float16)
 
 for epoch in range(epochs):
     print("######################## Epoch {} ########################".format(epoch))

@@ -127,6 +127,7 @@ for batch in train_dataloader:
     for idx in range(batch.shape[1]):
         input = batch[:, idx:idx+1, :]
         out.append(net(input))
+    net.reset_state()
 
 output = torch.stack(out, dim=1)
 print(output.shape)

@@ -46,8 +46,4 @@ inputs.
   parameter __training__ is also used within STDP. Just make sure gradients are always turned off since we don't need those...
 - For connection class, make sure it can handle the transmission of multiple spike within the same synapse. Aka, it should be able to handle
   a new incoming spike while the previous one has not passed through the entire synapse or time delay.
-- Make sure all indexing operations are replace with matrix multiplications where possible. GPU is considerably better at floating point
-  operations than integer and bitwise operations.
-- Make both a LinearDelayed and LinearInstant layer
-- Move functionalities shared among multiple classes to functional folder.
-- Decide on where to check for refractory cells, it might be that the voltage update function is not the best place?
+- Allow for the trace being a vector of spikes instead of a scalar.

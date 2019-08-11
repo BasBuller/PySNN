@@ -108,7 +108,7 @@ class LinearExponential(Connection):
         self.out_features = out_features
         self.batch_size = batch_size
 
-        self.synapse_shape = (batch_size, out_features, in_features)  # TODO: Change the 1 to variable?
+        self.synapse_shape = (batch_size, out_features, in_features)
         super(LinearExponential, self).__init__(self.synapse_shape, dt, delay)
 
         # Fixed parameters
@@ -122,25 +122,31 @@ class LinearExponential(Connection):
         self.init_connection()
 
     # Support function
-    def fold_traces(self):
-        return self.trace.data.view(self.batch_size, -1, self.out_features, self.in_features)  # TODO: Add posibility for a channel dim at dim 2
+    def unfold(self, x):
+        r"""Placeholder for possible folding functionality."""
+        return x
+
+    def fold(self, x):
+        r"""Simply folds incoming trace or activation potentials to output format."""
+        return x.view(self.batch_size, -1, self.out_features, self.in_features)  # TODO: Add posibility for a channel dim at dim 2
 
     # Standard functions
     def update_trace(self, x):
         r"""Update trace according to exponential decay function and incoming spikes."""
-        sF._connection_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
+        self.trace = sF._connection_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
                                      self.dt)
 
     def activation_potential(self, x):
         r"""Determine activation potentials from each synapse for current time step."""
         out = x * self.weight
-        return out.view(self.batch_size, -1, self.out_features, self.in_features)
+        return self.fold(out)
 
     def forward(self, x):
         x = self.convert_spikes(x)
+        x = self.unfold(x)
         self.update_trace(x)
         x = self.propagate_spike(x)
-        return self.activation_potential(x), self.fold_traces()
+        return self.activation_potential(x), self.fold(self.trace)
 
 
 #########################################################
@@ -196,13 +202,17 @@ class _ConvNd(Connection):
         self.register_parameter("bias", None)
 
     # Support functions
-    def fold_im(self, x):
-        r"""Simply folds incoming image according to layer parameters."""
-        return x.view(self.batch_size, self.out_channels, *self.image_out_shape, -1)
+    def unfold(self, x):
+        r"""Simply unfolds incoming image according to layer parameters.
+        
+        Currently torch.nn.functional.unfold only support 4D tenors (BxCxHxW)!
+        """
+        # TODO: Possibly implement own folding function that supports 5D if needed
+        return F.unfold(x, self.kernel_size, self.dilation, self.padding, self.stride).unsqueeze(1)
 
-    def fold_traces(self):
-        r"""Simply folds incoming trace according to layer parameters."""
-        return self.trace.view(self.batch_size, self.out_channels, *self.image_out_shape, -1)
+    def fold(self, x):
+        r"""Simply folds incoming trace or activation potentials according to layer parameters."""
+        return x.view(self.batch_size, self.out_channels, *self.image_out_shape, -1)
 
 
 #########################################################
@@ -233,24 +243,15 @@ class Conv2dExponential(_ConvNd):
         # Intialize layer
         self.init_connection()
 
-    # Class specific support functions
-    def unfold(self, x):
-        r"""Simply unfolds incoming image according to layer parameters.
-        
-        Cannot be placed in base class due to the fact that unfold only support 4D tensors.
-        """
-        return F.unfold(x, self.kernel_size, self.dilation, self.padding, self.stride).unsqueeze(1)
-
     def activation_potential(self, x):
         r"""Determine activation potentials from each synapse for current time step."""
         x = x * self.weight.view(self.weight.shape[0], -1).unsqueeze(2)
-        x = self.fold_im(x)
-        return x
+        return self.fold(x)
 
     # Standard functions
     def update_trace(self, x):
         r"""Update trace according to exponential decay function and incoming spikes."""
-        sF._connection_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
+        self.trace = sF._connection_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
             self.dt)
 
     def forward(self, x):
@@ -258,7 +259,7 @@ class Conv2dExponential(_ConvNd):
         x = self.unfold(x)  # Till here it is a rather easy set of steps
         self.update_trace(x)
         x = self.propagate_spike(x)  # Output spikes
-        return self.activation_potential(x), self.fold_traces()
+        return self.activation_potential(x), self.fold(self.trace)
 
 
 #########################################################
