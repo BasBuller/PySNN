@@ -5,8 +5,8 @@ from torch.nn.parameter import Parameter
 from torch.nn.modules.utils import _pair
 from torch.nn.modules.pooling import _MaxPoolNd, _AdaptiveMaxPoolNd
 
-from snn.utils import _set_no_grad, conv2d_output_shape
-import snn.functional as sF
+from pysnn.utils import _set_no_grad, conv2d_output_shape
+import pysnn.functional as sF
 
 
 #########################################################
@@ -36,14 +36,14 @@ class Connection(nn.Module):
         else:
             raise TypeError("Incorrect data type provided for delay_init, please provide an int or FloatTensor")
 
-        # Fixed parameters
-        self.dt = Parameter(torch.tensor(dt, dtype=torch.float))
-
         # Learnable parameters
         if delay_init is not None:
             self.delay_init = Parameter(delay_init)
         else:
             self.register_parameter("delay_init", None)
+
+        # Fixed parameters
+        self.dt = Parameter(torch.tensor(dt, dtype=torch.float))
 
         # State parameters
         self.trace = Parameter(torch.Tensor(*shape))
@@ -64,8 +64,6 @@ class Connection(nn.Module):
 
     def reset_parameters(self):
         r"""Reinnitialize learnable network Parameters (e.g. weights)."""
-        if self.delay_init is not None:
-            self.delay_init.fill_(0)
         nn.init.uniform_(self.weight)
 
     def init_connection(self):
@@ -93,9 +91,43 @@ class Connection(nn.Module):
 
 
 #########################################################
-# Linear layer
+# Linear Layers
 #########################################################
-class LinearExponential(Connection):
+# Base class
+class _Linear(Connection):
+    r"""SNN linear base class, comparable to torch.nn.Linear in format.
+    
+    This class implements basic methods and parameters that are shared among all version of Linear layers.
+    By inhereting from this class one can easily change voltage update, trace update and forward functionalities. 
+    """
+    def __init__(self,
+                 in_features,
+                 out_features,
+                 batch_size,
+                 dt,
+                 delay):
+        # Dimensions
+        self.in_features = in_features
+        self.out_features = out_features
+        self.batch_size = batch_size
+
+        self.synapse_shape = (batch_size, out_features, in_features)
+        super(_Linear, self).__init__(self.synapse_shape, dt, delay)
+
+        # Learnable parameters
+        self.weight = Parameter(torch.Tensor(out_features, in_features))
+
+    # Support function
+    def unfold(self, x):
+        r"""Placeholder for possible folding functionality."""
+        return x
+
+    def fold(self, x):
+        r"""Simply folds incoming trace or activation potentials to output format."""
+        return x.view(self.batch_size, -1, self.out_features, self.in_features)  # TODO: Add posibility for a channel dim at dim 2
+
+
+class LinearExponential(_Linear):
     r"""SNN linear (fully connected) layer with interface comparable to torch.nn.Linear."""
     def __init__(self,
                  in_features,
@@ -105,49 +137,38 @@ class LinearExponential(Connection):
                  delay,
                  tau_t,
                  alpha_t):
-        # Dimensions
-        self.in_features = in_features
-        self.out_features = out_features
-        self.batch_size = batch_size
-
-        self.synapse_shape = (batch_size, out_features, in_features)
-        super(LinearExponential, self).__init__(self.synapse_shape, dt, delay)
+        super(LinearExponential, self).__init__(in_features, out_features, batch_size, dt, delay)
 
         # Fixed parameters
         self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
         self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
 
-        # Learnable parameters
-        self.weight = Parameter(torch.Tensor(out_features, in_features))
-
         # Initialize connection
         self.init_connection()
-
-    # Support function
-    def fold_traces(self):
-        return self.trace.data.view(self.batch_size, -1, self.out_features)
 
     # Standard functions
     def update_trace(self, x):
         r"""Update trace according to exponential decay function and incoming spikes."""
-        sF._connection_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
+        self.trace = sF._connection_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
                                      self.dt)
 
     def activation_potential(self, x):
         r"""Determine activation potentials from each synapse for current time step."""
-        out = (x * self.weight).sum(2, keepdim=True)
-        return out.view(self.batch_size, -1, self.out_features)
+        out = x * self.weight
+        return self.fold(out)
 
     def forward(self, x):
         x = self.convert_spikes(x)
+        x = self.unfold(x)
         self.update_trace(x)
         x = self.propagate_spike(x)
-        return self.activation_potential(x), self.fold_traces()
+        return self.activation_potential(x), self.fold(self.trace)
 
 
 #########################################################
-# Convolutional base class
+# Convolutional Layers
 #########################################################
+# Base class
 class _ConvNd(Connection):
     def __init__(self,
                  in_channels,
@@ -198,18 +219,19 @@ class _ConvNd(Connection):
         self.register_parameter("bias", None)
 
     # Support functions
-    def fold_im(self, x):
-        r"""Simply folds incoming image according to layer parameters."""
-        return x.view(-1, x.shape[1], *self.image_out_shape)
+    def unfold(self, x):
+        r"""Simply unfolds incoming image according to layer parameters.
+        
+        Currently torch.nn.functional.unfold only support 4D tenors (BxCxHxW)!
+        """
+        # TODO: Possibly implement own folding function that supports 5D if needed
+        return F.unfold(x, self.kernel_size, self.dilation, self.padding, self.stride).unsqueeze(1)
 
-    def fold_traces(self):
-        r"""Simply folds incoming trace according to layer parameters."""
-        return self.trace.view(-1, self.batch_size, self.out_channels, *self.image_out_shape)
+    def fold(self, x):
+        r"""Simply folds incoming trace or activation potentials according to layer parameters."""
+        return x.view(self.batch_size, self.out_channels, *self.image_out_shape, -1)
 
 
-#########################################################
-# 2D Convolutional layer
-#########################################################
 class Conv2dExponential(_ConvNd):
     r"""Convolutional SNN layer interface comparable to torch.nn.Conv2d."""
     def __init__(self,
@@ -235,25 +257,15 @@ class Conv2dExponential(_ConvNd):
         # Intialize layer
         self.init_connection()
 
-    # Class specific support functions
-    def unfold(self, x):
-        r"""Simply unfolds incoming image according to layer parameters.
-        
-        Cannot be placed in base class due to the fact that unfold only support 4D tensors.
-        """
-        return F.unfold(x, self.kernel_size, self.dilation, self.padding, self.stride).unsqueeze(1)
-
     def activation_potential(self, x):
         r"""Determine activation potentials from each synapse for current time step."""
         x = x * self.weight.view(self.weight.shape[0], -1).unsqueeze(2)
-        x = x.sum(2, keepdim=True)
-        x = x.view(-1, x.shape[1], *self.image_out_shape)
-        return x
+        return self.fold(x)
 
     # Standard functions
     def update_trace(self, x):
         r"""Update trace according to exponential decay function and incoming spikes."""
-        sF._connection_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
+        self.trace = sF._connection_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
             self.dt)
 
     def forward(self, x):
@@ -261,11 +273,11 @@ class Conv2dExponential(_ConvNd):
         x = self.unfold(x)  # Till here it is a rather easy set of steps
         self.update_trace(x)
         x = self.propagate_spike(x)  # Output spikes
-        return self.activation_potential(x), self.fold_traces()
+        return self.activation_potential(x), self.fold(self.trace)
 
 
 #########################################################
-# Pooling
+# Pooling Layers
 #########################################################
 class MaxPool2d(_MaxPoolNd):
     r"""Simple port of PyTorch MaxPool2d with small adjustment for spiking operations.
@@ -293,88 +305,3 @@ class AdaptiveMaxPool2d(_AdaptiveMaxPoolNd):
         x = x.to(torch.float32, non_blocking=True)
         x = F.adaptive_max_pool2d(x, self.output_size, self.return_indices)
         return x > 0
-
-
-# #########################################################
-# # 2D Convolutional layer
-# #########################################################
-# class Conv2dExponentialOld(Connection):
-#     r"""Convolutional SNN layer interface comparable to torch.nn.Conv2d."""
-#     def __init__(self,
-#                  in_channels,
-#                  out_channels,
-#                  kernel_size,
-#                  h_in,
-#                  w_in,
-#                  batch_size,
-#                  dt,
-#                  delay,
-#                  tau_t,
-#                  alpha_t,
-#                  stride=1,
-#                  padding=0,
-#                  dilation=1):
-#         # Convolution parameters
-#         self.batch_size = batch_size
-#         self.out_channels = out_channels
-#         self.kernel_size = _pair(kernel_size)
-#         self.stride = _pair(stride)
-#         self.padding = _pair(padding)
-#         self.dilation = _pair(dilation)
-
-#         # Synapse connections shape
-#         empty_input = torch.zeros(batch_size, in_channels, h_in, w_in)
-#         synapse_shape = list(self.unfold(empty_input).shape)
-#         synapse_shape[1] = out_channels
-#         self.synapse_shape = synapse_shape
-
-#         # Super init
-#         super(Conv2dExponentialOld, self).__init__(synapse_shape, dt, delay)
-
-#         # Output image size
-#         self.image_out_shape = conv2d_output_shape(h_in, w_in, self.kernel_size, self.stride,
-#                                                    self.padding, self.dilation)
-
-#         # Weight parameter
-#         self.weight = Parameter(torch.Tensor(out_channels, in_channels, *self.kernel_size))
-#         self.register_parameter("bias", None)
-
-#         # Fixed parameters
-#         self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
-#         self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
-
-#         # Intialize layer
-#         self.init_connection()
-
-#     # Support functions
-#     def unfold(self, x):
-#         r"""Simply unfolds incoming image according to layer parameters."""
-#         return F.unfold(x, self.kernel_size, self.dilation, self.padding, self.stride).unsqueeze(1)
-
-#     def fold_im(self, x):
-#         r"""Simply folds incoming image according to layer parameters."""
-#         return x.view(-1, x.shape[1], *self.image_out_shape)
-
-#     def fold_traces(self):
-#         r"""Simply folds incoming trace according to layer parameters."""
-#         return self.trace.view(-1, self.batch_size, self.out_channels, *self.image_out_shape)
-
-#     # Standard functions
-#     def update_trace(self, x):
-#         r"""Update trace according to exponential decay function and incoming spikes."""
-#         sF._connection_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
-#             self.dt)
-
-#     def activation_potential(self, x):
-#         r"""Determine activation potentials from each synapse for current time step."""
-#         x = x * self.weight.view(self.weight.shape[0], -1).unsqueeze(2)
-#         x = x.sum(2, keepdim=True)
-#         x = x.view(-1, x.shape[1], *self.image_out_shape)
-#         return x
-
-#     def forward(self, x):
-#         x = self.convert_spikes(x)
-#         x = self.unfold(x)  # Till here it is a rather easy set of steps
-#         self.update_trace(x)
-#         x = self.propagate_spike(x)  # Output spikes
-#         return self.activation_potential(x), self.fold_traces()

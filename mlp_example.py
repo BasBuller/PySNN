@@ -3,9 +3,10 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from snn.connection import LinearExponential
-from snn.neuron import FedeNeuronTrace
-from snn.learning import FedeSTDP
+from pysnn.network import SNNNetwork
+from pysnn.connection import LinearExponential
+from pysnn.neuron import FedeNeuronTrace
+from pysnn.learning import FedeSTDP
 
 from event_pytorch.event_dataloaders import (
     SineData,
@@ -54,7 +55,7 @@ a = 0.5
 #########################################################
 # Network
 #########################################################
-class Network(nn.Module):
+class Network(SNNNetwork):
 # class Network(torch.jit.ScriptModule):
     def __init__(self):
         super(Network, self).__init__()
@@ -127,6 +128,7 @@ for batch in train_dataloader:
     for idx in range(batch.shape[1]):
         input = batch[:, idx:idx+1, :]
         out.append(net(input))
+    net.reset_state()
 
 output = torch.stack(out, dim=1)
 print(output.shape)

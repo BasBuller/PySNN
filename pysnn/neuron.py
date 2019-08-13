@@ -61,7 +61,16 @@ class Neuron(nn.Module):
         self.refrac_counts += self.duration_refrac * self.convert_spikes(spikes)
         self.v_cell.masked_fill_(spikes, 0)
 
+    def unfold(self, x):
+        r"""Move the last dimension (all incoming to single neuron in current layer) to first dim.
+
+        This is done because PyTorch broadcasting does not support broadcasting over the last dim.
+        """
+        shape = x.shape
+        return x.view(shape[-1], *shape[:-1])
+
     def convert_spikes(self, spikes):
+        r"""Cast uint8 spikes to datatype that is used for voltage and weights"""
         return spikes.to(self.v_cell.dtype)
 
     def reset_state(self):
@@ -100,16 +109,19 @@ class IFNeuronTrace(Neuron):
                  alpha_v,
                  alpha_t,
                  dt,
-                 duration_refrac):
+                 duration_refrac,
+                 tau_t):
         super(IFNeuronTrace, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac)
 
+        #Fixed parameters
+        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
         self.init_neuron()
 
     def update_trace(self, x):
-        sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
+        self.trace = sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
 
     def update_voltage(self, x):
-        sf._if_voltage_update(self.v_cell, x, self.alpha_v, self.refrac_counts)
+        self.v_cell = sf._if_voltage_update(self.v_cell, x, self.alpha_v, self.refrac_counts)
 
     def forward(self, x):
         self.update_trace(x)
@@ -142,11 +154,11 @@ class LIFNeuronTrace(Neuron):
         self.init_neuron()
 
     def update_trace(self, x):
-        sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
+        self.trace = sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
 
     def update_voltage(self, x):
-        sf._lif_voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v,
-            self.dt, self.recfrac_counts)
+        self.v_cell = sf._lif_voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v,
+            self.dt, self.refrac_counts)
 
     def forward(self, x):
         self.update_trace(x)
@@ -184,10 +196,10 @@ class FedeNeuronTrace(Neuron):
         self.init_neuron()
 
     def update_trace(self, x):
-        sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
+        self.trace = sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
 
     def update_voltage(self, x, pre_trace):
-        sf._fede_voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v,
+        self.v_cell = sf._fede_voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v,
             self.dt, self.refrac_counts, pre_trace)
 
     def forward(self, x, pre_trace):
