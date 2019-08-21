@@ -47,39 +47,61 @@ def _train_test_split_classification(datasets, labels=None, train_size=0.8, seed
     return train, test
 
 
-#########################################################
-# Neurmorphic Caltech 101
-#########################################################
-class NCaltechDataset(Dataset):
-    def __init__(self, root_dir, im_transform=None, lbl_transform=None):
-        # Make list of file names and labels
-        train_names = []
-        train_labels = []
-        for label, obj in enumerate(os.listdir(root_dir)):
-            obj_names = os.listdir(os.path.join(root_dir, obj))
-            obj_names = [os.path.join(obj, obj_name) for obj_name in obj_names]
-            train_names += obj_names
-            
-            obj_labels = np.ones(len(obj_names), dtype=int) * label
-            train_labels += obj_labels.tolist()
-        
-        # Make dataframe containing info
-        self.im_info = pd.DataFrame({
-            'name': train_names,
-            'labels': train_labels
-        })
-        self.root_dir = root_dir
+def _list_dir_content(root_dir):
+    content = {}
+    for root, dirs, files in os.walk(root_dir):
+        for label, name in enumerate(dirs):
+            subdir = os.path.join(root, name)
+            dir_content = os.listdir(subdir) 
+            content[name] = [os.path.join(subdir, im) for im in dir_content]
+    return content
+
+
+def _concat_dir_content(content):
+    ims = []
+    labels = []
+    names = []
+    for idx, (name, data) in enumerate(content.items()):
+        if not isinstance(data, (list, tuple)):
+            data = [data]
+        ims += data
+        labels += [idx for _ in range(len(data))]
+        names += [name for _ in range(len(data))]
+    df = pd.DataFrame({"sample": ims, "label": labels})
+    return df, names
+
+
+def train_test(root_dir, train_size=0.8, seed=42):
+    content = _list_dir_content(root_dir)
+    data, _ = _concat_dir_content(content)
+    train, test = _train_test_split_classification(data, train_size=train_size, seed=seed)
+    return train, test
+
+
+class NeuromorphicDataset(Dataset):
+    def __init__(self, data, sampling_time, sample_length, height, width, im_transform=None, lbl_transform=None):
+        self.data = data
         self.im_transform = im_transform
         self.lbl_transform = lbl_transform
+
+        self.sampling_time = sampling_time
+        self.sample_length = sample_length
+        self.height = height
+        self.width = width
+        self.n_time_bins = int(sample_length / sampling_time)
+        self.im_template = torch.zeros((2, height, width, self.n_time_bins))
         
     def __len__(self):
-        return len(self.im_info)
+        return len(self.data)
     
     def __getitem__(self, idx):
-        pnt_name = os.path.join(self.root_dir, self.im_info.iloc[idx, 0])
-        with open(pnt_name, 'rb') as f:
-            sample = pickle.load(f)
-        label = self.im_info.iloc[idx, 1]
+        # Image sample
+        im_name = self.data.iloc[idx, 0]
+        input_spikes = read_2d_spikes(im_name)
+        sample = input_spikes.to_spike_tensor(self.im_template, sampling_time=self.sampling_time)
+
+        # Label
+        label = self.data.iloc[idx, 1]
         
         # Apply transforms
         if self.im_transform:
@@ -91,88 +113,85 @@ class NCaltechDataset(Dataset):
 
 
 #########################################################
+# Neurmorphic Caltech 101
+#########################################################
+def ncaltech_train_test(root="/home/basbuller/stack/thesis/code/datasets/n-caltech101/Caltech101/", 
+                        sampling_time=1, 
+                        sample_length=300, 
+                        height=200, 
+                        width=300, 
+                        im_transform=None, 
+                        lbl_transform=None):
+    train, test = train_test(root)
+    train_dataset = NeuromorphicDataset(train, sampling_time, sample_length, height, width, 
+                                        im_transform=im_transform, lbl_transform=lbl_transform)
+    test_dataset = NeuromorphicDataset(test, sampling_time, sample_length, height, width, 
+                                        im_transform=im_transform, lbl_transform=lbl_transform)
+    return train_dataset, test_dataset
+
+
+#########################################################
 # Neuromorphic MNIST
 #########################################################
-class NMNISTDataset(Dataset):
-    def __init__(self, dataset_path, sample_file, sampling_time, sample_length):
-        self.path = dataset_path 
-        self.samples = np.loadtxt(sample_file).astype('int')
-        self.sampling_time = sampling_time
-        self.n_time_bins = int(sample_length / sampling_time)
+def nmnist_train_test(root="/home/basbuller/stack/thesis/code/datasets/n-mnist/",
+                      sampling_time=1, 
+                      sample_length=300, 
+                      height=34, 
+                      width=34, 
+                      im_transform=None, 
+                      lbl_transform=None):
+    train_content = _list_dir_content(root + "Train")
+    train, _ = _concat_dir_content(train_content)
+    train_dataset = NeuromorphicDataset(train, sampling_time, sample_length, height, width, 
+                                        im_transform=im_transform, lbl_transform=lbl_transform)
 
-    def __getitem__(self, index):
-        input_index  = self.samples[index, 0]
-        class_label  = self.samples[index, 1]
-        
-        input_spikes = read_2d_spikes(self.path + str(input_index.item()) + '.bs2')
-        input_spikes = input_spikes.to_spike_tensor(torch.zeros((2,34,34,self.n_time_bins)), 
-                                                    sampling_time=self.sampling_time)
-        desired_class = torch.zeros((10, 1, 1, 1))
-        desired_class[class_label,...] = 1
-        return input_spikes, desired_class, class_label
-    
-    def __len__(self):
-        return self.samples.shape[0]
+    test_content = _list_dir_content(root + "Test")
+    test, _ = _concat_dir_content(test_content)
+    test_dataset = NeuromorphicDataset(test, sampling_time, sample_length, height, width, 
+                                        im_transform=im_transform, lbl_transform=lbl_transform)
+
+    return train_dataset, test_dataset
 
 
-############################
-# N-Cars
-############################
-class NCarsDataset(Dataset):
-    def __init__(self, root_dir, sampling_time, sample_length):
-        # Construct dataframe with image names and labels
-        car_names = os.listdir(os.path.join(root_dir, 'cars'))
-        car_names = [os.path.join('cars', car) for car in car_names]
-        car_labels = np.ones(len(car_names), dtype=int)
-        background_names = os.listdir(os.path.join(root_dir, 'background'))
-        background_names = [os.path.join('background', backgr) for backgr in background_names]
-        background_labels = np.zeros(len(background_names), dtype=int)
-        names = car_names + background_names
-        labels = car_labels.tolist() + background_labels.tolist()
-        
-        # Assign values to class
-        self.im_info = pd.DataFrame({
-            'name':  names,
-            'label': labels})
-        self.root_dir = root_dir
-        self.im_transform = im_transform
-        self.lbl_transform = lbl_transform
-        self.sampling_time = sampling_time
-        self.n_time_bins = int(sample_length / sampling_time)
-        
-    def __len__(self):
-        return len(self.im_info)
-    
-    def __getitem__(self, idx):
-        # Load image & label
-        im_name = os.path.join(self.root_dir, self.im_info.iloc[idx, 0])
-        image = read_2d_spikes(im_name)
-        if len(image.x) > len(image.y):
-            image.x = image.x[:len(image.y)]
-        image = image.to_spike_tensor(torch.zeros(2,100,120,self.n_time_bins),
-                                    sampling_time=self.sampling_time)
+#########################################################
+# Neuromorphic MNIST
+#########################################################
+def ncars_train_test(root="/home/basbuller/stack/thesis/code/datasets/n-cars/",
+                     sampling_time=1, 
+                     sample_length=100, 
+                     height=100, 
+                     width=120, 
+                     im_transform=None, 
+                     lbl_transform=None):
+    train_content = _list_dir_content(root + "train")
+    train, _ = _concat_dir_content(train_content)
+    train_dataset = NeuromorphicDataset(train, sampling_time, sample_length, height, width, 
+                                        im_transform=im_transform, lbl_transform=lbl_transform)
 
-        label = self.im_info.iloc[idx, 1] 
-            
-        sample = {'image': image, 'label': label}
-        return sample
+    test_content = _list_dir_content(root + "test")
+    test, _ = _concat_dir_content(test_content)
+    test_dataset = NeuromorphicDataset(test, sampling_time, sample_length, height, width, 
+                                        im_transform=im_transform, lbl_transform=lbl_transform)
+
+    return train_dataset, test_dataset
 
 
 if __name__ == "__main__":
-    # a = ["a", "b", "c", "d", "e"]
-    a = np.random.rand(10)
-    b = np.random.rand(10)
-    data = {"a": a, "b": b}
-    df = pd.DataFrame(data)
-    print(df)
-    print("\n")
+    ncalt_train, ncalt_test = ncaltech_train_test()
+    nmnist_train, nmnist_test = nmnist_train_test()
+    ncars_train, ncars_test = ncars_train_test()
 
-    train, test = _train_test_split_classification(a, b)
-    print(train)
-    print(test)
-    print("\n")
+    print("caltech")
+    print(ncalt_train[0][0].shape)
+    print(ncalt_train[0][1])
+    print(len(ncalt_train))
 
-    train, test = _train_test_split_classification(df)
-    print(train)
-    print(test)
-    
+    print("\nnmnist")
+    print(nmnist_train[0][0].shape)
+    print(nmnist_train[0][1])
+    print(len(nmnist_train))
+
+    print("\nncars")
+    print(ncars_train[0][0].shape)
+    print(ncars_train[0][1])
+    print(len(ncars_train))
