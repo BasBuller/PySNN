@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import Dataset
 
-from file_io import Events, read_2d_spikes
+from .file_io import Events, read_2d_spikes
 
 
 #########################################################
@@ -195,3 +195,75 @@ if __name__ == "__main__":
     print(ncars_train[0][0].shape)
     print(ncars_train[0][1])
     print(len(ncars_train))
+
+
+############################
+# Boolean
+############################
+class _Boolean(Dataset):
+    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None):
+        self.data_encoder = data_encoder
+        self.data_transform = data_transform
+        self.lbl_transform = lbl_transform
+        self.noise_transform = noise_transform
+        self.data = torch.tensor([[0, 0], [1, 0], [0, 1], [1, 1]])
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        sample = self.data[idx]
+        label = self.labels[idx]
+
+        # Sample transforms
+        if self.noise_transform:
+            sample = self.noise_transform(sample, label)
+        if self.data_transform:
+            sample = self.data_transform(sample)
+        if self.data_encoder:
+            sample = self.data_encoder(sample)
+
+        # Label transforms
+        if self.lbl_transform:
+            label = self.lbl_transform(label)
+
+        return sample, label
+
+
+class XOR(_Boolean):
+    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None):
+        super(XOR, self).__init__(data_encoder, data_transform, lbl_transform)
+        self.labels = torch.tensor([[0], [1], [1], [0]])
+
+
+class AND(_Boolean):
+    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None):
+        super(AND, self).__init__(data_encoder, data_transform, lbl_transform)
+        self.labels = torch.tensor([[0], [0], [0], [1]])
+
+
+class OR(_Boolean):
+    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None):
+        super(OR, self).__init__(data_encoder, data_transform, lbl_transform)
+        self.labels = torch.tensor([[0], [1], [1], [1]])
+
+
+############################
+# Transforms
+############################
+class DiscretizeFloat():
+    def __call__(self, tensor):
+        tensor = tensor.int()
+        return tensor.float()
+
+
+class BooleanNoisy():
+    def __init__(self, low_thresh, high_thresh):
+        self.low_distr = torch.distributions.uniform.Uniform(0., low_thresh) 
+        self.high_distr = torch.distributions.uniform.Uniform(high_thresh, 1.)
+
+    def __call__(self, x):
+        if x == 0:
+            return self.low_distr.sample()
+        elif x == 1:
+            return self.high_distr.sample()

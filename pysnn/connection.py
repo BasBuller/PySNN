@@ -126,6 +126,48 @@ class _Linear(Connection):
         r"""Simply folds incoming trace or activation potentials to output format."""
         return x.view(self.batch_size, -1, self.out_features, self.in_features)  # TODO: Add posibility for a channel dim at dim 2
 
+    def update_trace(self, t_in):
+        r"""Propagate traces incoming from pre-synaptic neuron through all its outgoing connections."""
+        # TODO: Unsure if this clone is needed or not. Might even have to use repeat()
+        self.trace.copy_(t_in.expand(-1, self.out_features, -1).contiguous())
+
+
+
+class Linear(_Linear):
+    r"""SNN linear (fully connected) layer with interface comparable to torch.nn.Linear."""
+    def __init__(self,
+                 in_features,
+                 out_features,
+                 batch_size,
+                 dt,
+                 delay,
+                 tau_t,
+                 alpha_t):
+        super(Linear, self).__init__(in_features, out_features, batch_size, dt, delay)
+
+        # Fixed parameters
+        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
+        self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
+
+        # Initialize connection
+        self.init_connection()
+
+    # Standard functions
+    # def update_trace(self, x):
+    #     r"""Update trace according to exponential decay function and incoming spikes."""
+    #     self.trace = sF._linear_trace_update(self.trace, x, self.alpha_t, self.tau_t)
+
+    def activation_potential(self, x):
+        r"""Determine activation potentials from each synapse for current time step."""
+        out = x * self.weight
+        return self.fold(out)
+
+    def forward(self, x, trace_in):
+        x = self.convert_spikes(x)
+        self.update_trace(trace_in)
+        x = self.propagate_spike(x)
+        return self.activation_potential(x), self.fold(self.trace)
+
 
 class LinearExponential(_Linear):
     r"""SNN linear (fully connected) layer with interface comparable to torch.nn.Linear."""
@@ -147,20 +189,21 @@ class LinearExponential(_Linear):
         self.init_connection()
 
     # Standard functions
-    def update_trace(self, x):
-        r"""Update trace according to exponential decay function and incoming spikes."""
-        self.trace = sF._connection_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
-                                     self.dt)
+    # def update_trace(self, x):
+    #     r"""Update trace according to exponential decay function and incoming spikes."""
+    #     self.trace = sF._exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
+    #                                  self.dt)
 
     def activation_potential(self, x):
         r"""Determine activation potentials from each synapse for current time step."""
         out = x * self.weight
+        # out = x @ self.weight
+        # out = x @ self.weight, for automatically summing trace dimension
         return self.fold(out)
 
-    def forward(self, x):
+    def forward(self, x, trace_in):
         x = self.convert_spikes(x)
-        x = self.unfold(x)
-        self.update_trace(x)
+        self.update_trace(trace_in)
         x = self.propagate_spike(x)
         return self.activation_potential(x), self.fold(self.trace)
 
@@ -231,6 +274,9 @@ class _ConvNd(Connection):
         r"""Simply folds incoming trace or activation potentials according to layer parameters."""
         return x.view(self.batch_size, self.out_channels, *self.image_out_shape, -1)
 
+    def update_trace(self, trace_in):
+        self.trace.copy_(trace_in.expand(-1, self.out_channels, -1, -1).contiguous())
+
 
 class Conv2dExponential(_ConvNd):
     r"""Convolutional SNN layer interface comparable to torch.nn.Conv2d."""
@@ -263,10 +309,10 @@ class Conv2dExponential(_ConvNd):
         return self.fold(x)
 
     # Standard functions
-    def update_trace(self, x):
-        r"""Update trace according to exponential decay function and incoming spikes."""
-        self.trace = sF._connection_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
-            self.dt)
+    # def update_trace(self, x):
+    #     r"""Update trace according to exponential decay function and incoming spikes."""
+    #     self.trace = sF._exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
+    #         self.dt)
 
     def forward(self, x):
         x = self.convert_spikes(x)

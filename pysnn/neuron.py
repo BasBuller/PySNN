@@ -7,6 +7,50 @@ import pysnn.functional as sf
 
 
 ######################################################### 
+# Input Neuron
+#########################################################
+class Input(nn.Module):
+    r"""Simple feed-through layer of neurons used for storing a trace."""
+    def __init__(self, cells_shape, dt):
+        super(Input, self).__init__()
+        self.trace = Parameter(torch.zeros(*cells_shape, dtype=torch.float))
+        self.dt = Parameter(torch.tensor(dt, dtype=torch.float))
+
+    def reset_state(self):
+        r"""Reset cell states that accumulate over time during simulation."""
+        self.trace.fill_(0)
+
+    def no_grad(self):
+        r"""Turn off learning and gradient storing."""
+        _set_no_grad(self)
+
+    def init_neuron(self):
+        r"""Initialize state, parameters and turn off gradients."""
+        self.no_grad()
+        self.reset_state()
+
+    def convert_input(self, x):
+        return x.type(self.trace.dtype)
+
+
+class InputTraceExponential(Input):
+    def __init__(self, cells_shape, alpha_t, dt, tau_t):
+        super(InputTraceExponential, self).__init__(cells_shape, dt)
+        self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
+        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
+
+        self.init_neuron()
+
+    def update_trace(self, x):
+        x = self.convert_input(x)
+        self.trace = sf._exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
+
+    def forward(self, x):
+        self.update_trace(x)
+        return x, self.trace
+
+
+######################################################### 
 # Base Neuron
 #########################################################
 class Neuron(nn.Module):
@@ -61,6 +105,10 @@ class Neuron(nn.Module):
         self.refrac_counts += self.duration_refrac * self.convert_spikes(spikes)
         self.v_cell.masked_fill_(spikes, 0)
 
+    def fold(self, x):
+        r"""Fold incoming spike train by summing last dimension."""
+        return x.sum(-1)
+
     def unfold(self, x):
         r"""Move the last dimension (all incoming to single neuron in current layer) to first dim.
 
@@ -100,7 +148,7 @@ class Neuron(nn.Module):
 #########################################################
 # IF Neuron
 #########################################################
-class IFNeuronTrace(Neuron):
+class IFNeuronTraceLinear(Neuron):
     r"""Integrate and Fire neuron."""
     def __init__(self,
                  cells_shape,
@@ -118,23 +166,56 @@ class IFNeuronTrace(Neuron):
         self.init_neuron()
 
     def update_trace(self, x):
-        self.trace = sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
+        self.trace = sf._linear_trace_update(self.trace, x, self.alpha_t, self.tau_t)
 
     def update_voltage(self, x):
         self.v_cell = sf._if_voltage_update(self.v_cell, x, self.alpha_v, self.refrac_counts)
 
     def forward(self, x):
+        x = self.fold(x)
         self.update_trace(x)
         self.update_voltage(x)
         spikes = self.spiking()
         self.refrac(spikes)
-        return spikes
+        return spikes, self.trace
+
+
+class IFNeuronTraceExponential(Neuron):
+    r"""Integrate and Fire neuron."""
+    def __init__(self,
+                 cells_shape,
+                 thresh,
+                 v_rest,
+                 alpha_v,
+                 alpha_t,
+                 dt,
+                 duration_refrac,
+                 tau_t):
+        super(IFNeuronTraceExponential, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac)
+
+        #Fixed parameters
+        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
+        self.init_neuron()
+
+    def update_trace(self, x):
+        self.trace = sf._exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
+
+    def update_voltage(self, x):
+        self.v_cell = sf._if_voltage_update(self.v_cell, x, self.alpha_v, self.refrac_counts)
+
+    def forward(self, x):
+        x = self.fold(x)
+        self.update_trace(x)
+        self.update_voltage(x)
+        spikes = self.spiking()
+        self.refrac(spikes)
+        return spikes, self.trace
 
 
 #########################################################
 # LIF Neuron
 #########################################################
-class LIFNeuronTrace(Neuron):
+class LIFNeuronTraceExponential(Neuron):
     r"""Leaky Integrate and Fire neuron."""
     def __init__(self,
                  cells_shape,
@@ -146,7 +227,7 @@ class LIFNeuronTrace(Neuron):
                  duration_refrac,  # From here on class specific params
                  tau_v,
                  tau_t):
-        super(LIFNeuronTrace, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac)
+        super(LIFNeuronTraceExponential, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac)
 
         # Fixed parameters
         self.tau_v = Parameter(torch.tensor(tau_v, dtype=torch.float))
@@ -154,18 +235,19 @@ class LIFNeuronTrace(Neuron):
         self.init_neuron()
 
     def update_trace(self, x):
-        self.trace = sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
+        self.trace = sf._exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
 
     def update_voltage(self, x):
         self.v_cell = sf._lif_voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v,
             self.dt, self.refrac_counts)
 
     def forward(self, x):
+        x = self.fold(x)
         self.update_trace(x)
         self.update_voltage(x)
         spikes = self.spiking()
         self.refrac(spikes)
-        return spikes
+        return spikes, self.trace
 
 
 #########################################################
@@ -196,15 +278,16 @@ class FedeNeuronTrace(Neuron):
         self.init_neuron()
 
     def update_trace(self, x):
-        self.trace = sf._neuron_exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
+        self.trace = sf._exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
 
     def update_voltage(self, x, pre_trace):
         self.v_cell = sf._fede_voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v,
             self.dt, self.refrac_counts, pre_trace)
 
     def forward(self, x, pre_trace):
+        x = self.fold(x)
         self.update_trace(x)
         self.update_voltage(x, pre_trace)
         spikes = self.spiking()
         self.refrac(spikes)
-        return spikes
+        return spikes, self.trace

@@ -16,7 +16,7 @@ class LearningRule(nn.Module):
                  lr):
         super(LearningRule, self).__init__()
         self.connections = connections
-        self.lr = Parameter(torch.tensor(lr, dtype=torch.float))
+        self.lr = lr
 
     def no_grad(self):
         _set_no_grad(self)
@@ -32,7 +32,7 @@ class LearningRule(nn.Module):
 #########################################################
 # Fede STDP
 #########################################################
-def fede_ltp_ltd(w, w_init, trace, a):
+def _fede_ltp_ltd(w, w_init, trace, a):
     # LTP computation
     ltp_w = torch.exp(-(w - w_init))
     ltp_t = torch.exp(trace) - a
@@ -68,7 +68,7 @@ class FedeSTDP(LearningRule):
             trace = connection.trace.data.view(-1, *w.shape)
 
             # LTP and LTD
-            ltp, ltd = fede_ltp_ltd(w, self.w_init, trace, self.a)
+            ltp, ltd = _fede_ltp_ltd(w, self.w_init, trace, self.a)
 
             # Perform weight update
             connection.weight.data += self.lr * (ltp + ltd).mean(0)
@@ -125,3 +125,38 @@ class RSTDPRateSingleElement(LearningRule):
 
         self.activity += x.to(self.activity.dtype)
         self.counter += 1
+
+
+#########################################################
+# MSTDPETLinear
+#########################################################
+class MSTDPETLinear(LearningRule):
+    r"""Apply MSTDP from (Florian 2007) to the provided connections.
+    
+    Uses just a single, scalar reward value.
+    Update rule can be applied at any desired time step.
+
+    The connection parameter is a list of dictionaries, each dict containing the following keys:
+        - weights: weight Parameter for connection.
+        - pre_syn_trace: pre synaptic traces.
+        - post_syn_trace: post synaptic traces.
+    """
+    def __init__(self, 
+                 connections, 
+                 lr,
+                 dt,
+                 w_min=0.,
+                 w_max=4.):
+        super(MSTDPETLinear, self).__init__(connections, lr)
+        self.dt = dt
+        self.w_min = w_min
+        self.w_max = w_max
+
+    def forward(self, reward):
+        for conn in self.connections:
+            trace = conn["pre_syn_trace"] - conn["post_syn_trace"].permute(0, 2, 1)
+            delta_w = self.lr * self.dt * reward * trace
+
+            conn["weights"] += delta_w.mean(0)
+            conn["weights"].clamp_(self.w_min, self.w_max)
+            

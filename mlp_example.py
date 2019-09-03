@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
+from tqdm import tqdm
 
 from pysnn.network import SNNNetwork
 from pysnn.connection import LinearExponential
@@ -123,7 +124,7 @@ device = torch.device("cpu")
 net = Network()
 
 out = []
-for batch in train_dataloader:
+for batch in tqdm(train_dataloader):
     batch = batch["input"].squeeze(2).squeeze(2).to(device)
     for idx in range(batch.shape[1]):
         input = batch[:, idx:idx+1, :]

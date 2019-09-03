@@ -10,8 +10,7 @@ from pysnn.connection import Conv2dExponential, AdaptiveMaxPool2d
 from pysnn.neuron import FedeNeuronTrace
 from pysnn.learning import FedeSTDP
 from pysnn.utils import conv2d_output_shape
-
-from event_pytorch.event_dataloaders import NMNISTDataset
+from pysnn.datasets import nmnist_train_test
 
 
 #########################################################
@@ -24,8 +23,6 @@ n_hidden2 = 10
 n_out = 5
 
 # Data
-dataset_path = "/home/basbuller/python_lib_sources/slayerPytorch/example/NMNISTsmall/"
-sample_file = "/home/basbuller/python_lib_sources/slayerPytorch/example/NMNISTsmall/train1K.txt"
 sample_length = 300
 num_workers = 0
 batch_size = 20
@@ -77,18 +74,20 @@ class Network(SNNNetwork):
         self.learning_rule = FedeSTDP(connections, lr, w_init, a)
 
     def forward(self, x):
+        # TODO: Insert an Input neuron layer in order to track traces efficiently before feeding to conv1
+
         # Layer 1
         x, t  = self.conv1(x)
-        x = self.neuron1(x, t)
+        x, t = self.neuron1(x, t)
 
         # Layer 2
         x = self.pool2(x)
         x, t = self.conv2(x)
-        x = self.neuron2(x, t)
+        x, t = self.neuron2(x, t)
 
         # # Layer out
         x, t = self.conv3(x)
-        x = self.neuron3(x, t)
+        x, t = self.neuron3(x, t)
 
         # # Learning
         self.learning_rule()
@@ -99,23 +98,28 @@ class Network(SNNNetwork):
 #########################################################
 # Dataset
 #########################################################
-train_dataset = NMNISTDataset(dataset_path, sample_file, dt, sample_length)
+train_dataset, test_dataset = nmnist_train_test()
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
 
 #########################################################
 # Training
 #########################################################
-device = torch.device("cuda")
-net = Network()
-net = net.to(torch.float16).cuda()
-
-# device = torch.device("cpu")
+# device = torch.device("cuda")
 # net = Network()
+# net = net.to(torch.float16).cuda()
 
-for batch in tqdm(train_dataloader):
-    input = batch[0]
-    for idx in range(input.shape[-1]):
-        x = input[:, :, :, :, idx].to(device)
-        net(x)
-    net.reset_state()
+device = torch.device("cpu")
+net = Network()
+
+print(net.conv1.weight.shape)
+print(net.conv1.trace.shape)
+print(net.neuron1.trace.shape)
+
+# for batch in tqdm(train_dataloader):
+#     input = batch[0]
+#     for idx in range(input.shape[-1]):
+#         x = input[:, :, :, :, idx].to(device)
+#         net(x)
+#     net.reset_state()

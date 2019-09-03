@@ -5,5 +5,8 @@ __pycache__/*
 .mypy_cache/*
 PySNN.egg-info/*
 
+# Folders
+experiments/*
+
 # Files
 trial.py

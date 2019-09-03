@@ -42,8 +42,15 @@ inputs.
 
 ## __To do__
 
-- Adjust learning rule such that it is able to select which weights are learnable and which are not. Also adjust layer class such that the
-  parameter __training__ is also used within STDP. Just make sure gradients are always turned off since we don't need those...
-- For connection class, make sure it can handle the transmission of multiple spike within the same synapse. Aka, it should be able to handle
-  a new incoming spike while the previous one has not passed through the entire synapse or time delay.
 - Allow for the trace being a vector of spikes instead of a scalar.
+- Check how traces are calculated, might want to incorporate the ability to compare pre and post spike timings for traces.
+
+### __Learning rules__
+
+- Adjust learning rule such that it is able to select which weights are learnable and which are not. Also adjust layer class such that the parameter __training__ is also used within STDP. Just make sure gradients are always turned off since we don't need those... a new incoming spike while the previous one has not passed through the entire synapse or time delay.
+
+### __Connection classes__
+
+- For connection class, make sure it just propagates incoming trace from pre-synaptic neurons instead of recalculating the trace. This is an interesting point since we have to be smart about copying the trace or not to new memory.
+- For connection class, make sure it can handle the transmission of multiple spike within the same synapse. Aka, it should be able to handle
+- For connection class, look at how to implement delayed traces that line up well with the transmission delay of a synapse.
