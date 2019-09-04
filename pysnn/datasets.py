@@ -201,12 +201,13 @@ if __name__ == "__main__":
 # Boolean
 ############################
 class _Boolean(Dataset):
-    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None):
+    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None, repeats=1):
         self.data_encoder = data_encoder
         self.data_transform = data_transform
         self.lbl_transform = lbl_transform
         self.noise_transform = noise_transform
-        self.data = torch.tensor([[0, 0], [1, 0], [0, 1], [1, 1]])
+        self.data = torch.tensor([[0, 0], [1, 0], [0, 1], [1, 1]], dtype=torch.float)
+        self.data = torch.repeat_interleave(self.data, int(repeats), dim=1)
 
     def __len__(self):
         return len(self.data)
@@ -217,7 +218,7 @@ class _Boolean(Dataset):
 
         # Sample transforms
         if self.noise_transform:
-            sample = self.noise_transform(sample, label)
+            sample = self.noise_transform(sample)
         if self.data_transform:
             sample = self.data_transform(sample)
         if self.data_encoder:
@@ -231,20 +232,20 @@ class _Boolean(Dataset):
 
 
 class XOR(_Boolean):
-    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None):
-        super(XOR, self).__init__(data_encoder, data_transform, lbl_transform)
+    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None, repeats=1):
+        super(XOR, self).__init__(data_encoder, data_transform, noise_transform, lbl_transform, repeats)
         self.labels = torch.tensor([[0], [1], [1], [0]])
 
 
 class AND(_Boolean):
-    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None):
-        super(AND, self).__init__(data_encoder, data_transform, lbl_transform)
+    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None, repeats=1):
+        super(AND, self).__init__(data_encoder, data_transform, noise_transform, lbl_transform, repeats)
         self.labels = torch.tensor([[0], [0], [0], [1]])
 
 
 class OR(_Boolean):
-    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None):
-        super(OR, self).__init__(data_encoder, data_transform, lbl_transform)
+    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None, repeats=1):
+        super(OR, self).__init__(data_encoder, data_transform, noise_transform, lbl_transform, repeats)
         self.labels = torch.tensor([[0], [1], [1], [1]])
 
 
@@ -263,7 +264,9 @@ class BooleanNoisy():
         self.high_distr = torch.distributions.uniform.Uniform(high_thresh, 1.)
 
     def __call__(self, x):
-        if x == 0:
-            return self.low_distr.sample()
-        elif x == 1:
-            return self.high_distr.sample()
+        for idx, sample in enumerate(x):
+            if sample == 0:
+                x[idx] = self.low_distr.sample()
+            elif sample == 1:
+                x[idx] = self.high_distr.sample()
+        return x

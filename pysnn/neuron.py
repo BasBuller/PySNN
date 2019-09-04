@@ -215,6 +215,41 @@ class IFNeuronTraceExponential(Neuron):
 #########################################################
 # LIF Neuron
 #########################################################
+class LIFNeuronTraceLinear(Neuron):
+    r"""Leaky Integrate and Fire neuron."""
+    def __init__(self,
+                 cells_shape,
+                 thresh,
+                 v_rest,
+                 alpha_v,
+                 alpha_t,
+                 dt,
+                 duration_refrac,  # From here on class specific params
+                 tau_v,
+                 trace_decay):
+        super(LIFNeuronTraceLinear, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac)
+
+        # Fixed parameters
+        self.tau_v = Parameter(torch.tensor(tau_v, dtype=torch.float))
+        self.trace_decay = Parameter(torch.tensor(trace_decay, dtype=torch.float))
+        self.init_neuron()
+
+    def update_trace(self, x):
+        self.trace = sf._linear_trace_update(self.trace, x, self.alpha_t, self.trace_decay)
+
+    def update_voltage(self, x):
+        self.v_cell = sf._lif_voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v,
+            self.dt, self.refrac_counts)
+
+    def forward(self, x):
+        x = self.fold(x)
+        self.update_trace(x)
+        self.update_voltage(x)
+        spikes = self.spiking()
+        self.refrac(spikes)
+        return spikes, self.trace
+
+
 class LIFNeuronTraceExponential(Neuron):
     r"""Leaky Integrate and Fire neuron."""
     def __init__(self,

@@ -128,10 +128,10 @@ class RSTDPRateSingleElement(LearningRule):
 
 
 #########################################################
-# MSTDPETLinear
+# MSTDPET
 #########################################################
-class MSTDPETLinear(LearningRule):
-    r"""Apply MSTDP from (Florian 2007) to the provided connections.
+class MSTDPET(LearningRule):
+    r"""Apply MSTDPET from (Florian 2007) to the provided connections.
     
     Uses just a single, scalar reward value.
     Update rule can be applied at any desired time step.
@@ -144,13 +144,9 @@ class MSTDPETLinear(LearningRule):
     def __init__(self, 
                  connections, 
                  lr,
-                 dt,
-                 w_min=0.,
-                 w_max=4.):
-        super(MSTDPETLinear, self).__init__(connections, lr)
+                 dt):
+        super(MSTDPET, self).__init__(connections, lr)
         self.dt = dt
-        self.w_min = w_min
-        self.w_max = w_max
 
     def forward(self, reward):
         for conn in self.connections:
@@ -158,5 +154,19 @@ class MSTDPETLinear(LearningRule):
             delta_w = self.lr * self.dt * reward * trace
 
             conn["weights"] += delta_w.mean(0)
-            conn["weights"].clamp_(self.w_min, self.w_max)
+            conn["weights"].clamp_(conn["w_min"], conn["w_max"])
+
+
+#########################################################
+# BaasSTDP
+#########################################################
+class BaasSTDP(LearningRule):
+    r"""Personal, experimental learning rule."""
+    def __init__(self,
+                 connections,
+                 lr):
+        super(BaasSTDP, self).__init__(connections, lr)
+
+    def forward(self, reward):
+        pass
             

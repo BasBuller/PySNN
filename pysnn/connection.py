@@ -62,9 +62,20 @@ class Connection(nn.Module):
         self.trace.fill_(0)
         self.delay.fill_(0)
 
-    def reset_parameters(self):
+    def reset_parameters(self, distribution="uniform", gain=1., a=-1., b=1.):
         r"""Reinnitialize learnable network Parameters (e.g. weights)."""
-        nn.init.uniform_(self.weight)
+        if distribution == "uniform":
+            nn.init.uniform_(self.weight, a=a*gain, b=b*gain)
+        elif distribution == "normal":
+            nn.init.normal_(self.weight)
+        elif distribution == "xavier_normal":
+            nn.init.xavier_normal_(self.weight, gain=gain)
+        elif distribution == "xavier_uniform":
+            nn.init.xavier_uniform_(self.weight, gain=gain)
+        elif distribution == "kaiming_normal":
+            nn.init.kaiming_normal_(self.weight)
+        elif distribution == "kaiming_uniform":
+            nn.init.kaiming_uniform_(self.weight)
 
     def init_connection(self):
         r"""Collection of all intialization methods.

@@ -441,7 +441,7 @@ def _show_td_1d(TD, frame_rate=24, pre_compute_frames=True, repeat=False):
 
     anim = animation.FuncAnimation(fig, animate, frames=max_frame, interval=42, repeat=repeat) # 42 means playback at 23.809 fps
 
-    plt.show()
+    return anim
 
 
 def _show_td_2d(TD, frame_rate=24, pre_compute_frames=True, repeat=False):
@@ -493,15 +493,14 @@ def _show_td_2d(TD, frame_rate=24, pre_compute_frames=True, repeat=False):
 
         anim = animation.FuncAnimation(fig, animate, interval=interval, repeat=repeat) # 42 means playback at 23.809 fps
 
+    return anim
+
     # # save the animation as an mp4.  This requires ffmpeg or mencoder to be
     # # installed.  The extra_args ensure that the x264 codec is used, so that
     # # the video can be embedded in html5.  You may need to adjust this for
     # # your system: for more information, see
     # # http://matplotlib.sourceforge.net/api/animation_api.html
     # if saveAnimation: anim.save('show_td_animation.mp4', fps=30)
-
-    # plt.show()
-    return anim
 
 
 def show_td(TD, frame_rate=24, pre_compute_frames=True, repeat=False):
