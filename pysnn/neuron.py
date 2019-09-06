@@ -69,7 +69,8 @@ class Neuron(nn.Module):
                  alpha_v,
                  alpha_t,
                  dt,
-                 duration_refrac):
+                 duration_refrac,
+                 store_trace=False):
         super(Neuron, self).__init__()
         self.cells_shape = torch.tensor(cells_shape)
 
@@ -92,6 +93,12 @@ class Neuron(nn.Module):
         # Define learnable parameters
         self.thresh = Parameter(torch.Tensor(*cells_shape))
 
+        # In case of storing a complete, local copy of the activity of a neuron
+        if store_trace:
+            self.complete_trace = torch.zeros(*cells_shape, 1).to(torch.bool)
+        else:
+            self.complete_trace = None
+
     def spiking(self):
         r"""Return cells that are in spiking state."""
         return self.v_cell >= self.thresh
@@ -104,6 +111,10 @@ class Neuron(nn.Module):
         self.refrac_counts[self.refrac_counts > 0] -= self.dt
         self.refrac_counts += self.duration_refrac * self.convert_spikes(spikes)
         self.v_cell.masked_fill_(spikes, 0)
+
+    def concat_trace(self, x):
+        r"""Concatenate most recent timestep to the trace storage."""
+        self.complete_trace = torch.cat([self.complete_trace, x.unsqueeze(-1)], dim=-1)
 
     def fold(self, x):
         r"""Fold incoming spike train by summing last dimension."""
@@ -126,6 +137,8 @@ class Neuron(nn.Module):
         self.v_cell.fill_(self.v_rest)
         self.refrac_counts.fill_(0)
         self.trace.fill_(0)
+        if self.complete_trace is not None:
+            self.complete_trace = torch.zeros(*self.trace.shape, 1).to(torch.bool)
 
     def reset_parameters(self):
         r"""Reset learnable cell parameters to initialization values."""
@@ -158,8 +171,10 @@ class IFNeuronTraceLinear(Neuron):
                  alpha_t,
                  dt,
                  duration_refrac,
-                 tau_t):
-        super(IFNeuronTrace, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac)
+                 tau_t,
+                 store_trace=False):
+        super(IFNeuronTraceLinear, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, 
+                                                  dt, duration_refrac, store_trace=store_trace)
 
         #Fixed parameters
         self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
@@ -190,8 +205,10 @@ class IFNeuronTraceExponential(Neuron):
                  alpha_t,
                  dt,
                  duration_refrac,
-                 tau_t):
-        super(IFNeuronTraceExponential, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac)
+                 tau_t,
+                 store_trace=False):
+        super(IFNeuronTraceExponential, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, 
+                                                       dt, duration_refrac, store_trace=store_trace)
 
         #Fixed parameters
         self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
@@ -226,8 +243,10 @@ class LIFNeuronTraceLinear(Neuron):
                  dt,
                  duration_refrac,  # From here on class specific params
                  tau_v,
-                 trace_decay):
-        super(LIFNeuronTraceLinear, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac)
+                 trace_decay,
+                 store_trace=False):
+        super(LIFNeuronTraceLinear, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, 
+                                                   dt, duration_refrac, store_trace=store_trace)
 
         # Fixed parameters
         self.tau_v = Parameter(torch.tensor(tau_v, dtype=torch.float))
@@ -261,8 +280,10 @@ class LIFNeuronTraceExponential(Neuron):
                  dt,
                  duration_refrac,  # From here on class specific params
                  tau_v,
-                 tau_t):
-        super(LIFNeuronTraceExponential, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac)
+                 tau_t,
+                 store_trace=False):
+        super(LIFNeuronTraceExponential, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, 
+                                                        dt, duration_refrac, store_trace=store_trace)
 
         # Fixed parameters
         self.tau_v = Parameter(torch.tensor(tau_v, dtype=torch.float))
@@ -304,8 +325,10 @@ class FedeNeuronTrace(Neuron):
                  dt,
                  duration_refrac,  # From here on class specific params
                  tau_v,
-                 tau_t):
-        super(FedeNeuronTrace, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac)
+                 tau_t,
+                 store_trace=False):
+        super(FedeNeuronTrace, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, 
+                                              dt, duration_refrac, store_trace=store_trace)
 
         # Fixed parameters
         self.tau_v = Parameter(torch.tensor(tau_v, dtype=torch.float))
