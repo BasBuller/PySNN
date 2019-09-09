@@ -1,20 +1,21 @@
 # __PySNN__
 
-Spiking neural netowork framework written on top of PyTorch for efficient simulation of SNNs with correlation based methods. The library adheres to the torch.nn.Module design and implements efficient CUDA kernels where needed.
+Spiking neural network framework written on top of PyTorch for efficient simulation of SNNs with correlation based methods. The library adheres to the torch.nn.Module design.
 Based on the cuSNN library at:
 
     https://github.com/tudelft/cuSNN
 
 ## __Structure__
 
-Mirror the structure of PyTorch framework. Most core functions defined in functional module. Interfaces (classes wrapping functional) are
-defined in general snn lib.
+Mirror the structure of PyTorch framework. Most core functions defined in functional module. Interfaces (classes wrapping functional) are defined in general snn lib.
 
 ## __Network Definition__
 
-Important aspect of the package is the decorator for the forward function of the network. This decorator makes it such that the forward pass
-progresses over the layers not front to back, but propagates information based on the timesteps. This way the output signal from input 1 has
-not reached the end of the network before input 2 has been presented to the network.
+The overall structure of a network definition is the same as in PyTorch where possible. The biggest differences are as follows:
+
+- Each layer requires both a Connection and a Neuron object as they both implement specific time based dynamics.
+- The network definition currently also includes the value/loss function and learning rule definitions. Looking to change this to be same as
+  the PyTorch API.
 
 ## __Connection Shapes__
 

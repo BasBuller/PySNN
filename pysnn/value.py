@@ -1,6 +1,3 @@
-import torch
-
-
 #########################################################
 # XOR
 #########################################################
@@ -25,7 +22,7 @@ class RewardXOR():
 
 
 class RewardXORSpikes():
-    r"""Determine XOR guiding signal based on total number of output spikes."""
+    r"""Determine XOR guiding signal based on whether the most recent spike is desired."""
     def __call__(self, net_out, label):
         if label == 1:
             reward = 1
@@ -33,15 +30,3 @@ class RewardXORSpikes():
             reward = -1
 
         return reward
-
-
-#########################################################
-# Baas
-#########################################################
-class BaasValue():
-    r"""Personal, experimental value function."""
-    def __init__(self):
-        pass
-
-    def __call__(self):
-        return

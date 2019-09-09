@@ -47,7 +47,8 @@ def _fede_ltp_ltd(w, w_init, trace, a):
 
 
 class FedeSTDP(LearningRule):
-    r"""STDP version for Paredes Valles, performs mean operation over the batch dimension before weight update."""
+    r"""STDP version for Paredes Valles, performs mean operation over the batch 
+    dimension before weight update."""
     def __init__(self,
                  connections,
                  lr,
@@ -57,8 +58,8 @@ class FedeSTDP(LearningRule):
         if isinstance(connections, Connection):
             connections = (connections)
         super(FedeSTDP, self).__init__(connections, lr)
-        self.w_init = Parameter(torch.tensor(w_init, dtype=torch.float))
-        self.a = Parameter(torch.tensor(a, dtype=torch.float))
+        self.w_init = torch.tensor(w_init, dtype=torch.float)
+        self.a = torch.tensor(a, dtype=torch.float)
 
         self.init_rule()
 
@@ -72,59 +73,6 @@ class FedeSTDP(LearningRule):
 
             # Perform weight update
             connection.weight.data += self.lr * (ltp + ltd).mean(0)
-
-
-#########################################################
-# RSTDP for output class only (Mozafari et al.)
-#########################################################
-class RSTDPRateSingleElement(LearningRule):
-    def __init__(self,
-                 connection,
-                 lr,
-                 w_init,
-                 a,
-                 out_shape,
-                 start_counter):
-        super(RSTDPRateSingleElement, self).__init__(connection, lr)
-        self.w_init = Parameter(torch.tensor(w_init, dtype=torch.float))
-        self.a = Parameter(torch.tensor(a, dtype=torch.float))
-        self.activity = Parameter(torch.zeros(*out_shape))
-        self.counter = 0
-        self.start_counter = start_counter
-
-        self.init_rule()
-
-    def reset_state(self):
-        self.activity.fill_(0)
-        self.counter = 0
-
-    def forward(self, x, label):
-        if self.counter >= self.start_counter:
-            w = self.connections.weight.data
-            trace = self.connections.trace.data.view(-1, *w.shape)
-
-            # Determine if output class is correct
-            reward = torch.ones_like(label)
-            _, m_ind = x.max(-1)
-            reward[m_ind != label] = -1
-
-            # LTP and LTD
-            ltp, ltd = fede_ltp_ltd(w, self.w_init, trace, self.a)
-
-            # Swap LTP and LTD for faulty network output
-            store = ltp[reward==-1]
-            ltp[reward==-1] = ltd[reward==-1]
-            ltd[reward==-1] = store
-
-            # Update weights
-            delta_w = self.lr * (ltp + ltd)
-            mask = torch.zeros_like(delta_w)
-            mask[label, :] = 1
-            delta_w *= mask
-            self.connections.weight.data += delta_w.mean(0)
-
-        self.activity += x.to(self.activity.dtype)
-        self.counter += 1
 
 
 #########################################################
@@ -155,18 +103,28 @@ class MSTDPET(LearningRule):
 
             conn["weights"] += delta_w.mean(0)
             conn["weights"].clamp_(conn["w_min"], conn["w_max"])
-
+            
 
 #########################################################
-# BaasSTDP
+# Additive RSTDP
 #########################################################
-class BaasSTDP(LearningRule):
-    r"""Personal, experimental learning rule."""
+class AdditiveRSTDPLinear(LearningRule):
+    r"""Basic, additive RSTDP formulation for linear layers.
+    
+    Can be used for many published learning rules, the difference lies in the trace formulations.
+    Use a neuron with the desired trace formulation in conjunction with this learning rule.
+    """
     def __init__(self,
                  connections,
-                 lr):
-        super(BaasSTDP, self).__init__(connections, lr)
+                 lr,
+                 dt):
+        super(AdditiveRSTDPLinear, self).__init__(connections, lr)
+        self.dt = dt
 
     def forward(self, reward):
-        pass
-            
+        for conn in self.connections:
+            trace = conn["pre_syn_trace"] - conn["post_syn_trace"].permute(0, 2, 1)
+            delta_w = self.lr * self.dt * reward * trace
+
+            conn["weights"] += delta_w.mean(0)
+            conn["weights"].clamp_(conn["w_min"], conn["w_max"])

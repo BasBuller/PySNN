@@ -163,11 +163,6 @@ class Linear(_Linear):
         # Initialize connection
         self.init_connection()
 
-    # Standard functions
-    # def update_trace(self, x):
-    #     r"""Update trace according to exponential decay function and incoming spikes."""
-    #     self.trace = sF._linear_trace_update(self.trace, x, self.alpha_t, self.tau_t)
-
     def activation_potential(self, x):
         r"""Determine activation potentials from each synapse for current time step."""
         out = x * self.weight
@@ -198,12 +193,6 @@ class LinearExponential(_Linear):
 
         # Initialize connection
         self.init_connection()
-
-    # Standard functions
-    # def update_trace(self, x):
-    #     r"""Update trace according to exponential decay function and incoming spikes."""
-    #     self.trace = sF._exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
-    #                                  self.dt)
 
     def activation_potential(self, x):
         r"""Determine activation potentials from each synapse for current time step."""
