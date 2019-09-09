@@ -5,12 +5,13 @@ import torch
 # Trace updates, both neurons and layers
 ########################################################
 def _exponential_trace_update(trace, x, alpha_t, tau_t, dt):
-    r"""Calculate change in cell's trace based on current trace output spike x."""
+    r"""Calculate change in cell's trace based on current trace and incoming spikes x."""
     trace += ((-trace * dt) + (alpha_t * x)) / tau_t
     return trace
 
 
 def _linear_trace_update(trace, x, alpha_t, trace_decay):
+    r"""Calculate change in cell's trace based on a fixed decay factor and incoming spikes x."""
     trace *= trace_decay
     trace += alpha_t * x
     return trace

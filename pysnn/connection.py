@@ -175,39 +175,6 @@ class Linear(_Linear):
         return self.activation_potential(x), self.fold(self.trace)
 
 
-class LinearExponential(_Linear):
-    r"""SNN linear (fully connected) layer with interface comparable to torch.nn.Linear."""
-    def __init__(self,
-                 in_features,
-                 out_features,
-                 batch_size,
-                 dt,
-                 delay,
-                 tau_t,
-                 alpha_t):
-        super(LinearExponential, self).__init__(in_features, out_features, batch_size, dt, delay)
-
-        # Fixed parameters
-        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
-        self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
-
-        # Initialize connection
-        self.init_connection()
-
-    def activation_potential(self, x):
-        r"""Determine activation potentials from each synapse for current time step."""
-        out = x * self.weight
-        # out = x @ self.weight
-        # out = x @ self.weight, for automatically summing trace dimension
-        return self.fold(out)
-
-    def forward(self, x, trace_in):
-        x = self.convert_spikes(x)
-        self.update_trace(trace_in)
-        x = self.propagate_spike(x)
-        return self.activation_potential(x), self.fold(self.trace)
-
-
 #########################################################
 # Convolutional Layers
 #########################################################
@@ -278,7 +245,7 @@ class _ConvNd(Connection):
         self.trace.copy_(trace_in.expand(-1, self.out_channels, -1, -1).contiguous())
 
 
-class Conv2dExponential(_ConvNd):
+class Conv2d(_ConvNd):
     r"""Convolutional SNN layer interface comparable to torch.nn.Conv2d."""
     def __init__(self,
                  in_channels,
@@ -293,7 +260,7 @@ class Conv2dExponential(_ConvNd):
                  stride=1,
                  padding=0,
                  dilation=1):
-        super(Conv2dExponential, self).__init__(in_channels, out_channels, kernel_size, im_dims, batch_size,
+        super(Conv2d, self).__init__(in_channels, out_channels, kernel_size, im_dims, batch_size,
                                                 dt, delay, stride, padding, dilation)
 
         # Fixed parameters
@@ -307,12 +274,6 @@ class Conv2dExponential(_ConvNd):
         r"""Determine activation potentials from each synapse for current time step."""
         x = x * self.weight.view(self.weight.shape[0], -1).unsqueeze(2)
         return self.fold(x)
-
-    # Standard functions
-    # def update_trace(self, x):
-    #     r"""Update trace according to exponential decay function and incoming spikes."""
-    #     self.trace = sF._exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t,
-    #         self.dt)
 
     def forward(self, x):
         x = self.convert_spikes(x)

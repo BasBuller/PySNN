@@ -19,22 +19,24 @@ The overall structure of a network definition is the same as in PyTorch where po
 
 ## __Connection Shapes__
 
-In order to keep track of traces and delays in information passing tensors an extra dimension is needed compared to the PyTorch conventions. Because of ease of use with Python broadcasting of matrices this extra dimension is added as the 0th dimension, meaning an extra dimension is present before the batch dimension. This hold for trace tensors.
+In order to keep track of traces and delays in information passing tensors an extra dimension is needed compared to the PyTorch conventions. 
+Due to the addition of spike traces, each spiking tensor contains an extra trace dimension as the last dimension. The resulting dimension ordering is as follows for an image tensor (trace is indicated as R to not be confused with time for video data):
+
+    [batch size, channels, height, width, traces] (B,C,H,W,R)
+
+For fully connected layers the resulting tensor is as follows (free dimension can be used the same as in PyTorch):
+
+    [batch size, free dimension, input elements, traces] (B,F,I,R)
+
+Currently, no explicit 3D convolution is possible like is common within video-processing. Luckily, SNNs have a temporal dimension inherently and are (currently still theoretically) well suited for processing videos event by event, and thus not needing 3D convolution.
 
 ## __Traces__
 
-Defining which object keeps track of the traces is up to the user. For ease of use and lower memory footprint the cell can keep track of its
-traces. This directly assumes that the traces for every synapse originating from a single neuron are the same. It is possible to keep track
-of the traces in the connection object. In this case each synapse can have a separate trace.
+Traces are stored both in the Neuron and Connection objects. Currently, Connection objects takes traces from their pre-synaptic Neurons and propagate the trace over time, meaning it does not do any further processing on the traces. If it is desired, one can implement separate trace processing in a custom Connection object.
 
-## __Delay through synapse__
+Traces are stored in a tensor in each Connection, as well as the delay for each trace propagating through the Connection. Only one trace (or signal) can tracked through each synapse. In case delay times through a synapse become very long (longer than the refractory period of the pre-synaptic cell) it is possible for a new signal to enter the Connection before the previous one has travelled through it. In the current implementation the old signal will be overwritten, meaning the information is lost before it is used!
 
-Can do the following, have a tensor equal to the number of synapses. For an MLP of 5 pre-synaptic and 10 post-synaptic neurons this matrix
-is (10 x 5). Within this matrix store the ninformation passing tensorsr of milliseconds left before the spike has been propagated through the synapse. Once the
-counter hits 1 generate a spike and decreasinformation passing tensors 0. Just make sure to increment ms duration of spike propagation with 1 such that the actual
-desired delay is achieved and it is not cutinformation passing tensorsrt by 1 due to implementation efficiency. In this implementation the designer of the network
-has a responsibility of making sure dt and synaptic delay match well, otherwise counting errors might occur. Also note, the refractory
-period of a cell should be equal or longer than the transmission time! If it is not the spike timing might be reset.
+    It is up to the user to assure refractory periods are just as long or longer than the synaptic delay in the following Connection!
 
 ## __Module definitions__
 
@@ -43,15 +45,14 @@ inputs.
 
 ## __To do__
 
-- Allow for the trace being a vector of spikes instead of a scalar.
-- Check how traces are calculated, might want to incorporate the ability to compare pre and post spike timings for traces.
+- Allow for having a local copy of a cell's entire trace history. Possibly also extending this to Connection objects. This will result in a large increase in memory usage.
+- Change from using .uint8 to .bool datatypes with the introduction of PyTorch 1.2.
 
 ### __Learning rules__
 
-- Adjust learning rule such that it is able to select which weights are learnable and which are not. Also adjust layer class such that the parameter __training__ is also used within STDP. Just make sure gradients are always turned off since we don't need those... a new incoming spike while the previous one has not passed through the entire synapse or time delay.
+- Adjust learning rule such that it is able to select which weights are learnable and which are not. 
+- Adjust layer class such that the parameter __training__ is also used within STDP. Just make sure gradients are always turned off since we don't need those...
 
 ### __Connection classes__
 
-- For connection class, make sure it just propagates incoming trace from pre-synaptic neurons instead of recalculating the trace. This is an interesting point since we have to be smart about copying the trace or not to new memory.
 - For connection class, make sure it can handle the transmission of multiple spike within the same synapse. Aka, it should be able to handle
-- For connection class, look at how to implement delayed traces that line up well with the transmission delay of a synapse.
