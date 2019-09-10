@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn.parameter import Parameter
 
 from pysnn.connection import Connection
-from pysnn.utils import _set_no_grad
+from pysnn.utils import _set_no_grad, tensor_clamp
 
 
 #########################################################
@@ -102,7 +102,7 @@ class MSTDPET(LearningRule):
             delta_w = self.lr * self.dt * reward * trace
 
             conn["weights"] += delta_w.mean(0)
-            conn["weights"].clamp_(conn["w_min"], conn["w_max"])
+            conn["weights"].data = tensor_clamp(conn["weights"], conn["w_min"], conn["w_max"])
             
 
 #########################################################
@@ -127,4 +127,5 @@ class AdditiveRSTDPLinear(LearningRule):
             delta_w = self.lr * self.dt * reward * trace
 
             conn["weights"] += delta_w.mean(0)
-            conn["weights"].clamp_(conn["w_min"], conn["w_max"])
+            # conn["weights"].clamp_(conn["w_min"], conn["w_max"])
+            conn["weights"] = tensor_clamp(conn["weights"], conn["w_min"], conn["w_max"])

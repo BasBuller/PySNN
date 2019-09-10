@@ -28,6 +28,14 @@ def _if_voltage_update(v_cur, v_in, alpha, refrac_counts):
     return v_cur
 
 
+def _lif_linear_voltage_update(v_cur, v_rest, v_in, alpha_v, v_decay, dt, refrac_counts):
+    r"""Calculate change in cell's voltage based on a linear relation between current and incoming voltage."""
+    v_cur = v_rest + (v_cur - v_rest) * v_decay + alpha_v * v_in
+    non_refrac = refrac_counts == 0
+    v_cur *= non_refrac.to(v_cur.dtype)
+    return v_cur
+
+
 def _lif_voltage_update(v_cur, v_rest, v_in, alpha_v, tau_v, dt, refrac_counts):
     r"""Calculate change in cell's voltage based on current and incoming voltage."""
     v_delta = (-(v_cur - v_rest) * dt + alpha_v * v_in) / tau_v

@@ -34,3 +34,12 @@ def interspike_time(spike_array):
         inter_time = spike_indices[idx+1] - spike_indices[idx]
         interspike_times.append(inter_time)
     return interspike_times
+
+
+#########################################################
+# Tensor clamping
+#########################################################
+def tensor_clamp(tensor, min, max):
+    clamp = torch.min(tensor, max)  # upper boundary
+    clamp = torch.max(clamp, min)  # lower boundary
+    return clamp
