@@ -34,16 +34,33 @@ class Input(nn.Module):
 
 
 class InputTraceExponential(Input):
-    def __init__(self, cells_shape, alpha_t, dt, tau_t):
+    def __init__(self, cells_shape, dt, alpha_t, tau_t):
         super(InputTraceExponential, self).__init__(cells_shape, dt)
-        self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
-        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
+        self.alpha_t = torch.tensor(alpha_t, dtype=torch.float)
+        self.tau_t = torch.tensor(tau_t, dtype=torch.float)
 
         self.init_neuron()
 
     def update_trace(self, x):
         x = self.convert_input(x)
         self.trace = sf._exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
+
+    def forward(self, x):
+        self.update_trace(x)
+        return x, self.trace
+
+
+class InputTraceLinear(Input):
+    def __init__(self, cells_shape, dt, alpha_t, trace_decay):
+        super(InputTraceLinear, self).__init__(cells_shape, dt)
+        self.alpha_t = torch.tensor(alpha_t, dtype=torch.float)
+        self.trace_decay = torch.tensor(trace_decay, dtype=torch.float)
+
+        self.init_neuron()
+
+    def update_trace(self, x):
+        x = self.convert_input(x)
+        self.trace = sf._linear_trace_update(self.trace, x, self.alpha_t, self.trace_decay)
 
     def forward(self, x):
         self.update_trace(x)
@@ -181,16 +198,17 @@ class IFNeuronTraceLinear(Neuron):
         self.init_neuron()
 
     def update_trace(self, x):
-        self.trace = sf._linear_trace_update(self.trace, x, self.alpha_t, self.tau_t)
+        spikes = self.convert_spikes(x)
+        self.trace = sf._linear_trace_update(self.trace, spikes, self.alpha_t, self.tau_t)
 
     def update_voltage(self, x):
         self.v_cell = sf._if_voltage_update(self.v_cell, x, self.alpha_v, self.refrac_counts)
 
     def forward(self, x):
         x = self.fold(x)
-        self.update_trace(x)
         self.update_voltage(x)
         spikes = self.spiking()
+        self.update_trace(spikes)
         self.refrac(spikes)
         return spikes, self.trace
 
@@ -215,16 +233,17 @@ class IFNeuronTraceExponential(Neuron):
         self.init_neuron()
 
     def update_trace(self, x):
-        self.trace = sf._exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
+        spikes = self.convert_spikes(x)
+        self.trace = sf._exponential_trace_update(self.trace, spikes, self.alpha_t, self.tau_t, self.dt)
 
     def update_voltage(self, x):
         self.v_cell = sf._if_voltage_update(self.v_cell, x, self.alpha_v, self.refrac_counts)
 
     def forward(self, x):
         x = self.fold(x)
-        self.update_trace(x)
         self.update_voltage(x)
         spikes = self.spiking()
+        self.update_trace(spikes)
         self.refrac(spikes)
         return spikes, self.trace
 
@@ -242,29 +261,30 @@ class LIFNeuronTraceLinear(Neuron):
                  alpha_t,
                  dt,
                  duration_refrac,  # From here on class specific params
-                 tau_v,
+                 voltage_decay,
                  trace_decay,
                  store_trace=False):
         super(LIFNeuronTraceLinear, self).__init__(cells_shape, thresh, v_rest, alpha_v, alpha_t, 
                                                    dt, duration_refrac, store_trace=store_trace)
 
         # Fixed parameters
-        self.tau_v = Parameter(torch.tensor(tau_v, dtype=torch.float))
-        self.trace_decay = Parameter(torch.tensor(trace_decay, dtype=torch.float))
+        self.voltage_decay = torch.tensor(voltage_decay, dtype=torch.float)
+        self.trace_decay = torch.tensor(trace_decay, dtype=torch.float)
         self.init_neuron()
 
     def update_trace(self, x):
-        self.trace = sf._linear_trace_update(self.trace, x, self.alpha_t, self.trace_decay)
+        spikes = self.convert_spikes(x)
+        self.trace = sf._linear_trace_update(self.trace, spikes, self.alpha_t, self.trace_decay)
 
     def update_voltage(self, x):
-        self.v_cell = sf._lif_voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v,
+        self.v_cell.data = sf._lif_linear_voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.voltage_decay,
             self.dt, self.refrac_counts)
 
     def forward(self, x):
         x = self.fold(x)
-        self.update_trace(x)
         self.update_voltage(x)
         spikes = self.spiking()
+        self.update_trace(spikes)
         self.refrac(spikes)
         return spikes, self.trace
 
@@ -291,7 +311,8 @@ class LIFNeuronTraceExponential(Neuron):
         self.init_neuron()
 
     def update_trace(self, x):
-        self.trace = sf._exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
+        spikes = self.convert_spikes(x)
+        self.trace = sf._exponential_trace_update(self.trace, spikes, self.alpha_t, self.tau_t, self.dt)
 
     def update_voltage(self, x):
         self.v_cell = sf._lif_voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v,
@@ -299,9 +320,9 @@ class LIFNeuronTraceExponential(Neuron):
 
     def forward(self, x):
         x = self.fold(x)
-        self.update_trace(x)
         self.update_voltage(x)
         spikes = self.spiking()
+        self.update_trace(spikes)
         self.refrac(spikes)
         return spikes, self.trace
 

@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn.parameter import Parameter
 
 from pysnn.connection import Connection
-from pysnn.utils import _set_no_grad
+from pysnn.utils import _set_no_grad, tensor_clamp
 
 
 #########################################################
@@ -98,11 +98,13 @@ class MSTDPET(LearningRule):
 
     def forward(self, reward):
         for conn in self.connections:
+            loc_reward = reward[conn["reward_type"]]
+
             trace = conn["pre_syn_trace"] - conn["post_syn_trace"].permute(0, 2, 1)
-            delta_w = self.lr * self.dt * reward * trace
+            delta_w = self.lr * self.dt * loc_reward * trace
 
             conn["weights"] += delta_w.mean(0)
-            conn["weights"].clamp_(conn["w_min"], conn["w_max"])
+            conn["weights"].data = tensor_clamp(conn["weights"].data, conn["w_min"], conn["w_max"])
             
 
 #########################################################
@@ -127,4 +129,5 @@ class AdditiveRSTDPLinear(LearningRule):
             delta_w = self.lr * self.dt * reward * trace
 
             conn["weights"] += delta_w.mean(0)
-            conn["weights"].clamp_(conn["w_min"], conn["w_max"])
+            # conn["weights"].clamp_(conn["w_min"], conn["w_max"])
+            conn["weights"] = tensor_clamp(conn["weights"], conn["w_min"], conn["w_max"])

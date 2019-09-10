@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -66,6 +67,11 @@ class Connection(nn.Module):
         r"""Reinnitialize learnable network Parameters (e.g. weights)."""
         if distribution == "uniform":
             nn.init.uniform_(self.weight, a=a*gain, b=b*gain)
+        if distribution == "neuron_scaled_uniform":
+            scaling = np.sqrt(self.weight.shape[1])
+            a = (a + gain) / scaling
+            b = (b + gain) / scaling
+            nn.init.uniform_(self.weight, a=a, b=b)
         elif distribution == "normal":
             nn.init.normal_(self.weight)
         elif distribution == "xavier_normal":
@@ -127,6 +133,7 @@ class _Linear(Connection):
 
         # Learnable parameters
         self.weight = Parameter(torch.Tensor(out_features, in_features))
+        self.output_spike_matrix = torch.ones_like(self.weight)
 
     # Support function
     def unfold(self, x):
@@ -143,7 +150,6 @@ class _Linear(Connection):
         self.trace.copy_(t_in.expand(-1, self.out_features, -1).contiguous())
 
 
-
 class Linear(_Linear):
     r"""SNN linear (fully connected) layer with interface comparable to torch.nn.Linear."""
     def __init__(self,
@@ -151,14 +157,8 @@ class Linear(_Linear):
                  out_features,
                  batch_size,
                  dt,
-                 delay,
-                 tau_t,
-                 alpha_t):
+                 delay):
         super(Linear, self).__init__(in_features, out_features, batch_size, dt, delay)
-
-        # Fixed parameters
-        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
-        self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
 
         # Initialize connection
         self.init_connection()
@@ -169,10 +169,10 @@ class Linear(_Linear):
         return self.fold(out)
 
     def forward(self, x, trace_in):
-        x = self.convert_spikes(x)
         self.update_trace(trace_in)
+        x = self.convert_spikes(x)
         x = self.propagate_spike(x)
-        return self.activation_potential(x), self.fold(self.trace)
+        return self.activation_potential(x)
 
 
 #########################################################
@@ -211,7 +211,7 @@ class _ConvNd(Connection):
         self.synapse_shape = synapse_shape
 
         # Super init
-        super(_ConvNd, self).__init__(synapse_shape, dt, delay)
+        super(_ConvNd, self).__init__(synapse_.hape, dt, delay)
 
         # Output image shape
         if len(im_dims) == 1:
@@ -280,7 +280,7 @@ class Conv2d(_ConvNd):
         x = self.unfold(x)  # Till here it is a rather easy set of steps
         self.update_trace(x)
         x = self.propagate_spike(x)  # Output spikes
-        return self.activation_potential(x), self.fold(self.trace)
+        return self.activation_potential(x)
 
 
 #########################################################
