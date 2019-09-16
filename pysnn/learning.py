@@ -104,7 +104,7 @@ class MSTDPET(LearningRule):
             delta_w = self.lr * self.dt * loc_reward * trace
 
             conn["weights"] += delta_w.mean(0)
-            conn["weights"].data = tensor_clamp(conn["weights"].data, conn["w_min"], conn["w_max"])
+            conn["weights"].data = tensor_clamp(conn["weights"], conn["w_min"], conn["w_max"])
             
 
 #########################################################
