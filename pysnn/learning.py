@@ -92,16 +92,33 @@ class MSTDPET(LearningRule):
     def __init__(self, 
                  connections, 
                  lr,
-                 dt):
+                 dt,
+                 eligibility_decay,
+                 eligibility_time_constant):
         super(MSTDPET, self).__init__(connections, lr)
         self.dt = dt
+        self.eligibility_decay = eligibility_decay
+        self.eligibility_time_constant = eligibility_time_constant
+
+    def reset_state(self):
+        for conn in self.connections:
+            conn["eligibility_trace"].fill_(0)
+
+    def update_eligibility_trace(self):
+        for conn in self.connections:
+            pre_trace = conn["pre_syn_trace"]
+            post_trace = conn["post_syn_trace"]
+            pre_spike = conn["pre_spikes"].squeeze(1)
+            post_spike = conn["post_spikes"]
+
+            zeta = (pre_trace.permute(0, 2, 1) * post_spike - post_trace * pre_spike.permute(0, 2, 1)) / self.eligibility_time_constant
+            conn["eligibility_trace"] *= self.eligibility_decay 
+            conn["eligibility_trace"] += zeta.permute(0, 2, 1)
 
     def forward(self, reward):
         for conn in self.connections:
             loc_reward = reward[conn["reward_type"]]
-
-            trace = conn["pre_syn_trace"] - conn["post_syn_trace"].permute(0, 2, 1)
-            delta_w = self.lr * self.dt * loc_reward * trace
+            delta_w = self.lr * self.dt * loc_reward * conn["eligibility_trace"]
 
             conn["weights"] += delta_w.mean(0)
             conn["weights"].data = tensor_clamp(conn["weights"], conn["w_min"], conn["w_max"])
