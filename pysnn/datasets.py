@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import Dataset
 
-from .file_io import Events, read_2d_spikes
+from pysnn.file_io import Events, read_2d_spikes
 
 
 #########################################################
@@ -72,6 +72,10 @@ def _concat_dir_content(content):
 
 
 def train_test(root_dir, train_size=0.8, seed=42):
+    r"""Split dataset into train and test sets.
+    
+    Takes in a directory where it looks for sub-directories. Content of each directory is split into train and test subsets.
+    """
     content = _list_dir_content(root_dir)
     data, _ = _concat_dir_content(content)
     train, test = _train_test_split_classification(data, train_size=train_size, seed=seed)
@@ -79,6 +83,11 @@ def train_test(root_dir, train_size=0.8, seed=42):
 
 
 class NeuromorphicDataset(Dataset):
+    r"""Class that wraps around several neuromorphic datasets.
+
+
+    The class adheres to regular PyTorch dataset conventions.
+    """
     def __init__(self, data, sampling_time, sample_length, height, width, im_transform=None, lbl_transform=None):
         self.data = data
         self.im_transform = im_transform
@@ -115,13 +124,19 @@ class NeuromorphicDataset(Dataset):
 #########################################################
 # Neurmorphic Caltech 101
 #########################################################
-def ncaltech_train_test(root="/home/basbuller/stack/thesis/code/datasets/n-caltech101/Caltech101/", 
+def ncaltech_train_test(root,
                         sampling_time=1, 
                         sample_length=300, 
                         height=200, 
                         width=300, 
                         im_transform=None, 
                         lbl_transform=None):
+    r"""Neurmorphic version of the Caltech-101 dataset, obtained from:
+
+        https://www.garrickorchard.com/datasets/n-caltech101
+    
+    'Converting Static Image Datasets to Spiking Neuromorphic Datasets Using Saccades' by G. Orchard et al.
+    """
     train, test = train_test(root)
     train_dataset = NeuromorphicDataset(train, sampling_time, sample_length, height, width, 
                                         im_transform=im_transform, lbl_transform=lbl_transform)
@@ -133,19 +148,25 @@ def ncaltech_train_test(root="/home/basbuller/stack/thesis/code/datasets/n-calte
 #########################################################
 # Neuromorphic MNIST
 #########################################################
-def nmnist_train_test(root="/home/basbuller/stack/thesis/code/datasets/n-mnist/",
+def nmnist_train_test(root,
                       sampling_time=1, 
                       sample_length=300, 
                       height=34, 
                       width=34, 
                       im_transform=None, 
                       lbl_transform=None):
-    train_content = _list_dir_content(root + "Train")
+    r"""Neurmorphic version of the MNIST dataset, obtained from:
+
+        https://www.garrickorchard.com/datasets/n-mnist
+    
+    'Converting Static Image Datasets to Spiking Neuromorphic Datasets Using Saccades' by G. Orchard et al.
+    """
+    train_content = _list_dir_content(os.path.join(root, "Train"))
     train, _ = _concat_dir_content(train_content)
     train_dataset = NeuromorphicDataset(train, sampling_time, sample_length, height, width, 
                                         im_transform=im_transform, lbl_transform=lbl_transform)
 
-    test_content = _list_dir_content(root + "Test")
+    test_content = _list_dir_content(os.path.join(root, "Test"))
     test, _ = _concat_dir_content(test_content)
     test_dataset = NeuromorphicDataset(test, sampling_time, sample_length, height, width, 
                                         im_transform=im_transform, lbl_transform=lbl_transform)
@@ -156,19 +177,25 @@ def nmnist_train_test(root="/home/basbuller/stack/thesis/code/datasets/n-mnist/"
 #########################################################
 # Neuromorphic MNIST
 #########################################################
-def ncars_train_test(root="/home/basbuller/stack/thesis/code/datasets/n-cars/",
+def ncars_train_test(root,
                      sampling_time=1, 
                      sample_length=100, 
                      height=100, 
                      width=120, 
                      im_transform=None, 
                      lbl_transform=None):
-    train_content = _list_dir_content(root + "train")
+    r"""Neurmorphic dataset containing images of cars or background, obtained from:
+
+        https://www.prophesee.ai/dataset-n-cars/
+    
+    This is a two class problem.
+    """
+    train_content = _list_dir_content(os.path.join(root, "train"))
     train, _ = _concat_dir_content(train_content)
     train_dataset = NeuromorphicDataset(train, sampling_time, sample_length, height, width, 
                                         im_transform=im_transform, lbl_transform=lbl_transform)
 
-    test_content = _list_dir_content(root + "test")
+    test_content = _list_dir_content(os.path.join(root, "test"))
     test, _ = _concat_dir_content(test_content)
     test_dataset = NeuromorphicDataset(test, sampling_time, sample_length, height, width, 
                                         im_transform=im_transform, lbl_transform=lbl_transform)
@@ -176,36 +203,15 @@ def ncars_train_test(root="/home/basbuller/stack/thesis/code/datasets/n-cars/",
     return train_dataset, test_dataset
 
 
-if __name__ == "__main__":
-    ncalt_train, ncalt_test = ncaltech_train_test()
-    nmnist_train, nmnist_test = nmnist_train_test()
-    ncars_train, ncars_test = ncars_train_test()
-
-    print("caltech")
-    print(ncalt_train[0][0].shape)
-    print(ncalt_train[0][1])
-    print(len(ncalt_train))
-
-    print("\nnmnist")
-    print(nmnist_train[0][0].shape)
-    print(nmnist_train[0][1])
-    print(len(nmnist_train))
-
-    print("\nncars")
-    print(ncars_train[0][0].shape)
-    print(ncars_train[0][1])
-    print(len(ncars_train))
-
-
 ############################
 # Boolean
 ############################
 class _Boolean(Dataset):
-    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None, repeats=1):
+    r"""Dataset for generating event-based, boolean data samples. Can be used to construct AND, OR, XOR datasets."""
+    def __init__(self, data_encoder=None, data_transform=None, lbl_transform=None, repeats=1):
         self.data_encoder = data_encoder
         self.data_transform = data_transform
         self.lbl_transform = lbl_transform
-        self.noise_transform = noise_transform
         self.data = torch.tensor([[0, 0], [1, 0], [0, 1], [1, 1]], dtype=torch.float)
         self.data = torch.repeat_interleave(self.data, int(repeats), dim=1)
 
@@ -217,8 +223,6 @@ class _Boolean(Dataset):
         label = self.labels[idx]
 
         # Sample transforms
-        if self.noise_transform:
-            sample = self.noise_transform(sample)
         if self.data_transform:
             sample = self.data_transform(sample)
         if self.data_encoder:
@@ -232,25 +236,25 @@ class _Boolean(Dataset):
 
 
 class XOR(_Boolean):
-    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None, repeats=1):
-        super(XOR, self).__init__(data_encoder, data_transform, noise_transform, lbl_transform, repeats)
+    def __init__(self, data_encoder=None, data_transform=None, lbl_transform=None, repeats=1):
+        super(XOR, self).__init__(data_encoder, data_transform, lbl_transform, repeats)
         self.labels = torch.tensor([[0], [1], [1], [0]])
 
 
 class AND(_Boolean):
-    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None, repeats=1):
-        super(AND, self).__init__(data_encoder, data_transform, noise_transform, lbl_transform, repeats)
+    def __init__(self, data_encoder=None, data_transform=None, lbl_transform=None, repeats=1):
+        super(AND, self).__init__(data_encoder, data_transform, lbl_transform, repeats)
         self.labels = torch.tensor([[0], [0], [0], [1]])
 
 
 class OR(_Boolean):
-    def __init__(self, data_encoder=None, data_transform=None, noise_transform=None, lbl_transform=None, repeats=1):
-        super(OR, self).__init__(data_encoder, data_transform, noise_transform, lbl_transform, repeats)
+    def __init__(self, data_encoder=None, data_transform=None, lbl_transform=None, repeats=1):
+        super(OR, self).__init__(data_encoder, data_transform, lbl_transform, repeats)
         self.labels = torch.tensor([[0], [1], [1], [1]])
 
 
 ############################
-# Transforms
+# transforms
 ############################
 class DiscretizeFloat():
     def __call__(self, tensor):
@@ -258,10 +262,10 @@ class DiscretizeFloat():
         return tensor.float()
 
 
-class BooleanNoisy():
+class BooleanNoise():
     def __init__(self, low_thresh, high_thresh):
-        self.low_distr = torch.distributions.uniform.Uniform(0., low_thresh) 
-        self.high_distr = torch.distributions.uniform.Uniform(high_thresh, 1.)
+        self.low_distr = torch.distributions.Uniform(0., low_thresh) 
+        self.high_distr = torch.distributions.Uniform(high_thresh, 1.)
 
     def __call__(self, x):
         for idx, sample in enumerate(x):
@@ -270,3 +274,25 @@ class BooleanNoisy():
             elif sample == 1:
                 x[idx] = self.high_distr.sample()
         return x
+
+
+if __name__ == "__main__":
+    root_dir = "/home/basbuller/thesis_final/code/datasets/"
+
+    ncalt_train, ncalt_test = ncaltech_train_test(root_dir + "ncaltech101")
+    print("caltech")
+    print(ncalt_train[0][0].shape)
+    print(ncalt_train[0][1])
+    print(len(ncalt_train))
+
+    # nmnist_train, nmnist_test = nmnist_train_test(root_dir + "nmnist")
+    # print("\nnmnist")
+    # print(nmnist_train[0][0].shape)
+    # print(nmnist_train[0][1])
+    # print(len(nmnist_train))
+
+    # ncars_train, ncars_test = ncars_train_test(root_dir + "n-cars")
+    # print("\nncars")
+    # print(ncars_train[0][0].shape)
+    # print(ncars_train[0][1])
+    # print(len(ncars_train))
