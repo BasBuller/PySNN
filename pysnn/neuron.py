@@ -127,7 +127,7 @@ class Neuron(nn.Module):
         """
         self.refrac_counts[self.refrac_counts > 0] -= self.dt
         self.refrac_counts += self.duration_refrac * self.convert_spikes(spikes)
-        self.v_cell.masked_fill_(spikes, 0)
+        self.v_cell.masked_fill_(spikes, self.v_rest)
 
     def concat_trace(self, x):
         r"""Concatenate most recent timestep to the trace storage."""
