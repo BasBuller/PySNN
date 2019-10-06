@@ -47,6 +47,7 @@ class PoissonEncoder:
     Adapted from:
         https://github.com/Hananel-Hazan/bindsnet/blob/master/bindsnet/encoding/encodings.py
     """
+
     def __init__(self, duration, dt):
         self.duration = duration
         self.dt = dt

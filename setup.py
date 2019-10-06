@@ -6,19 +6,20 @@ with open("README.md", "r") as f:
 requirements = [
     "torch>=1.2.0",
     "torchvision",
+    "matplotlib",
     "numpy",
     "pandas",
-    "sklearn"
+    "sklearn",
+    "pre-commit",
 ]
 
 setup(
-    name="pysnn", 
+    name="pysnn",
     version="0.1",
     description="Framework for engineering and simulating spiking neural networks, built on top of PyTorch.",
     long_description=readme,
     author="Bas Buller",
     author_email="bas.buller@gmail.com",
-    packages=find_packages(exclude=("tests",)),
-    # packages=find_packages(),
-    install_requires=requirements
+    packages=find_packages(exclude=("tests", "examples")),
+    install_requires=requirements,
 )

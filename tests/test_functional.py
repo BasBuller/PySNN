@@ -20,10 +20,16 @@ refrac_counts = torch.zeros(*cells_shape)
 ##########################################################
 # Test general functionals
 ##########################################################
-@pytest.mark.parametrize("trace,spikes_in,trace_out", [
-    (torch.zeros(*cells_shape), torch.ones(*cells_shape), 
-        [torch.ones(*cells_shape)*0.5, torch.ones(*cells_shape)*0.75])
-])
+@pytest.mark.parametrize(
+    "trace,spikes_in,trace_out",
+    [
+        (
+            torch.zeros(*cells_shape),
+            torch.ones(*cells_shape),
+            [torch.ones(*cells_shape) * 0.5, torch.ones(*cells_shape) * 0.75],
+        )
+    ],
+)
 def test_exponential_trace_update(trace, spikes_in, trace_out):
     from pysnn.functional import _exponential_trace_update
 
@@ -36,9 +42,16 @@ def test_exponential_trace_update(trace, spikes_in, trace_out):
 # Test neuron functionals
 ##########################################################
 # Test IF voltage update
-@pytest.mark.parametrize("v_cur,v_in,v_out", [
-    (torch.zeros(*cells_shape), torch.ones(*cells_shape), [torch.ones(*cells_shape), torch.ones(*cells_shape)])
-])
+@pytest.mark.parametrize(
+    "v_cur,v_in,v_out",
+    [
+        (
+            torch.zeros(*cells_shape),
+            torch.ones(*cells_shape),
+            [torch.ones(*cells_shape), torch.ones(*cells_shape)],
+        )
+    ],
+)
 def test_lif_voltage_update(v_cur, v_in, v_out):
     from pysnn.functional import _if_voltage_update
 
@@ -48,26 +61,43 @@ def test_lif_voltage_update(v_cur, v_in, v_out):
 
 
 # Test LIF voltage update
-@pytest.mark.parametrize("v_cur,v_in,v_out", [
-    (torch.zeros(*cells_shape), torch.ones(*cells_shape)*2, 
-        [torch.ones(*cells_shape)*1, torch.ones(*cells_shape)*1.5])
-])
+@pytest.mark.parametrize(
+    "v_cur,v_in,v_out",
+    [
+        (
+            torch.zeros(*cells_shape),
+            torch.ones(*cells_shape) * 2,
+            [torch.ones(*cells_shape) * 1, torch.ones(*cells_shape) * 1.5],
+        )
+    ],
+)
 def test_lif_voltage_update(v_cur, v_in, v_out):
     from pysnn.functional import _lif_voltage_update
 
     for volt_out in v_out:
-        v_cur = _lif_voltage_update(v_cur, v_rest, v_in, alpha_v, tau_v, dt, refrac_counts)
+        v_cur = _lif_voltage_update(
+            v_cur, v_rest, v_in, alpha_v, tau_v, dt, refrac_counts
+        )
         assert (v_cur == volt_out).all()
 
 
 # Test fede voltage update
-@pytest.mark.parametrize("v_cur,v_in,trace_in,v_out", [
-    (torch.zeros(*cells_shape), torch.ones(*cells_shape, 2)*2, torch.ones(*cells_shape, 2), 
-        [torch.ones(*cells_shape), torch.ones(*cells_shape)*1.5])
-])
+@pytest.mark.parametrize(
+    "v_cur,v_in,trace_in,v_out",
+    [
+        (
+            torch.zeros(*cells_shape),
+            torch.ones(*cells_shape, 2) * 2,
+            torch.ones(*cells_shape, 2),
+            [torch.ones(*cells_shape), torch.ones(*cells_shape) * 1.5],
+        )
+    ],
+)
 def test_fede_voltage_update(v_cur, v_in, trace_in, v_out):
     from pysnn.functional import _fede_voltage_update
 
     for volt_out in v_out:
-        v_cur = _fede_voltage_update(v_cur, v_rest, v_in, alpha_v, tau_v, dt, refrac_counts, trace_in)
+        v_cur = _fede_voltage_update(
+            v_cur, v_rest, v_in, alpha_v, tau_v, dt, refrac_counts, trace_in
+        )
         assert (v_cur == volt_out).all()

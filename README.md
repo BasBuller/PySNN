@@ -5,6 +5,20 @@ Based on the cuSNN library at:
 
     https://github.com/tudelft/cuSNN
 
+## __Installation__
+
+Installation can be done with pip:
+
+```bash
+$ git clone https://github.com/BasBuller/PySNN
+$ pip install -e PySNN/
+```
+Code is formatted with [Black](https://github.com/psf/black) using a pre-commit hook. To configure it, run:
+
+```bash
+$ pre-commit install
+```
+
 ## __Structure__
 
 Mirror the structure of PyTorch framework. Most core functions defined in functional module. Interfaces (classes wrapping functional) are defined in general snn lib.
