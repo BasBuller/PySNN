@@ -11,11 +11,16 @@ from pysnn.utils import _set_no_grad, tensor_clamp
 #########################################################
 class LearningRule(nn.Module):
     r"""Base class for correlation based learning rules in spiking neural networks."""
+    # TODO: use Black (install it) and see whether this changes back to correct
     def __init__(self,
-                 connections,
+                 connection,
+                 pre_neuron,
+                 post_neuron,
                  lr):
         super(LearningRule, self).__init__()
-        self.connections = connections
+        self.connection = connection
+        self.pre_neuron = pre_neuron
+        self.post_neuron = post_neuron
         self.lr = lr
 
     def no_grad(self):
@@ -49,30 +54,22 @@ def _fede_ltp_ltd(w, w_init, trace, a):
 class FedeSTDP(LearningRule):
     r"""STDP version for Paredes Valles, performs mean operation over the batch 
     dimension before weight update."""
-    def __init__(self,
-                 connections,
-                 lr,
-                 w_init,
-                 a):
-        # Make sure connections is an iterable for compatibility with forward function
-        if isinstance(connections, Connection):
-            connections = (connections)
-        super(FedeSTDP, self).__init__(connections, lr)
+    def __init__(self, connection, pre_neuron, post_neuron, lr, w_init, a):
+        super(FedeSTDP, self).__init__(connection, pre_neuron, post_neuron, lr)
         self.w_init = torch.tensor(w_init, dtype=torch.float)
         self.a = torch.tensor(a, dtype=torch.float)
 
         self.init_rule()
 
     def forward(self):
-        for connection in self.connections:
-            w = connection.weight.data
-            trace = connection.trace.data.view(-1, *w.shape)
+        w = self.connection.weight.data
+        trace = self.connection.trace.data.view(-1, *w.shape)
 
-            # LTP and LTD
-            ltp, ltd = _fede_ltp_ltd(w, self.w_init, trace, self.a)
+        # LTP and LTD
+        ltp, ltd = _fede_ltp_ltd(w, self.w_init, trace, self.a)
 
-            # Perform weight update
-            connection.weight.data += self.lr * (ltp + ltd).mean(0)
+        # Perform weight update
+        self.connection.weight.data += self.lr * (ltp + ltd).mean(0)
 
 
 #########################################################
@@ -89,39 +86,29 @@ class MSTDPET(LearningRule):
         - pre_syn_trace: pre synaptic traces.
         - post_syn_trace: post synaptic traces.
     """
-    def __init__(self, 
-                 connections, 
-                 lr,
-                 dt,
-                 eligibility_decay,
-                 eligibility_time_constant):
-        super(MSTDPET, self).__init__(connections, lr)
+    def __init__(self, connection, pre_neuron, post_neuron, lr, dt, e_trace_decay):
+        super(MSTDPET, self).__init__(connection, pre_neuron, post_neuron, lr)
         self.dt = dt
-        self.eligibility_decay = eligibility_decay
-        self.eligibility_time_constant = eligibility_time_constant
+        self.e_trace_decay = e_trace_decay
+
+        self.e_trace = torch.Tensor(*self.connection.weight.shape)
+
+        self.init_rule()
 
     def reset_state(self):
-        for conn in self.connections:
-            conn["eligibility_trace"].fill_(0)
+        self.e_trace.fill_(0)
 
     def update_eligibility_trace(self):
-        for conn in self.connections:
-            pre_trace = conn["pre_syn_trace"]
-            post_trace = conn["post_syn_trace"]
-            pre_spike = conn["pre_spikes"].squeeze(1)
-            post_spike = conn["post_spikes"]
-
-            zeta = (pre_trace.permute(0, 2, 1) * post_spike - post_trace * pre_spike.permute(0, 2, 1)) / self.eligibility_time_constant
-            conn["eligibility_trace"] *= self.eligibility_decay 
-            conn["eligibility_trace"] += zeta.permute(0, 2, 1)
+        self.e_trace *= self.e_trace_decay
+        # TODO: check dimensions
+        # TODO: does spiking() still give spikes or have these been reset?
+        self.e_trace += self.pre_neuron.trace * self.post_neuron.spiking() - self.post_neuron.trace * self.pre_neuron.spiking()
 
     def forward(self, reward):
-        for conn in self.connections:
-            loc_reward = reward[conn["reward_type"]]
-            delta_w = self.lr * self.dt * loc_reward * conn["eligibility_trace"]
-
-            conn["weights"] += delta_w.mean(0)
-            conn["weights"].data = tensor_clamp(conn["weights"], conn["w_min"], conn["w_max"])
+        # TODO: why would one use .data? Also done in FedeSTDP
+        # TODO: add weight clamping?
+        # TODO: not sure whether dt belongs here
+        self.connection.weight.data += self.lr * self.dt * reward * self.e_trace
             
 
 #########################################################
@@ -133,18 +120,14 @@ class AdditiveRSTDPLinear(LearningRule):
     Can be used for many published learning rules, the difference lies in the trace formulations.
     Use a neuron with the desired trace formulation in conjunction with this learning rule.
     """
-    def __init__(self,
-                 connections,
-                 lr,
-                 dt):
-        super(AdditiveRSTDPLinear, self).__init__(connections, lr)
+    def __init__(self, connection, pre_neuron, post_neuron, lr, dt):
+        super(AdditiveRSTDPLinear, self).__init__(connection, pre_neuron, post_neuron, lr)
         self.dt = dt
 
     def forward(self, reward):
-        for conn in self.connections:
-            trace = conn["pre_syn_trace"] - conn["post_syn_trace"].permute(0, 2, 1)
-            delta_w = self.lr * self.dt * reward * trace
-
-            conn["weights"] += delta_w.mean(0)
-            # conn["weights"].clamp_(conn["w_min"], conn["w_max"])
-            conn["weights"] = tensor_clamp(conn["weights"], conn["w_min"], conn["w_max"])
+        # TODO: needs transpose of second
+        # TODO: pre - post or other way around?
+        delta_trace = self.pre_neuron.trace - self.post_neuron.trace
+        # TODO: not sure whether dt belongs here
+        # TODO: needs weight clamp
+        self.connection.weight += self.lr * self.dt * reward * delta_trace
