@@ -63,7 +63,7 @@ class Connection(nn.Module):
         self.trace.fill_(0)
         self.delay.fill_(0)
 
-    def reset_parameters(self, distribution="uniform", gain=1., a=-1., b=1.):
+    def reset_weights(self, distribution="uniform", gain=1., a=-1., b=1.):
         r"""Reinnitialize learnable network Parameters (e.g. weights)."""
         if distribution == "uniform":
             nn.init.uniform_(self.weight, a=a*gain, b=b*gain)
@@ -83,6 +83,9 @@ class Connection(nn.Module):
         elif distribution == "kaiming_uniform":
             nn.init.kaiming_uniform_(self.weight)
 
+    def reset_thresholds(self, distributions="uniform", gain=1., a=-1., b=1.):
+        pass
+
     def init_connection(self):
         r"""Collection of all intialization methods.
         
@@ -94,7 +97,7 @@ class Connection(nn.Module):
             self.__class__.__name__)
         self.no_grad()
         self.reset_state()
-        self.reset_parameters()
+        self.reset_weights()
 
     def propagate_spike(self, x):
         r"""Track propagation of spikes through synapses if the connection."""
@@ -172,7 +175,7 @@ class Linear(_Linear):
         self.update_trace(trace_in)
         x = self.convert_spikes(x)
         x = self.propagate_spike(x)
-        return self.activation_potential(x)
+        return self.activation_potential(x), self.fold(self.trace)
 
 
 #########################################################
@@ -280,35 +283,65 @@ class Conv2d(_ConvNd):
         x = self.unfold(x)  # Till here it is a rather easy set of steps
         self.update_trace(x)
         x = self.propagate_spike(x)  # Output spikes
-        return self.activation_potential(x)
+        return self.activation_potential(x), self.fold(self.trace)
 
 
 #########################################################
-# Pooling Layers
+# Max Pooling
 #########################################################
-class MaxPool2d(_MaxPoolNd):
+class _SpikeMaxPoolNd(nn.Module):
+    def __init__(self, kernel_size, stride=None, padding=0, dilation=1,
+                 ceil_mode=False):
+            super(_SpikeMaxPoolNd, self).__init__()
+            self.kernel_size = kernel_size
+            self.stride = stride or kernel_size
+            self.padding = padding
+            self.dilation = dilation
+            self.ceil_mode = ceil_mode
+            self.return_indices = True
+
+    def reset_state(self):
+        pass
+
+
+class MaxPool2d(_SpikeMaxPoolNd):
     r"""Simple port of PyTorch MaxPool2d with small adjustment for spiking operations.
     
     Currently pooling only supports operations on floating point numbers, thus it casts the uint8 spikes to floats back and forth.
+    The trace of the 'maximum' spike is also returned. In case of multiple spikes within pooling window, returns first spike of 
+    the window (top left corner).
     """
+
+    def forward(self, x, trace):
+        x = x.to(torch.float32, non_blocking=True)
+        x, idx = F.max_pool2d(x, self.kernel_size, self.stride, self.padding, self.dilation, self.ceil_mode, self.return_indices)
+        trace = trace.view(-1)[idx.view(-1)]
+        trace = trace.view(idx.shape)
+        return x > 0, trace
+
+
+#########################################################
+# Adaptive Max Pooling
+#########################################################
+class _SpikeAdaptiveMaxPoolNd(nn.Module):
+    def __init__(self, output_size):
+        super(_SpikeAdaptiveMaxPoolNd, self).__init__()
+        self.output_size = output_size
+        self.return_indices = True
+        
     def reset_state(self):
         pass
 
-    def forward(self, x):
-        x = x.to(torch.float32, non_blocking=True)
-        x = F.max_pool2d(x, self.kernel_size, self.stride, self.padding, self.dilation, self.ceil_mode, self.return_indices)
-        return x > 0
 
-
-class AdaptiveMaxPool2d(_AdaptiveMaxPoolNd):
+class AdaptiveMaxPool2d(_SpikeAdaptiveMaxPoolNd):
     r"""Simple port of PyTorch AdaptiveMaxPool2d with small adjustment for spiking operations.
     
     Currently pooling only supports operations on floating point numbers, thus it casts the uint8 spikes to floats back and forth.
+    The trace of the 'maximum' spike is also returned. In case of multiple spikes within pooling window, returns first spike of 
+    the window (top left corner).
     """
-    def reset_state(self):
-        pass
-
-    def forward(self, x):
+    def forward(self, x, trace):
         x = x.to(torch.float32, non_blocking=True)
-        x = F.adaptive_max_pool2d(x, self.output_size, self.return_indices)
-        return x > 0
+        x, idx = F.adaptive_max_pool2d(x, self.output_size, self.return_indices)
+        trace = trace[idx]
+        return x > 0, trace

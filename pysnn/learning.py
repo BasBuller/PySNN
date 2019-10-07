@@ -38,13 +38,15 @@ class LearningRule(nn.Module):
 # Fede STDP
 #########################################################
 def _fede_ltp_ltd(w, w_init, trace, a):
+    dw = w - w_init
+
     # LTP computation
-    ltp_w = torch.exp(-(w - w_init))
+    ltp_w = torch.exp(-dw)
     ltp_t = torch.exp(trace) - a
     ltp = ltp_w * ltp_t
 
     # LTD computation
-    ltd_w = -torch.exp(w - w_init)
+    ltd_w = -torch.exp(dw)
     ltd_t = torch.exp(1 - trace) - a
     ltd = ltd_w * ltd_t
 
@@ -123,6 +125,8 @@ class AdditiveRSTDPLinear(LearningRule):
     def __init__(self, connection, pre_neuron, post_neuron, lr, dt):
         super(AdditiveRSTDPLinear, self).__init__(connection, pre_neuron, post_neuron, lr)
         self.dt = dt
+
+        self.init_rule()
 
     def forward(self, reward):
         # TODO: needs transpose of second

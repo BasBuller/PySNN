@@ -112,7 +112,10 @@ class Neuron(nn.Module):
 
         # In case of storing a complete, local copy of the activity of a neuron
         if store_trace:
-            self.complete_trace = torch.zeros(*cells_shape, 1).to(torch.bool)
+            # self.complete_trace = Parameter(torch.zeros(*cells_shape, 1, dtype=torch.bool, requires_grad=False).to(torch.bool))
+            self.complete_trace = Parameter(torch.zeros(*cells_shape, 1))
+            self.complete_trace.requires_grad = False
+            self.complete_trace.data = self.complete_trace.to(torch.bool)
         else:
             self.complete_trace = None
 
@@ -131,7 +134,7 @@ class Neuron(nn.Module):
 
     def concat_trace(self, x):
         r"""Concatenate most recent timestep to the trace storage."""
-        self.complete_trace = torch.cat([self.complete_trace, x.unsqueeze(-1)], dim=-1)
+        self.complete_trace.data = torch.cat([self.complete_trace, x.unsqueeze(-1)], dim=-1)
 
     def fold(self, x):
         r"""Fold incoming spike train by summing last dimension."""
@@ -155,7 +158,7 @@ class Neuron(nn.Module):
         self.refrac_counts.fill_(0)
         self.trace.fill_(0)
         if self.complete_trace is not None:
-            self.complete_trace = torch.zeros(*self.trace.shape, 1).to(torch.bool)
+            self.complete_trace.data = torch.zeros(*self.v_cell.shape, 1, device=self.v_cell.device).to(torch.bool)
 
     def reset_parameters(self):
         r"""Reset learnable cell parameters to initialization values."""
@@ -286,6 +289,8 @@ class LIFNeuronTraceLinear(Neuron):
         spikes = self.spiking()
         self.update_trace(spikes)
         self.refrac(spikes)
+        if self.complete_trace is not None:
+            self.concat_trace(spikes)
         return spikes, self.trace
 
 
@@ -357,6 +362,7 @@ class FedeNeuronTrace(Neuron):
         self.init_neuron()
 
     def update_trace(self, x):
+        x = self.convert_spikes(x)
         self.trace = sf._exponential_trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
 
     def update_voltage(self, x, pre_trace):
@@ -364,9 +370,11 @@ class FedeNeuronTrace(Neuron):
             self.dt, self.refrac_counts, pre_trace)
 
     def forward(self, x, pre_trace):
-        x = self.fold(x)
-        self.update_trace(x)
+        # x = self.fold(x)
         self.update_voltage(x, pre_trace)
         spikes = self.spiking()
+        self.update_trace(spikes)
         self.refrac(spikes)
+        if self.complete_trace is not None:
+            self.concat_trace(spikes)
         return spikes, self.trace
