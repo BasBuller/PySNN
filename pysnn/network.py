@@ -14,5 +14,6 @@ class SNNNetwork(nn.Module):
         super(SNNNetwork, self).__init__()
 
     def reset_state(self):
-        for child in self.modules():
-            child.reset_state()
+        for module in self.modules():
+            if not isinstance(module, SNNNetwork):
+                module.reset_state()
