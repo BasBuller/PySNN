@@ -12,11 +12,9 @@ from pysnn.utils import _set_no_grad, tensor_clamp
 class LearningRule(nn.Module):
     r"""Base class for correlation based learning rules in spiking neural networks."""
 
-    def __init__(self, connection, pre_neuron, post_neuron, lr):
+    def __init__(self, connection, lr):
         super(LearningRule, self).__init__()
         self.connection = connection
-        self.pre_neuron = pre_neuron
-        self.post_neuron = post_neuron
         self.lr = lr
 
     def no_grad(self):
@@ -51,8 +49,8 @@ class FedeSTDP(LearningRule):
     r"""STDP version for Paredes Valles, performs mean operation over the batch 
     dimension before weight update."""
 
-    def __init__(self, connection, pre_neuron, post_neuron, lr, w_init, a):
-        super(FedeSTDP, self).__init__(connection, pre_neuron, post_neuron, lr)
+    def __init__(self, connection, lr, w_init, a):
+        super(FedeSTDP, self).__init__(connection, lr)
         self.w_init = torch.tensor(w_init, dtype=torch.float)
         self.a = torch.tensor(a, dtype=torch.float)
 
@@ -87,7 +85,10 @@ class MSTDPET(LearningRule):
     def __init__(
         self, connection, pre_neuron, post_neuron, a_pre, a_post, lr, dt, e_trace_decay
     ):
-        super(MSTDPET, self).__init__(connection, pre_neuron, post_neuron, lr)
+        super(MSTDPET, self).__init__(connection, lr)
+        self.pre_neuron = pre_neuron
+        self.post_neuron = post_neuron
+        
         self.dt = dt
         self.e_trace_decay = e_trace_decay
         self.a_pre = a_pre
@@ -117,27 +118,3 @@ class MSTDPET(LearningRule):
         self.update_eligibility_trace()
         self.connection.weight.data += self.lr * self.dt * reward * self.e_trace
 
-
-#########################################################
-# Additive RSTDP
-#########################################################
-class AdditiveRSTDPLinear(LearningRule):
-    r"""Basic, additive RSTDP formulation for linear layers.
-    
-    Can be used for many published learning rules, the difference lies in the trace formulations.
-    Use a neuron with the desired trace formulation in conjunction with this learning rule.
-    """
-
-    def __init__(self, connection, pre_neuron, post_neuron, lr, dt):
-        super(AdditiveRSTDPLinear, self).__init__(
-            connection, pre_neuron, post_neuron, lr
-        )
-        self.dt = dt
-
-    def forward(self, reward):
-        # TODO: needs transpose of second
-        # TODO: pre - post or other way around?
-        delta_trace = self.pre_neuron.trace - self.post_neuron.trace
-        # TODO: not sure whether dt belongs here
-        # TODO: needs weight clamp
-        self.connection.weight += self.lr * self.dt * reward * delta_trace
