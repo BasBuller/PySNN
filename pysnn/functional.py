@@ -7,6 +7,7 @@ import torch
 def _exponential_trace_update(trace, x, alpha_t, tau_t, dt):
     r"""Calculate change in cell's trace based on current trace and incoming spikes x."""
     trace += ((-trace * dt) + (alpha_t * x)) / tau_t
+    # TODO: Check for possible inplace instead of copying operation, should be inplace for best performance
     return trace
 
 
@@ -14,6 +15,7 @@ def _linear_trace_update(trace, x, alpha_t, trace_decay):
     r"""Calculate change in cell's trace based on a fixed decay factor and incoming spikes x."""
     trace *= trace_decay
     trace += alpha_t * x
+    # TODO: Check for possible inplace instead of copying operation, should be inplace for best performance
     return trace
 
 
@@ -25,6 +27,7 @@ def _if_voltage_update(v_cur, v_in, alpha, refrac_counts):
     v_delta = alpha * v_in
     non_refrac = refrac_counts == 0
     v_cur += v_delta * non_refrac.to(v_delta.dtype)
+    # TODO: Check for possible inplace instead of copying operation, should be inplace for best performance
     return v_cur
 
 
@@ -35,6 +38,7 @@ def _lif_linear_voltage_update(
     v_delta = (v_cur - v_rest) * v_decay + alpha_v * v_in
     non_refrac = refrac_counts == 0
     v_cur = v_rest + v_delta * non_refrac.to(v_delta.dtype)
+    # TODO: Check for possible inplace instead of copying operation, should be inplace for best performance
     return v_cur
 
 
@@ -43,6 +47,7 @@ def _lif_voltage_update(v_cur, v_rest, v_in, alpha_v, tau_v, dt, refrac_counts):
     v_delta = (-(v_cur - v_rest) * dt + alpha_v * v_in) / tau_v
     non_refrac = refrac_counts == 0
     v_cur += v_delta * non_refrac.to(v_delta.dtype)
+    # TODO: Check for possible inplace instead of copying operation, should be inplace for best performance
     return v_cur
 
 
@@ -54,4 +59,5 @@ def _fede_voltage_update(
     v_delta = (-(v_cur - v_rest) * dt + forcing) / tau_v
     non_refrac = refrac_counts == 0
     v_cur += v_delta * non_refrac.to(v_delta.dtype)
+    # TODO: Check for possible inplace instead of copying operation, should be inplace for best performance
     return v_cur

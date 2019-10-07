@@ -36,19 +36,14 @@ class Connection(nn.Module):
             raise TypeError(
                 "Incorrect data type provided for delay_init, please provide an int or FloatTensor"
             )
-
-        # Learnable parameters
-        if delay_init is not None:
-            self.delay_init = Parameter(delay_init)
-        else:
-            self.register_parameter("delay_init", None)
+        self.register_buffer("delay_init", delay_init)
 
         # Fixed parameters
-        self.dt = Parameter(torch.tensor(dt, dtype=torch.float))
+        self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
 
         # State parameters
-        self.trace = Parameter(torch.Tensor(*shape))
-        self.delay = Parameter(torch.Tensor(*shape))
+        self.register_buffer("trace", torch.Tensor(*shape))
+        self.register_buffer("delay", torch.Tensor(*shape))
 
     def convert_spikes(self, x):
         r"""Convert input from Byte Tensor to same data type as the weights."""
@@ -63,7 +58,7 @@ class Connection(nn.Module):
         self.trace.fill_(0)
         self.delay.fill_(0)
 
-    def reset_parameters(self, distribution="uniform", gain=1.0, a=-1.0, b=1.0):
+    def reset_weights(self, distribution="uniform", gain=1.0, a=-1.0, b=1.0):
         r"""Reinnitialize learnable network Parameters (e.g. weights)."""
         if distribution == "uniform":
             nn.init.uniform_(self.weight, a=a * gain, b=b * gain)
@@ -83,6 +78,9 @@ class Connection(nn.Module):
         elif distribution == "kaiming_uniform":
             nn.init.kaiming_uniform_(self.weight)
 
+    def reset_thresholds(self, distributions="uniform", gain=1., a=-1., b=1.):
+        pass
+
     def init_connection(self):
         r"""Collection of all intialization methods.
         
@@ -98,7 +96,7 @@ class Connection(nn.Module):
         )
         self.no_grad()
         self.reset_state()
-        self.reset_parameters()
+        self.reset_weights()
 
     def propagate_spike(self, x):
         r"""Track propagation of spikes through synapses if the connection."""
@@ -133,7 +131,6 @@ class _Linear(Connection):
 
         # Learnable parameters
         self.weight = Parameter(torch.Tensor(out_features, in_features))
-        self.output_spike_matrix = torch.ones_like(self.weight)
 
     # Support function
     def unfold(self, x):
@@ -170,7 +167,7 @@ class Linear(_Linear):
         self.update_trace(trace_in)
         x = self.convert_spikes(x)
         x = self.propagate_spike(x)
-        return self.activation_potential(x)
+        return self.activation_potential(x), self.fold(self.trace)
 
 
 #########################################################
@@ -215,7 +212,7 @@ class _ConvNd(Connection):
         self.synapse_shape = synapse_shape
 
         # Super init
-        super(_ConvNd, self).__init__(synapse_.hape, dt, delay)
+        super(_ConvNd, self).__init__(synapse_shape, dt, delay)
 
         # Output image shape
         if len(im_dims) == 1:
@@ -237,7 +234,6 @@ class _ConvNd(Connection):
         self.weight = Parameter(
             torch.Tensor(out_channels, in_channels, *self.kernel_size)
         )
-        self.register_parameter("bias", None)
 
     # Support functions
     def unfold(self, x):
@@ -290,8 +286,8 @@ class Conv2d(_ConvNd):
         )
 
         # Fixed parameters
-        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
-        self.alpha_t = Parameter(torch.tensor(alpha_t, dtype=torch.float))
+        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
+        self.register_buffer("alpha_t", torch.tensor(alpha_t, dtype=torch.float))
 
         # Intialize layer
         self.init_connection()
@@ -306,45 +302,66 @@ class Conv2d(_ConvNd):
         x = self.unfold(x)  # Till here it is a rather easy set of steps
         self.update_trace(x)
         x = self.propagate_spike(x)  # Output spikes
-        return self.activation_potential(x)
+        return self.activation_potential(x), self.fold(self.trace)
 
 
 #########################################################
-# Pooling Layers
+# Max Pooling
 #########################################################
-class MaxPool2d(_MaxPoolNd):
+class _SpikeMaxPoolNd(nn.Module):
+    def __init__(self, kernel_size, stride=None, padding=0, dilation=1,
+                 ceil_mode=False):
+            super(_SpikeMaxPoolNd, self).__init__()
+            self.kernel_size = kernel_size
+            self.stride = stride or kernel_size
+            self.padding = padding
+            self.dilation = dilation
+            self.ceil_mode = ceil_mode
+            self.return_indices = True
+
+    def reset_state(self):
+        pass
+
+
+class MaxPool2d(_SpikeMaxPoolNd):
     r"""Simple port of PyTorch MaxPool2d with small adjustment for spiking operations.
     
     Currently pooling only supports operations on floating point numbers, thus it casts the uint8 spikes to floats back and forth.
+    The trace of the 'maximum' spike is also returned. In case of multiple spikes within pooling window, returns first spike of 
+    the window (top left corner).
     """
 
+    def forward(self, x, trace):
+        x = x.to(torch.float32, non_blocking=True)
+        x, idx = F.max_pool2d(x, self.kernel_size, self.stride, self.padding, self.dilation, self.ceil_mode, self.return_indices)
+        trace = trace.view(-1)[idx.view(-1)]
+        trace = trace.view(idx.shape)
+        return x > 0, trace
+
+
+#########################################################
+# Adaptive Max Pooling
+#########################################################
+class _SpikeAdaptiveMaxPoolNd(nn.Module):
+    def __init__(self, output_size):
+        super(_SpikeAdaptiveMaxPoolNd, self).__init__()
+        self.output_size = output_size
+        self.return_indices = True
+        
     def reset_state(self):
         pass
 
-    def forward(self, x):
-        x = x.to(torch.float32, non_blocking=True)
-        x = F.max_pool2d(
-            x,
-            self.kernel_size,
-            self.stride,
-            self.padding,
-            self.dilation,
-            self.ceil_mode,
-            self.return_indices,
-        )
-        return x > 0
 
-
-class AdaptiveMaxPool2d(_AdaptiveMaxPoolNd):
+class AdaptiveMaxPool2d(_SpikeAdaptiveMaxPoolNd):
     r"""Simple port of PyTorch AdaptiveMaxPool2d with small adjustment for spiking operations.
     
     Currently pooling only supports operations on floating point numbers, thus it casts the uint8 spikes to floats back and forth.
+    The trace of the 'maximum' spike is also returned. In case of multiple spikes within pooling window, returns first spike of 
+    the window (top left corner).
     """
 
-    def reset_state(self):
-        pass
-
-    def forward(self, x):
+    def forward(self, x, trace):
         x = x.to(torch.float32, non_blocking=True)
-        x = F.adaptive_max_pool2d(x, self.output_size, self.return_indices)
-        return x > 0
+        x, idx = F.adaptive_max_pool2d(x, self.output_size, self.return_indices)
+        trace = trace[idx]
+        return x > 0, trace

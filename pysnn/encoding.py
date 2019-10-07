@@ -38,7 +38,7 @@ def poisson_encoding(intensities, duration, dt):
     spikes[times, torch.arange(size)] = 1
     spikes = spikes[1:]
 
-    return spikes.view(time, *shape)
+    return spikes.view(*shape, time)
 
 
 class PoissonEncoder:
