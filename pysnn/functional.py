@@ -40,6 +40,8 @@ def _lif_linear_voltage_update(
 
 def _lif_voltage_update(v_cur, v_rest, v_in, alpha_v, tau_v, dt, refrac_counts):
     r"""Calculate change in cell's voltage based on current and incoming voltage."""
+
+    # TODO: Check for possible copying instead of inplace operations, should be inplace for best performance
     v_delta = (-(v_cur - v_rest) * dt + alpha_v * v_in) / tau_v
     non_refrac = refrac_counts == 0
     v_cur += v_delta * non_refrac.to(v_delta.dtype)

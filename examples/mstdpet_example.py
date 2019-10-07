@@ -54,7 +54,7 @@ class SNN(SNNNetwork):
 
     def forward(self, x):
         pre_spikes, pre_trace = self.pre_neuron(x)
-        x = self.linear(pre_spikes, pre_trace)
+        x, _ = self.linear(pre_spikes, pre_trace)
         post_spikes, post_trace = self.post_neuron(x)
 
         return pre_spikes, post_spikes, pre_trace, post_trace

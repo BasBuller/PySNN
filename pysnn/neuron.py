@@ -143,7 +143,7 @@ class Neuron(nn.Module):
 
     def concat_trace(self, x):
         r"""Concatenate most recent timestep to the trace storage."""
-        self.complete_trace.data = torch.cat([self.complete_trace, x.unsqueeze(-1)], dim=-1)
+        self.complete_trace = torch.cat([self.complete_trace, x.unsqueeze(-1)], dim=-1)
 
     def fold(self, x):
         r"""Fold incoming spike train by summing last dimension."""
@@ -167,11 +167,11 @@ class Neuron(nn.Module):
         self.refrac_counts.fill_(0)
         self.trace.fill_(0)
         if self.complete_trace is not None:
-            self.complete_trace.data = torch.zeros(*self.v_cell.shape, 1, device=self.v_cell.device).to(torch.bool)
+            self.complete_trace = torch.zeros(*self.v_cell.shape, 1, device=self.v_cell.device).to(torch.bool)
 
     def reset_thresh(self):
-        r"""Reset learnable cell parameters to initialization values."""
-        self.thresh.copy_(torch.ones_like(self.thresh.data) * self.thresh_center)
+        r"""Reset threshold to initialization values, allows for different standard thresholds per neuron."""
+        self.thresh.copy_(torch.ones_like(self.thresh) * self.thresh_center)
 
     def no_grad(self):
         r"""Turn off learning and gradient storing."""
@@ -332,7 +332,7 @@ class LIFNeuronTraceLinear(Neuron):
         )
 
     def update_voltage(self, x):
-        self.v_cell.data = sf._lif_linear_voltage_update(
+        self.v_cell = sf._lif_linear_voltage_update(
             self.v_cell,
             self.v_rest,
             x,

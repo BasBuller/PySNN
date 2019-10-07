@@ -59,6 +59,8 @@ inputs.
 
 ## __To do__
 
+- IMPORTANT: Change all tensor attributes to torch.nn.Buffer, this allows for transfering to GPU while preventing them from showing up in
+  .parameter() calls.
 - Allow for having a local copy of a cell's entire trace history. Possibly also extending this to Connection objects. This will result in a large increase in memory usage.
 - Change from using .uint8 to .bool datatypes with the introduction of PyTorch 1.2.
 
@@ -69,4 +71,4 @@ inputs.
 
 ### __Connection classes__
 
-- For connection class, make sure it can handle the transmission of multiple spike within the same synapse. Aka, it should be able to handle
+- For connection class, make sure it can handle the transmission of multiple spike within the same synapse.
