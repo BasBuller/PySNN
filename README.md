@@ -59,8 +59,8 @@ inputs.
 
 ## __To do__
 
-- IMPORTANT: Change all tensor attributes to torch.nn.Buffer, this allows for transfering to GPU while preventing them from showing up in
-  .parameter() calls.
+- Determine performance of the functions in pysnn.functional, they return the difference and using inplace operations in the Module that is
+  calling the functional might provide better performance.
 - Allow for having a local copy of a cell's entire trace history. Possibly also extending this to Connection objects. This will result in a large increase in memory usage.
 - Change from using .uint8 to .bool datatypes with the introduction of PyTorch 1.2.
 
