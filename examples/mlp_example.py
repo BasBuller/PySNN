@@ -31,7 +31,7 @@ thresh = 0.8
 v_rest = 0
 alpha_v = 0.2
 tau_v = 5
-alpha_t = 1.
+alpha_t = 1.0
 tau_t = 5
 duration_refrac = 5
 dt = 1
@@ -68,7 +68,6 @@ class Network(SNNNetwork):
         # connections = [self.mlp1_c, self.mlp2_c]
         # self.learning_rule = FedeSTDP(connections, lr, w_init, a)
 
-    # @torch.jit.script_method
     def forward(self, input):
         x, t = self.input(input)
 
@@ -110,7 +109,7 @@ out = []
 for batch in tqdm(train_dataloader):
     sample, label = batch
     for idx in range(sample.shape[-1]):
-        input = sample[:, :, idx].unsqueeze(1)
+        input = sample[:, idx, :].unsqueeze(1)
         out.append(net(input))
     net.reset_state()
 

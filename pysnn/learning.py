@@ -9,14 +9,9 @@ from pysnn.utils import _set_no_grad, tensor_clamp
 # Learning rule base class
 #########################################################
 class LearningRule(nn.Module):
-    r"""Base class for correlation based learning rules in spiking neural networks.
-    
-    Each 'layer' (combination of a Connection and a Neuron object) needs a separate LearningRule object.
-    """
-    # TODO: use Black (install it) and see whether this changes back to correct
-    def __init__(self,
-                 connection,
-                 lr):
+    r"""Base class for correlation based learning rules in spiking neural networks."""
+
+    def __init__(self, connection, lr):
         super(LearningRule, self).__init__()
         self.connection = connection
         self.lr = lr
@@ -38,6 +33,7 @@ class LearningRule(nn.Module):
 class FedeSTDP(LearningRule):
     r"""STDP version for Paredes Valles, performs mean operation over the batch 
     dimension before weight update."""
+
     def __init__(self, connection, lr, w_init, a):
         super(FedeSTDP, self).__init__(connection, lr)
         self.w_init = torch.tensor(w_init, dtype=torch.float)
@@ -70,14 +66,23 @@ class FedeSTDP(LearningRule):
 # MSTDPET
 #########################################################
 class MSTDPET(LearningRule):
-    r"""Apply MSTDPET from (Florian 2007) to the provided connections."""
-    def __init__(self, connection, pre_neuron, post_neuron, lr, dt, e_trace_decay):
-        super(MSTDPET, self).__init__(connection, post_neuron, lr)
+    r"""Apply MSTDPET from (Florian 2007) to the provided connections.
+    
+    Uses just a single, scalar reward value.
+    Update rule can be applied at any desired time step.
+    """
+
+    def __init__(
+        self, connection, pre_neuron, post_neuron, a_pre, a_post, lr, dt, e_trace_decay
+    ):
+        super(MSTDPET, self).__init__(connection, lr)
         self.pre_neuron = pre_neuron
         self.post_neuron = post_neuron
-
+        
         self.dt = dt
         self.e_trace_decay = e_trace_decay
+        self.a_pre = a_pre
+        self.a_post = a_post
 
         self.e_trace = torch.Tensor(*self.connection.weight.shape)
 
@@ -87,10 +92,20 @@ class MSTDPET(LearningRule):
         self.e_trace.fill_(0)
 
     def update_eligibility_trace(self):
+        r"""Update eligibility trace based on pre and postsynaptic spiking activity.
+        
+        This function has to be called manually after each timestep. Should not be called from within forward, 
+        as this does is likely not called every timestep.
+        """
+
         self.e_trace *= self.e_trace_decay
         # TODO: check dimensions
         # TODO: does spiking() still give spikes or have these been reset?
-        self.e_trace += self.pre_neuron.trace * self.post_neuron.spiking() - self.post_neuron.trace * self.pre_neuron.spiking()
+        self.e_trace += self.a_pre * torch.ger(
+            self.post_neuron.spikes.view(-1).float(), self.pre_neuron.trace.view(-1)
+        ) - self.a_post * torch.ger(
+            self.post_neuron.trace.view(-1), self.pre_neuron.spikes.view(-1).float()
+        )
 
     def forward(self, reward):
         # TODO: add weight clamping?

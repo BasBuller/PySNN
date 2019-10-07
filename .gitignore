@@ -1,15 +1,19 @@
 # Cache folders
-.vscode/*
-__pycache__/*
-*/__pycache__/*
-.mypy_cache/*
-PySNN.egg-info/*
+.vscode/
+.idea/
+__pycache__/
+*/__pycache__/
+.mypy_cache/
+PySNN.egg-info/
+pysnn.egg-info/
 
-# Folders
-experiments/*
-build/*
-dist/*
-pysnn.egg-info/*
+# Virtualenv
+venv/
+
+# Other folders
+experiments/
+build/
+dist/
 
 # Files
 trial.py

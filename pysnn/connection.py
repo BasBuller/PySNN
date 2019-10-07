@@ -18,10 +18,8 @@ class Connection(nn.Module):
 
     This object connects layers of neurons, it also contains the synaptic weights.
     """
-    def __init__(self,
-                 shape,
-                 dt,
-                 delay):
+
+    def __init__(self, shape, dt, delay):
         super(Connection, self).__init__()
         self.synapse_shape = shape
 
@@ -35,7 +33,9 @@ class Connection(nn.Module):
         elif isinstance(delay, torch.Tensor):
             delay_init = delay + 1
         else:
-            raise TypeError("Incorrect data type provided for delay_init, please provide an int or FloatTensor")
+            raise TypeError(
+                "Incorrect data type provided for delay_init, please provide an int or FloatTensor"
+            )
 
         # Learnable parameters
         if delay_init is not None:
@@ -63,10 +63,10 @@ class Connection(nn.Module):
         self.trace.fill_(0)
         self.delay.fill_(0)
 
-    def reset_weights(self, distribution="uniform", gain=1., a=-1., b=1.):
+    def reset_parameters(self, distribution="uniform", gain=1.0, a=-1.0, b=1.0):
         r"""Reinnitialize learnable network Parameters (e.g. weights)."""
         if distribution == "uniform":
-            nn.init.uniform_(self.weight, a=a*gain, b=b*gain)
+            nn.init.uniform_(self.weight, a=a * gain, b=b * gain)
         if distribution == "neuron_scaled_uniform":
             scaling = np.sqrt(self.weight.shape[1])
             a = (a + gain) / scaling
@@ -92,9 +92,13 @@ class Connection(nn.Module):
         Assumes weights are implemented by the class that inherits from this base class.
         """
         assert hasattr(self, "weight"), "Weight attribute is missing for {}.".format(
-            self.__class__.__name__)
-        assert isinstance(self.weight, Parameter), "Weight attribute is not a PyTorch Parameter for {}.".format(
-            self.__class__.__name__)
+            self.__class__.__name__
+        )
+        assert isinstance(
+            self.weight, Parameter
+        ), "Weight attribute is not a PyTorch Parameter for {}.".format(
+            self.__class__.__name__
+        )
         self.no_grad()
         self.reset_state()
         self.reset_weights()
@@ -120,12 +124,8 @@ class _Linear(Connection):
     This class implements basic methods and parameters that are shared among all version of Linear layers.
     By inhereting from this class one can easily change voltage update, trace update and forward functionalities. 
     """
-    def __init__(self,
-                 in_features,
-                 out_features,
-                 batch_size,
-                 dt,
-                 delay):
+
+    def __init__(self, in_features, out_features, batch_size, dt, delay):
         # Dimensions
         self.in_features = in_features
         self.out_features = out_features
@@ -145,7 +145,9 @@ class _Linear(Connection):
 
     def fold(self, x):
         r"""Simply folds incoming trace or activation potentials to output format."""
-        return x.view(self.batch_size, -1, self.out_features, self.in_features)  # TODO: Add posibility for a channel dim at dim 2
+        return x.view(
+            self.batch_size, -1, self.out_features, self.in_features
+        )  # TODO: Add posibility for a channel dim at dim 2
 
     def update_trace(self, t_in):
         r"""Propagate traces incoming from pre-synaptic neuron through all its outgoing connections."""
@@ -155,12 +157,8 @@ class _Linear(Connection):
 
 class Linear(_Linear):
     r"""SNN linear (fully connected) layer with interface comparable to torch.nn.Linear."""
-    def __init__(self,
-                 in_features,
-                 out_features,
-                 batch_size,
-                 dt,
-                 delay):
+
+    def __init__(self, in_features, out_features, batch_size, dt, delay):
         super(Linear, self).__init__(in_features, out_features, batch_size, dt, delay)
 
         # Initialize connection
@@ -183,24 +181,30 @@ class Linear(_Linear):
 #########################################################
 # Base class
 class _ConvNd(Connection):
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 kernel_size,
-                 im_dims,
-                 batch_size,
-                 dt,
-                 delay,
-                 stride=1,
-                 padding=0,
-                 dilation=1):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        im_dims,
+        batch_size,
+        dt,
+        delay,
+        stride=1,
+        padding=0,
+        dilation=1,
+    ):
         # Assertions
-        assert isinstance(im_dims, (tuple, list)), "Parameter im_dims should be a tuple or list of ints"
+        assert isinstance(
+            im_dims, (tuple, list)
+        ), "Parameter im_dims should be a tuple or list of ints"
         for i in im_dims:
             assert isinstance(i, int), "Variables in im_dims should be int"
 
         # Convolution parameters
-        self.batch_size = batch_size  # Cannot infer, needed to reserve memory for storing trace and delay timing
+        self.batch_size = (
+            batch_size
+        )  # Cannot infer, needed to reserve memory for storing trace and delay timing
         self.out_channels = out_channels
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)
@@ -218,17 +222,24 @@ class _ConvNd(Connection):
 
         # Output image shape
         if len(im_dims) == 1:
-            self.image_out_shape = (0)
+            self.image_out_shape = 0
         elif len(im_dims) == 2:
-            self.image_out_shape = conv2d_output_shape(*im_dims, self.kernel_size, stride=self.stride, 
-                                                       padding=self.padding, dilation=self.dilation)
+            self.image_out_shape = conv2d_output_shape(
+                *im_dims,
+                self.kernel_size,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation
+            )
         elif len(im_dims) == 3:
             self.image_out_shape = (0, 0, 0)
         else:
             raise ValueError("Input contains too many dimensions")
 
         # Weight parameter
-        self.weight = Parameter(torch.Tensor(out_channels, in_channels, *self.kernel_size))
+        self.weight = Parameter(
+            torch.Tensor(out_channels, in_channels, *self.kernel_size)
+        )
         self.register_parameter("bias", None)
 
     # Support functions
@@ -238,7 +249,9 @@ class _ConvNd(Connection):
         Currently torch.nn.functional.unfold only support 4D tenors (BxCxHxW)!
         """
         # TODO: Possibly implement own folding function that supports 5D if needed
-        return F.unfold(x, self.kernel_size, self.dilation, self.padding, self.stride).unsqueeze(1)
+        return F.unfold(
+            x, self.kernel_size, self.dilation, self.padding, self.stride
+        ).unsqueeze(1)
 
     def fold(self, x):
         r"""Simply folds incoming trace or activation potentials according to layer parameters."""
@@ -250,21 +263,34 @@ class _ConvNd(Connection):
 
 class Conv2d(_ConvNd):
     r"""Convolutional SNN layer interface comparable to torch.nn.Conv2d."""
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 kernel_size,
-                 im_dims,
-                 batch_size,
-                 dt,
-                 delay,
-                 tau_t,
-                 alpha_t,
-                 stride=1,
-                 padding=0,
-                 dilation=1):
-        super(Conv2d, self).__init__(in_channels, out_channels, kernel_size, im_dims, batch_size,
-                                                dt, delay, stride, padding, dilation)
+
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        im_dims,
+        batch_size,
+        dt,
+        delay,
+        tau_t,
+        alpha_t,
+        stride=1,
+        padding=0,
+        dilation=1,
+    ):
+        super(Conv2d, self).__init__(
+            in_channels,
+            out_channels,
+            kernel_size,
+            im_dims,
+            batch_size,
+            dt,
+            delay,
+            stride,
+            padding,
+            dilation,
+        )
 
         # Fixed parameters
         self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
@@ -340,6 +366,7 @@ class AdaptiveMaxPool2d(_SpikeAdaptiveMaxPoolNd):
     The trace of the 'maximum' spike is also returned. In case of multiple spikes within pooling window, returns first spike of 
     the window (top left corner).
     """
+
     def forward(self, x, trace):
         x = x.to(torch.float32, non_blocking=True)
         x, idx = F.adaptive_max_pool2d(x, self.output_size, self.return_indices)

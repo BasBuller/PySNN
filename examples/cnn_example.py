@@ -32,7 +32,7 @@ thresh = 0.8
 v_rest = 0
 alpha_v = 0.2
 tau_v = 5
-alpha_t = 1.
+alpha_t = 1.0
 tau_t = 5
 duration_refrac = 5
 dt = 1
@@ -77,7 +77,7 @@ class Network(SNNNetwork):
         # TODO: Insert an Input neuron layer in order to track traces efficiently before feeding to conv1
 
         # Layer 1
-        x, t  = self.conv1(x)
+        x, t = self.conv1(x)
         x, t = self.neuron1(x, t)
 
         # Layer 2
@@ -99,8 +99,12 @@ class Network(SNNNetwork):
 # Dataset
 #########################################################
 train_dataset, test_dataset = nmnist_train_test()
-train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+train_dataloader = DataLoader(
+    train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers
+)
+test_dataloader = DataLoader(
+    test_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers
+)
 
 
 #########################################################
