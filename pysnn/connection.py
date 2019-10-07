@@ -63,7 +63,7 @@ class Connection(nn.Module):
         self.trace.fill_(0)
         self.delay.fill_(0)
 
-    def reset_parameters(self, distribution="uniform", gain=1.0, a=-1.0, b=1.0):
+    def reset_weights(self, distribution="uniform", gain=1.0, a=-1.0, b=1.0):
         r"""Reinnitialize learnable network Parameters (e.g. weights)."""
         if distribution == "uniform":
             nn.init.uniform_(self.weight, a=a * gain, b=b * gain)

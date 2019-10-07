@@ -119,6 +119,7 @@ class Neuron(nn.Module):
         self.thresh_center = Parameter(torch.tensor(thresh, dtype=torch.float))
 
         # Define dynamic parameters
+        self.spikes = Parameter(torch.Tensor(*cells_shape))
         self.v_cell = Parameter(torch.Tensor(*cells_shape))
         self.trace = Parameter(torch.Tensor(*cells_shape))
         self.refrac_counts = Parameter(torch.Tensor(*cells_shape))
@@ -177,7 +178,7 @@ class Neuron(nn.Module):
         if self.complete_trace is not None:
             self.complete_trace.data = torch.zeros(*self.v_cell.shape, 1, device=self.v_cell.device).to(torch.bool)
 
-    def reset_parameters(self):
+    def reset_thresh(self):
         r"""Reset learnable cell parameters to initialization values."""
         self.thresh.copy_(torch.ones_like(self.thresh.data) * self.thresh_center)
 
@@ -189,7 +190,7 @@ class Neuron(nn.Module):
         r"""Initialize state, parameters and turn off gradients."""
         self.no_grad()
         self.reset_state()
-        self.reset_parameters()
+        self.reset_thresh()
 
     def forward(self):
         return
@@ -480,7 +481,7 @@ class FedeNeuronTrace(Neuron):
         # x = self.fold(x)
         self.update_voltage(x, pre_trace)
         spikes = self.spiking()
-        self.update_trace(spikes)
+        self.update_trace(self.convert_spikes(spikes))
         self.refrac(spikes)
         if self.complete_trace is not None:
             self.concat_trace(spikes)
