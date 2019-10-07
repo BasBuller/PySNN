@@ -54,19 +54,17 @@ class Network(SNNNetwork):
         super(Network, self).__init__()
 
         # Input
-        self.input = InputTraceExponential((n_in,), *i_dynamics)
+        self.input = InputTraceExponential((batch_size, 1, n_in), *i_dynamics)
 
         # Layer 1
         self.mlp1_c = Linear(n_in, n_hidden, *c_dynamics)
         self.neuron1 = FedeNeuronTrace((batch_size, 1, n_hidden), *n_dynamics)
+        self.learning1 = FedeSTDP(self.mlp1_c, lr, w_init, a)
 
         # Layer 2
         self.mlp2_c = Linear(n_hidden, n_out, *c_dynamics)
         self.neuron2 = FedeNeuronTrace((batch_size, 1, n_out), *n_dynamics)
-
-        # # Learning rule
-        # connections = [self.mlp1_c, self.mlp2_c]
-        # self.learning_rule = FedeSTDP(connections, lr, w_init, a)
+        self.learning2 = FedeSTDP(self.mlp2_c, lr, w_init, a)
 
     def forward(self, input):
         x, t = self.input(input)
@@ -79,10 +77,11 @@ class Network(SNNNetwork):
         x, t = self.mlp2_c(x, t)
         x, t = self.neuron2(x, t)
 
-        # Learning
-        self.learning_rule()
-
         return x
+
+    def backward(self):
+        self.learning1()
+        self.learning2() 
 
 
 #########################################################
@@ -107,11 +106,16 @@ net = Network()
 
 out = []
 for batch in tqdm(train_dataloader):
+    single_out = []
     sample, label = batch
-    for idx in range(sample.shape[-1]):
-        input = sample[:, idx, :].unsqueeze(1)
-        out.append(net(input))
-    net.reset_state()
 
-output = torch.stack(out, dim=1)
-print(output.shape)
+    # Iterate over input's time dimension
+    for idx in range(sample.shape[-1]):
+        input = sample[:, :, idx].unsqueeze(1)
+        single_out.append(net(input))
+        net.backward()
+        
+    net.reset_state()
+    out.append(torch.stack(single_out, dim=-1))
+
+print(out[0].shape)

@@ -14,8 +14,8 @@ class Input(nn.Module):
 
     def __init__(self, cells_shape, dt):
         super(Input, self).__init__()
-        self.trace = Parameter(torch.zeros(*cells_shape, dtype=torch.float))
-        self.dt = Parameter(torch.tensor(dt, dtype=torch.float))
+        self.trace = torch.zeros(*cells_shape, dtype=torch.float)
+        self.dt = torch.tensor(dt, dtype=torch.float)
 
     def reset_state(self):
         r"""Reset cell states that accumulate over time during simulation."""
@@ -105,34 +105,25 @@ class Neuron(nn.Module):
         ), "dt does not fit an integer amount of times in duration_refrac"
 
         # Fixed parameters
-        self.v_rest = Parameter(torch.tensor(v_rest, dtype=torch.float))
-        self.alpha_v = Parameter(
-            torch.tensor(alpha_v, dtype=torch.float)
-        )  # TODO: Might want to move this out of base class
-        self.alpha_t = Parameter(
-            torch.tensor(alpha_t, dtype=torch.float)
-        )  # TODO: Might want to move this out of base class
-        self.dt = Parameter(torch.tensor(dt, dtype=torch.float))
-        self.duration_refrac = Parameter(
-            torch.tensor(duration_refrac + 1, dtype=torch.float)
-        )
-        self.thresh_center = Parameter(torch.tensor(thresh, dtype=torch.float))
+        self.v_rest = torch.tensor(v_rest, dtype=torch.float)
+        self.alpha_v = torch.tensor(alpha_v, dtype=torch.float)  # TODO: Might want to move this out of base class
+        self.alpha_t = torch.tensor(alpha_t, dtype=torch.float)  # TODO: Might want to move this out of base class
+        self.dt = torch.tensor(dt, dtype=torch.float)
+        self.duration_refrac = torch.tensor(duration_refrac + 1, dtype=torch.float)
+        self.thresh_center = torch.tensor(thresh, dtype=torch.float)
 
         # Define dynamic parameters
-        self.spikes = Parameter(torch.Tensor(*cells_shape))
-        self.v_cell = Parameter(torch.Tensor(*cells_shape))
-        self.trace = Parameter(torch.Tensor(*cells_shape))
-        self.refrac_counts = Parameter(torch.Tensor(*cells_shape))
+        self.spikes = torch.Tensor(*cells_shape)
+        self.v_cell = torch.Tensor(*cells_shape)
+        self.trace = torch.Tensor(*cells_shape)
+        self.refrac_counts = torch.Tensor(*cells_shape)
 
         # Define learnable parameters
         self.thresh = Parameter(torch.Tensor(*cells_shape))
 
         # In case of storing a complete, local copy of the activity of a neuron
         if store_trace:
-            # self.complete_trace = Parameter(torch.zeros(*cells_shape, 1, dtype=torch.bool, requires_grad=False).to(torch.bool))
-            self.complete_trace = Parameter(torch.zeros(*cells_shape, 1))
-            self.complete_trace.requires_grad = False
-            self.complete_trace.data = self.complete_trace.to(torch.bool)
+            self.complete_trace = torch.zeros(*cells_shape, 1, dtype=torch.bool)
         else:
             self.complete_trace = None
 
@@ -226,7 +217,7 @@ class IFNeuronTraceLinear(Neuron):
         )
 
         # Fixed parameters
-        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
+        self.tau_t = torch.tensor(tau_t, dtype=torch.float)
         self.init_neuron()
 
     def update_trace(self, x):
@@ -276,7 +267,7 @@ class IFNeuronTraceExponential(Neuron):
         )
 
         # Fixed parameters
-        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
+        self.tau_t = torch.tensor(tau_t, dtype=torch.float)
         self.init_neuron()
 
     def update_trace(self, x):
@@ -390,8 +381,8 @@ class LIFNeuronTraceExponential(Neuron):
         )
 
         # Fixed parameters
-        self.tau_v = Parameter(torch.tensor(tau_v, dtype=torch.float))
-        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
+        self.tau_v = torch.tensor(tau_v, dtype=torch.float)
+        self.tau_t = torch.tensor(tau_t, dtype=torch.float)
         self.init_neuron()
 
     def update_trace(self, x):
@@ -456,8 +447,8 @@ class FedeNeuronTrace(Neuron):
         )
 
         # Fixed parameters
-        self.tau_v = Parameter(torch.tensor(tau_v, dtype=torch.float))
-        self.tau_t = Parameter(torch.tensor(tau_t, dtype=torch.float))
+        self.tau_v = torch.tensor(tau_v, dtype=torch.float)
+        self.tau_t = torch.tensor(tau_t, dtype=torch.float)
         self.init_neuron()
 
     def update_trace(self, x):
