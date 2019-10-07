@@ -36,14 +36,14 @@ class Connection(nn.Module):
             raise TypeError(
                 "Incorrect data type provided for delay_init, please provide an int or FloatTensor"
             )
-        self.delay_init = delay_init
+        self.register_buffer("delay_init", delay_init)
 
         # Fixed parameters
-        self.dt = torch.tensor(dt, dtype=torch.float)
+        self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
 
         # State parameters
-        self.trace = torch.Tensor(*shape)
-        self.delay = torch.Tensor(*shape)
+        self.register_buffer("trace", torch.Tensor(*shape))
+        self.register_buffer("delay", torch.Tensor(*shape))
 
     def convert_spikes(self, x):
         r"""Convert input from Byte Tensor to same data type as the weights."""
@@ -131,7 +131,6 @@ class _Linear(Connection):
 
         # Learnable parameters
         self.weight = Parameter(torch.Tensor(out_features, in_features))
-        self.output_spike_matrix = torch.ones_like(self.weight)
 
     # Support function
     def unfold(self, x):
@@ -213,7 +212,7 @@ class _ConvNd(Connection):
         self.synapse_shape = synapse_shape
 
         # Super init
-        super(_ConvNd, self).__init__(synapse_.hape, dt, delay)
+        super(_ConvNd, self).__init__(synapse_shape, dt, delay)
 
         # Output image shape
         if len(im_dims) == 1:
@@ -287,8 +286,8 @@ class Conv2d(_ConvNd):
         )
 
         # Fixed parameters
-        self.tau_t = torch.tensor(tau_t, dtype=torch.float)
-        self.alpha_t = torch.tensor(alpha_t, dtype=torch.float)
+        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
+        self.register_buffer("alpha_t", torch.tensor(alpha_t, dtype=torch.float))
 
         # Intialize layer
         self.init_connection()

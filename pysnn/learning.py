@@ -14,7 +14,7 @@ class LearningRule(nn.Module):
     def __init__(self, connection, lr):
         super(LearningRule, self).__init__()
         self.connection = connection
-        self.lr = lr
+        self.register_buffer("lr", torch.tensor(lr, dtype=torch.float))
 
     def no_grad(self):
         _set_no_grad(self)
@@ -36,8 +36,8 @@ class FedeSTDP(LearningRule):
 
     def __init__(self, connection, lr, w_init, a):
         super(FedeSTDP, self).__init__(connection, lr)
-        self.w_init = torch.tensor(w_init, dtype=torch.float)
-        self.a = torch.tensor(a, dtype=torch.float)
+        self.register_buffer("w_init", torch.tensor(w_init, dtype=torch.float))
+        self.register_buffer("a", torch.tensor(a, dtype=torch.float))
 
         self.init_rule()
 
@@ -79,12 +79,12 @@ class MSTDPET(LearningRule):
         self.pre_neuron = pre_neuron
         self.post_neuron = post_neuron
         
-        self.dt = dt
-        self.e_trace_decay = e_trace_decay
-        self.a_pre = a_pre
-        self.a_post = a_post
+        self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
+        self.register_buffer("e_trace_decay", torch.tensor(e_trace_decay, dtype=torch.float))
+        self.register_buffer("a_pre", torch.tensor(a_pre, dtype=torch.float))
+        self.register_buffer("a_post", torch.tensor(a_post, dtype=torch.float))
 
-        self.e_trace = torch.Tensor(*self.connection.weight.shape)
+        self.register_buffer("e_trace", torch.Tensor(*self.connection.weight.shape))
 
         self.init_rule()
 
