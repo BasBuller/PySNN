@@ -19,20 +19,24 @@ from event_pytorch.event_dataloaders import NMNISTDataset
 #########################################################
 # Data
 dataset_path = "/home/basbuller/python_lib_sources/slayerPytorch/example/NMNISTsmall/"
-sample_file = "/home/basbuller/python_lib_sources/slayerPytorch/example/NMNISTsmall/train1K.txt"
-test_file = "/home/basbuller/python_lib_sources/slayerPytorch/example/NMNISTsmall/test100.txt"
+sample_file = (
+    "/home/basbuller/python_lib_sources/slayerPytorch/example/NMNISTsmall/train1K.txt"
+)
+test_file = (
+    "/home/basbuller/python_lib_sources/slayerPytorch/example/NMNISTsmall/test100.txt"
+)
 sample_length = 300
 num_workers = 4
 batch_size = 20
 
 # Time and trace decay
 dt = 1
-alpha_t = 1.
+alpha_t = 1.0
 tau_t = 5
 
 # Neuronal dynamics
 thresh = 0.5
-v_rest = 0.
+v_rest = 0.0
 alpha_v = 0.3
 tau_v = 5
 duration_refrac = 5
@@ -75,17 +79,21 @@ class Network(SNNNetwork):
         self.neuron3 = FedeNeuronTrace((batch_size, 16, 8, 8), *n_dynamics)
 
         # Linear
-        self.linear4 = LinearExponential(1024, 10, batch_size, dt, delay, tau_t, alpha_t)
+        self.linear4 = LinearExponential(
+            1024, 10, batch_size, dt, delay, tau_t, alpha_t
+        )
         self.neuron4 = FedeNeuronTrace((batch_size, 1, 10), *n_dynamics)
 
         # Learning rule
         conv_connections = [self.conv1, self.conv2, self.conv3]
         self.unsupervised = FedeSTDP(conv_connections, lr, w_init, a)
-        self.supervised = RSTDPRateSingleElement(self.linear4, lr, w_init, a, (batch_size, 10), count_start)
+        self.supervised = RSTDPRateSingleElement(
+            self.linear4, lr, w_init, a, (batch_size, 10), count_start
+        )
 
     def forward(self, x):
         # Layer 1
-        x, t  = self.conv1(x)
+        x, t = self.conv1(x)
         x = self.neuron1(x, t)
 
         # Layer 2
@@ -114,10 +122,14 @@ class Network(SNNNetwork):
 # Dataset
 #########################################################
 train_dataset = NMNISTDataset(dataset_path, sample_file, dt, sample_length)
-train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+train_dataloader = DataLoader(
+    train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers
+)
 
 test_dataset = NMNISTDataset(dataset_path, test_file, dt, sample_length)
-test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+test_dataloader = DataLoader(
+    test_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers
+)
 
 
 #########################################################

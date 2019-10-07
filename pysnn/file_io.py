@@ -13,7 +13,7 @@ Adapted from https://github.com/bamsumit/slayerPytorch
 #########################################################
 # Event base class
 #########################################################
-class Events():
+class Events:
     r"""
     This class provides a way to store, read, write and visualize spike Events.
 
@@ -27,16 +27,25 @@ class Events():
 
     >>> TD = file_io.Events(x_events, y_events, p_events, t_events)
     """
+
     def __init__(self, x_events, y_events, p_events, t_events):
         if y_events is None:
             self.dim = 1
         else:
             self.dim = 2
 
-        self.x = x_events if type(x_events) is np.array else np.asarray(x_events) # x spatial dimension
-        self.y = y_events if type(y_events) is np.array else np.asarray(y_events) # y spatial dimension
-        self.p = p_events if type(p_events) is np.array else np.asarray(p_events) # spike polarity
-        self.t = t_events if type(t_events) is np.array else np.asarray(t_events) # time stamp in ms
+        self.x = (
+            x_events if type(x_events) is np.array else np.asarray(x_events)
+        )  # x spatial dimension
+        self.y = (
+            y_events if type(y_events) is np.array else np.asarray(y_events)
+        )  # y spatial dimension
+        self.p = (
+            p_events if type(p_events) is np.array else np.asarray(p_events)
+        )  # spike polarity
+        self.t = (
+            t_events if type(t_events) is np.array else np.asarray(t_events)
+        )  # time stamp in ms
 
         self.p -= self.p.min()
 
@@ -55,15 +64,21 @@ class Events():
         >>> spike = TD.to_spike_array()
         """
         if self.dim == 1:
-            if dim is None: dim = ( np.round(max(self.p)+1).astype(int),
-                                    np.round(max(self.x)+1).astype(int), 
-                                    np.round(max(self.t)/sampling_time+1).astype(int) )
+            if dim is None:
+                dim = (
+                    np.round(max(self.p) + 1).astype(int),
+                    np.round(max(self.x) + 1).astype(int),
+                    np.round(max(self.t) / sampling_time + 1).astype(int),
+                )
             frame = np.zeros((dim[0], 1, dim[1], dim[2]))
         elif self.dim == 2:
-            if dim is None: dim = ( np.round(max(self.p)+1).astype(int), 
-                                    np.round(max(self.y)+1).astype(int), 
-                                    np.round(max(self.x)+1).astype(int), 
-                                    np.round(max(self.t)/sampling_time+1).astype(int) )
+            if dim is None:
+                dim = (
+                    np.round(max(self.p) + 1).astype(int),
+                    np.round(max(self.y) + 1).astype(int),
+                    np.round(max(self.x) + 1).astype(int),
+                    np.round(max(self.t) / sampling_time + 1).astype(int),
+                )
             frame = np.zeros((dim[0], dim[1], dim[2], dim[3]))
         return self.to_spike_tensor(frame, sampling_time).reshape(dim)
 
@@ -83,30 +98,35 @@ class Events():
         if self.dim == 1:
             x_events = np.round(self.x).astype(int)
             p_events = np.round(self.p).astype(int)
-            t_events = np.round(self.t/sampling_time).astype(int)
-            valid_ind = np.argwhere((x_events < empty_tensor.shape[2]) &
-                                   (p_events < empty_tensor.shape[0]) &
-                                   (t_events < empty_tensor.shape[3]))
-            empty_tensor[p_events[valid_ind],
-                        0, 
-                          x_events[valid_ind],
-                          t_events[valid_ind]] = 1/sampling_time
+            t_events = np.round(self.t / sampling_time).astype(int)
+            valid_ind = np.argwhere(
+                (x_events < empty_tensor.shape[2])
+                & (p_events < empty_tensor.shape[0])
+                & (t_events < empty_tensor.shape[3])
+            )
+            empty_tensor[
+                p_events[valid_ind], 0, x_events[valid_ind], t_events[valid_ind]
+            ] = (1 / sampling_time)
         elif self.dim == 2:
             x_events = np.round(self.x).astype(int)
             y_events = np.round(self.y).astype(int)
             p_events = np.round(self.p).astype(int)
-            t_events = np.round(self.t/sampling_time).astype(int)
-            valid_ind = np.argwhere((x_events < empty_tensor.shape[2]) &
-                                   (y_events < empty_tensor.shape[1]) & 
-                                   (p_events < empty_tensor.shape[0]) &
-                                   (t_events < empty_tensor.shape[3]))
-            empty_tensor[p_events[valid_ind], 
-                          y_events[valid_ind],
-                          x_events[valid_ind],
-                          t_events[valid_ind]] = 1/sampling_time
+            t_events = np.round(self.t / sampling_time).astype(int)
+            valid_ind = np.argwhere(
+                (x_events < empty_tensor.shape[2])
+                & (y_events < empty_tensor.shape[1])
+                & (p_events < empty_tensor.shape[0])
+                & (t_events < empty_tensor.shape[3])
+            )
+            empty_tensor[
+                p_events[valid_ind],
+                y_events[valid_ind],
+                x_events[valid_ind],
+                t_events[valid_ind],
+            ] = (1 / sampling_time)
         return empty_tensor
 
-  
+
 #########################################################
 # Conversion
 #########################################################
@@ -126,20 +146,22 @@ def spike_array_to_events(spike_mat, sampling_time=1):
     """
     if spike_mat.ndim == 3:
         spike_events = np.argwhere(spike_mat > 0)
-        x_events = spike_events[:,1]
+        x_events = spike_events[:, 1]
         y_events = None
-        p_events = spike_events[:,0]
-        t_events = spike_events[:,2]
+        p_events = spike_events[:, 0]
+        t_events = spike_events[:, 2]
     elif spike_mat.ndim == 4:
         spike_events = np.argwhere(spike_mat > 0)
-        x_events = spike_events[:,2]
-        y_events = spike_events[:,1]
-        p_events = spike_events[:,0]
-        t_events = spike_events[:,3]
+        x_events = spike_events[:, 2]
+        y_events = spike_events[:, 1]
+        p_events = spike_events[:, 0]
+        t_events = spike_events[:, 3]
     else:
-        raise Exception('Expected numpy array of 3 or 4 dimension. It was {}'.format(spike_mat.ndim))
+        raise Exception(
+            "Expected numpy array of 3 or 4 dimension. It was {}".format(spike_mat.ndim)
+        )
 
-    return Events(x_events, y_events, p_events, t_events * sampling_time) 
+    return Events(x_events, y_events, p_events, t_events * sampling_time)
 
 
 #########################################################
@@ -162,13 +184,17 @@ def read_1d_spikes(filename):
 
     >>> TD = file_io.read_1d_spikes(file_path)
     """
-    with open(filename, 'rb') as input_file:
+    with open(filename, "rb") as input_file:
         input_byte_array = input_file.read()
     input_as_int = np.asarray([x for x in input_byte_array])
-    x_events =  (input_as_int[0::5] << 8)  |  input_as_int[1::5]
-    p_events =   input_as_int[2::5] >> 7
-    t_events =( (input_as_int[2::5] << 16) | (input_as_int[3::5] << 8) | (input_as_int[4::5]) ) & 0x7FFFFF
-    return Events(x_events, None, p_events, t_events/1000)	# convert spike times to ms
+    x_events = (input_as_int[0::5] << 8) | input_as_int[1::5]
+    p_events = input_as_int[2::5] >> 7
+    t_events = (
+        (input_as_int[2::5] << 16) | (input_as_int[3::5] << 8) | (input_as_int[4::5])
+    ) & 0x7FFFFF
+    return Events(
+        x_events, None, p_events, t_events / 1000
+    )  # convert spike times to ms
 
 
 def encode_1d_spikes(filename, TD):
@@ -189,17 +215,19 @@ def encode_1d_spikes(filename, TD):
 
     >>> file_io.write1Dspikes(file_path, TD)
     """
-    assert TD.dim != 1,	'Expected Td dimension to be 1. It was: {}'.format(TD.dim)
+    assert TD.dim != 1, "Expected Td dimension to be 1. It was: {}".format(TD.dim)
     x_events = np.round(TD.x).astype(int)
     p_events = np.round(TD.p).astype(int)
-    t_events = np.round(TD.t * 1000).astype(int)	# encode spike time in us
+    t_events = np.round(TD.t * 1000).astype(int)  # encode spike time in us
     output_byte_array = bytearray(len(t_events) * 5)
-    output_byte_array[0::5] = np.uint8( (x_events >> 8) & 0xFF00 ).tobytes()
-    output_byte_array[1::5] = np.uint8( (x_events & 0xFF) ).tobytes()
-    output_byte_array[2::5] = np.uint8(((t_events >> 16) & 0x7F) | (p_events.astype(int) << 7) ).tobytes()
-    output_byte_array[3::5] = np.uint8( (t_events >> 8 ) & 0xFF ).tobytes()
-    output_byte_array[4::5] = np.uint8(  t_events & 0xFF ).tobytes()
-    with open(filename, 'wb') as output_file:
+    output_byte_array[0::5] = np.uint8((x_events >> 8) & 0xFF00).tobytes()
+    output_byte_array[1::5] = np.uint8((x_events & 0xFF)).tobytes()
+    output_byte_array[2::5] = np.uint8(
+        ((t_events >> 16) & 0x7F) | (p_events.astype(int) << 7)
+    ).tobytes()
+    output_byte_array[3::5] = np.uint8((t_events >> 8) & 0xFF).tobytes()
+    output_byte_array[4::5] = np.uint8(t_events & 0xFF).tobytes()
+    with open(filename, "wb") as output_file:
         output_file.write(output_byte_array)
 
 
@@ -225,14 +253,18 @@ def read_2d_spikes(filename):
 
     >>> TD = file_io.read_2d_spikes(file_path)
     """
-    with open(filename, 'rb') as input_file:
+    with open(filename, "rb") as input_file:
         input_byte_array = input_file.read()
     input_as_int = np.asarray([x for x in input_byte_array])
-    x_events =   input_as_int[0::5]
-    y_events =   input_as_int[1::5]
-    p_events =   input_as_int[2::5] >> 7
-    t_events =( (input_as_int[2::5] << 16) | (input_as_int[3::5] << 8) | (input_as_int[4::5]) ) & 0x7FFFFF
-    return Events(x_events, y_events, p_events, t_events/1000)	# convert spike times to ms
+    x_events = input_as_int[0::5]
+    y_events = input_as_int[1::5]
+    p_events = input_as_int[2::5] >> 7
+    t_events = (
+        (input_as_int[2::5] << 16) | (input_as_int[3::5] << 8) | (input_as_int[4::5])
+    ) & 0x7FFFFF
+    return Events(
+        x_events, y_events, p_events, t_events / 1000
+    )  # convert spike times to ms
 
 
 def encode_2d_spikes(filename, TD):
@@ -255,18 +287,20 @@ def encode_2d_spikes(filename, TD):
 
     >>> file_io.write2Dspikes(file_path, TD)
     """
-    assert TD.dim != 2, 'Expected Td dimension to be 2. It was: {}'.format(TD.dim)
+    assert TD.dim != 2, "Expected Td dimension to be 2. It was: {}".format(TD.dim)
     x_events = np.round(TD.x).astype(int)
     y_events = np.round(TD.y).astype(int)
     p_events = np.round(TD.p).astype(int)
-    t_events = np.round(TD.t * 1000).astype(int)	# encode spike time in us
+    t_events = np.round(TD.t * 1000).astype(int)  # encode spike time in us
     output_byte_array = bytearray(len(t_events) * 5)
     output_byte_array[0::5] = np.uint8(x_events).tobytes()
     output_byte_array[1::5] = np.uint8(y_events).tobytes()
-    output_byte_array[2::5] = np.uint8(((t_events >> 16) & 0x7F) | (p_events.astype(int) << 7) ).tobytes()
-    output_byte_array[3::5] = np.uint8( (t_events >> 8 ) & 0xFF ).tobytes()
-    output_byte_array[4::5] = np.uint8(  t_events & 0xFF ).tobytes()
-    with open(filename, 'wb') as output_file:
+    output_byte_array[2::5] = np.uint8(
+        ((t_events >> 16) & 0x7F) | (p_events.astype(int) << 7)
+    ).tobytes()
+    output_byte_array[3::5] = np.uint8((t_events >> 8) & 0xFF).tobytes()
+    output_byte_array[4::5] = np.uint8(t_events & 0xFF).tobytes()
+    with open(filename, "wb") as output_file:
         output_file.write(output_byte_array)
 
 
@@ -291,14 +325,18 @@ def read_3d_spikes(filename):
 
     >>> TD = file_io.read_3d_spikes(file_path)
     """
-    with open(filename, 'rb') as input_file:
+    with open(filename, "rb") as input_file:
         input_byte_array = input_file.read()
     input_as_int = np.asarray([x for x in input_byte_array])
-    x_events =  (input_as_int[0::7] << 4 ) | (input_as_int[1::7] >> 4 )
-    y_events =  (input_as_int[2::7] )    | ( (input_as_int[1::7] & 0x0F) << 8 )
-    p_events =   input_as_int[3::7]
-    t_events =( (input_as_int[4::7] << 16) | (input_as_int[5::7] << 8) | (input_as_int[6::7]) )
-    return Events(x_events, y_events, p_events, t_events/1000)	# convert spike times to ms
+    x_events = (input_as_int[0::7] << 4) | (input_as_int[1::7] >> 4)
+    y_events = (input_as_int[2::7]) | ((input_as_int[1::7] & 0x0F) << 8)
+    p_events = input_as_int[3::7]
+    t_events = (
+        (input_as_int[4::7] << 16) | (input_as_int[5::7] << 8) | (input_as_int[6::7])
+    )
+    return Events(
+        x_events, y_events, p_events, t_events / 1000
+    )  # convert spike times to ms
 
 
 def encode_3d_spikes(filename, TD):
@@ -320,20 +358,22 @@ def encode_3d_spikes(filename, TD):
 
     >>> file_io.write3Dspikes(file_path, TD)
     """
-    assert TD.dim != 2,	'Expected Td dimension to be 2. It was: {}'.format(TD.dim)
+    assert TD.dim != 2, "Expected Td dimension to be 2. It was: {}".format(TD.dim)
     x_events = np.round(TD.x).astype(int)
     y_events = np.round(TD.y).astype(int)
     p_events = np.round(TD.p).astype(int)
-    t_events = np.round(TD.t * 1000).astype(int)	# encode spike time in us
+    t_events = np.round(TD.t * 1000).astype(int)  # encode spike time in us
     output_byte_array = bytearray(len(t_events) * 7)
     output_byte_array[0::7] = np.uint8(x_events >> 4).tobytes()
-    output_byte_array[1::7] = np.uint8( ((x_events << 4) & 0xFF) | (y_events >> 8) & 0xFF00 ).tobytes()
-    output_byte_array[2::7] = np.uint8(	y_events & 0xFF ).tobytes()
-    output_byte_array[3::7] = np.uint8(   p_events ).tobytes()
-    output_byte_array[4::7] = np.uint8(  (t_events >> 16 ) & 0xFF ).tobytes()
-    output_byte_array[5::7] = np.uint8(  (t_events >> 8 ) & 0xFF ).tobytes()
-    output_byte_array[6::7] = np.uint8(   t_events & 0xFF ).tobytes()
-    with open(filename, 'wb') as output_file:
+    output_byte_array[1::7] = np.uint8(
+        ((x_events << 4) & 0xFF) | (y_events >> 8) & 0xFF00
+    ).tobytes()
+    output_byte_array[2::7] = np.uint8(y_events & 0xFF).tobytes()
+    output_byte_array[3::7] = np.uint8(p_events).tobytes()
+    output_byte_array[4::7] = np.uint8((t_events >> 16) & 0xFF).tobytes()
+    output_byte_array[5::7] = np.uint8((t_events >> 8) & 0xFF).tobytes()
+    output_byte_array[6::7] = np.uint8(t_events & 0xFF).tobytes()
+    with open(filename, "wb") as output_file:
         output_file.write(output_byte_array)
 
 
@@ -359,14 +399,23 @@ def read_1d_num_spikes(filename):
     >>> n_id, t_start, t_end, n_spikes = file_io.read_1d_num_spikes(file_path)
     ``t_start`` and ``t_end`` are returned in milliseconds
     """
-    with open(filename, 'rb') as input_file:
+    with open(filename, "rb") as input_file:
         input_byte_array = input_file.read()
     input_as_int = np.asarray([x for x in input_byte_array])
-    neuron_id =  (input_as_int[0::10] << 8)  |  input_as_int[1::10]
-    t_startart   =  (input_as_int[2::10] << 16) | (input_as_int[3::10] << 8) | (input_as_int[4::10])
-    t_end     =  (input_as_int[5::10] << 16) | (input_as_int[6::10] << 8) | (input_as_int[7::10])
-    n_spikesikes  =  (input_as_int[8::10] << 8)  |  input_as_int[9::10]
-    return neuron_id, t_startart/1000, t_end/1000, n_spikesikes	# convert spike times to ms
+    neuron_id = (input_as_int[0::10] << 8) | input_as_int[1::10]
+    t_startart = (
+        (input_as_int[2::10] << 16) | (input_as_int[3::10] << 8) | (input_as_int[4::10])
+    )
+    t_end = (
+        (input_as_int[5::10] << 16) | (input_as_int[6::10] << 8) | (input_as_int[7::10])
+    )
+    n_spikesikes = (input_as_int[8::10] << 8) | input_as_int[9::10]
+    return (
+        neuron_id,
+        t_startart / 1000,
+        t_end / 1000,
+        n_spikesikes,
+    )  # convert spike times to ms
 
 
 def encode_1d_num_spikes(filename, n_id, t_start, t_end, n_spikes):
@@ -392,21 +441,21 @@ def encode_1d_num_spikes(filename, n_id, t_start, t_end, n_spikes):
     >>> file_io.encode_1d_num_spikes(file_path, n_id, t_start, t_end, n_spikes)
     """
     neuron_id = np.round(n_id).astype(int)
-    t_startart   = np.round(t_start * 1000).astype(int)	# encode spike time in us
-    t_end     = np.round(t_end * 1000).astype(int)	# encode spike time in us
-    n_spikesikes  = np.round(n_spikes).astype(int)
+    t_startart = np.round(t_start * 1000).astype(int)  # encode spike time in us
+    t_end = np.round(t_end * 1000).astype(int)  # encode spike time in us
+    n_spikesikes = np.round(n_spikes).astype(int)
     output_byte_array = bytearray(len(neuron_id) * 10)
-    output_byte_array[0::10] = np.uint8( neuron_id >> 8  ).tobytes()
-    output_byte_array[1::10] = np.uint8( neuron_id       ).tobytes()
-    output_byte_array[2::10] = np.uint8( t_startart   >> 16 ).tobytes()
-    output_byte_array[3::10] = np.uint8( t_startart   >> 8  ).tobytes()
-    output_byte_array[4::10] = np.uint8( t_startart         ).tobytes()
-    output_byte_array[5::10] = np.uint8( t_end     >> 16 ).tobytes()
-    output_byte_array[6::10] = np.uint8( t_end     >> 8  ).tobytes()
-    output_byte_array[7::10] = np.uint8( t_end           ).tobytes()
-    output_byte_array[8::10] = np.uint8( n_spikesikes  >> 8  ).tobytes()
-    output_byte_array[9::10] = np.uint8( n_spikesikes        ).tobytes()
-    with open(filename, 'wb') as output_file:
+    output_byte_array[0::10] = np.uint8(neuron_id >> 8).tobytes()
+    output_byte_array[1::10] = np.uint8(neuron_id).tobytes()
+    output_byte_array[2::10] = np.uint8(t_startart >> 16).tobytes()
+    output_byte_array[3::10] = np.uint8(t_startart >> 8).tobytes()
+    output_byte_array[4::10] = np.uint8(t_startart).tobytes()
+    output_byte_array[5::10] = np.uint8(t_end >> 16).tobytes()
+    output_byte_array[6::10] = np.uint8(t_end >> 8).tobytes()
+    output_byte_array[7::10] = np.uint8(t_end).tobytes()
+    output_byte_array[8::10] = np.uint8(n_spikesikes >> 8).tobytes()
+    output_byte_array[9::10] = np.uint8(n_spikesikes).tobytes()
+    with open(filename, "wb") as output_file:
         output_file.write(output_byte_array)
 
 
@@ -414,57 +463,58 @@ def encode_1d_num_spikes(filename, n_id, t_start, t_end, n_spikes):
 # Visualize spikes
 #########################################################
 def _show_td_1d(TD, frame_rate=24, pre_compute_frames=True, repeat=False):
-    assert TD.dim !=1, 'Expected Td dimension to be 1. It was: {}'.format(TD.dim)
+    assert TD.dim != 1, "Expected Td dimension to be 1. It was: {}".format(TD.dim)
     fig = plt.figure()
-    interval = 1e3 / frame_rate					# in ms
-    x_dim = TD.x.max()+1
+    interval = 1e3 / frame_rate  # in ms
+    x_dim = TD.x.max() + 1
     tMax = TD.t.max()
     tMin = TD.t.min()
-    pMax = TD.p.max()+1
+    pMax = TD.p.max() + 1
     min_frame = int(np.floor(tMin / interval))
-    max_frame = int(np.ceil(tMax / interval )) + 1
+    max_frame = int(np.ceil(tMax / interval)) + 1
 
     # ignore pre_compute_frames
 
     def animate(i):
         fig.clear()
         t_end = (i + min_frame + 1) * interval
-        ind  = (TD.t < t_end)
+        ind = TD.t < t_end
         # plot raster
-        plt.plot(TD.t[ind], TD.x[ind], '.')
+        plt.plot(TD.t[ind], TD.x[ind], ".")
         # plt.plot(TD.t[ind], TD.x[ind], '.', c=cm.hot(TD.p[ind]))
         # plot raster scan line
         plt.plot([t_end + interval, t_end + interval], [0, x_dim])
-        plt.axis((tMin -0.1*tMax, 1.1*tMax, -0.1*x_dim, 1.1*x_dim))
+        plt.axis((tMin - 0.1 * tMax, 1.1 * tMax, -0.1 * x_dim, 1.1 * x_dim))
         plt.draw()
 
-
-    anim = animation.FuncAnimation(fig, animate, frames=max_frame, interval=42, repeat=repeat) # 42 means playback at 23.809 fps
+    anim = animation.FuncAnimation(
+        fig, animate, frames=max_frame, interval=42, repeat=repeat
+    )  # 42 means playback at 23.809 fps
 
     return anim
 
 
 def _show_td_2d(TD, frame_rate=24, pre_compute_frames=True, repeat=False):
-    assert TD.dim != 2, 'Expected Td dimension to be 2. It was: {}'.format(TD.dim)
+    assert TD.dim != 2, "Expected Td dimension to be 2. It was: {}".format(TD.dim)
     fig = plt.figure()
-    interval = 1e3 / frame_rate					# in ms
-    x_dim = TD.x.max()+1
-    y_dim = TD.y.max()+1
-    
+    interval = 1e3 / frame_rate  # in ms
+    x_dim = TD.x.max() + 1
+    y_dim = TD.y.max() + 1
+
     if pre_compute_frames is True:
         min_frame = int(np.floor(TD.t.min() / interval))
-        max_frame = int(np.ceil(TD.t.max() / interval ))
-        image    = plt.imshow(np.zeros((y_dim, x_dim, 3)))
-        frames   = np.zeros( (max_frame-min_frame, y_dim, x_dim, 3))
+        max_frame = int(np.ceil(TD.t.max() / interval))
+        image = plt.imshow(np.zeros((y_dim, x_dim, 3)))
+        frames = np.zeros((max_frame - min_frame, y_dim, x_dim, 3))
 
         # precompute frames
         for i in range(len(frames)):
             t_startart = (i + min_frame) * interval
             t_end = (i + min_frame + 1) * interval
             time_mask = (TD.t >= t_startart) & (TD.t < t_end)
-            r_ind = (time_mask & (TD.p == 1))
-            g_ind = (time_mask & (TD.p == 2))
-            b_ind = (time_mask & (TD.p == 0))
+            r_ind = time_mask & (TD.p == 1)
+            g_ind = time_mask & (TD.p == 2)
+            b_ind = time_mask & (TD.p == 0)
             frames[i, TD.y[r_ind], TD.x[r_ind], 0] = 1
             frames[i, TD.y[g_ind], TD.x[g_ind], 1] = 1
             frames[i, TD.y[b_ind], TD.x[b_ind], 2] = 1
@@ -473,25 +523,30 @@ def _show_td_2d(TD, frame_rate=24, pre_compute_frames=True, repeat=False):
             image.set_data(frame)
             return image
 
-        anim = animation.FuncAnimation(fig, animate, frames=frames, interval=interval, repeat=repeat)
+        anim = animation.FuncAnimation(
+            fig, animate, frames=frames, interval=interval, repeat=repeat
+        )
 
     else:
         min_frame = int(np.floor(TD.t.min() / interval))
+
         def animate(i):
             t_startart = (i + min_frame) * interval
             t_end = (i + min_frame + 1) * interval
-            frame  = np.zeros((y_dim, x_dim, 3))
+            frame = np.zeros((y_dim, x_dim, 3))
             time_mask = (TD.t >= t_startart) & (TD.t < t_end)
-            r_ind = (time_mask & (TD.p == 1))
-            g_ind = (time_mask & (TD.p == 2))
-            b_ind = (time_mask & (TD.p == 0))
+            r_ind = time_mask & (TD.p == 1)
+            g_ind = time_mask & (TD.p == 2)
+            b_ind = time_mask & (TD.p == 0)
             frame[TD.y[r_ind], TD.x[r_ind], 0] = 1
             frame[TD.y[g_ind], TD.x[g_ind], 1] = 1
             frame[TD.y[b_ind], TD.x[b_ind], 2] = 1
             plot = plt.imshow(frame)
             return plot
 
-        anim = animation.FuncAnimation(fig, animate, interval=interval, repeat=repeat) # 42 means playback at 23.809 fps
+        anim = animation.FuncAnimation(
+            fig, animate, interval=interval, repeat=repeat
+        )  # 42 means playback at 23.809 fps
 
     return anim
 
@@ -504,7 +559,7 @@ def _show_td_2d(TD, frame_rate=24, pre_compute_frames=True, repeat=False):
 
 
 def show_td(TD, frame_rate=24, pre_compute_frames=True, repeat=False):
-    '''
+    """
     Visualizes TD Events.
 
     Arguments:
@@ -516,11 +571,21 @@ def show_td(TD, frame_rate=24, pre_compute_frames=True, repeat=False):
     Usage:
 
     >>> show_td(TD)
-    '''
+    """
     if TD.dim == 1:
-        anim = _show_td_1d(TD, frame_rate=frame_rate, pre_compute_frames=pre_compute_frames, repeat=repeat)		
+        anim = _show_td_1d(
+            TD,
+            frame_rate=frame_rate,
+            pre_compute_frames=pre_compute_frames,
+            repeat=repeat,
+        )
     else:
-        anim = _show_td_2d(TD, frame_rate=frame_rate, pre_compute_frames=pre_compute_frames, repeat=repeat)
+        anim = _show_td_2d(
+            TD,
+            frame_rate=frame_rate,
+            pre_compute_frames=pre_compute_frames,
+            repeat=repeat,
+        )
     return anim
 
 

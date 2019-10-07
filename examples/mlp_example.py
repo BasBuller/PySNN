@@ -13,7 +13,7 @@ from event_pytorch.event_dataloaders import (
     SineData,
     NumpyToTensor,
     DiscretizeFloat,
-    RepeatLabels
+    RepeatLabels,
 )
 from bindsnet.encoding import PoissonEncoder
 
@@ -39,7 +39,7 @@ thresh = 0.8
 v_rest = 0
 alpha_v = 0.2
 tau_v = 5
-alpha_t = 1.
+alpha_t = 1.0
 tau_t = 5
 duration_refrac = 5
 dt = 1
@@ -57,7 +57,7 @@ a = 0.5
 # Network
 #########################################################
 class Network(SNNNetwork):
-# class Network(torch.jit.ScriptModule):
+    # class Network(torch.jit.ScriptModule):
     def __init__(self):
         super(Network, self).__init__()
 
@@ -80,7 +80,7 @@ class Network(SNNNetwork):
     # @torch.jit.script_method
     def forward(self, input):
         # Layer 1
-        x, t  = self.mlp1_c(input)
+        x, t = self.mlp1_c(input)
         x = self.neuron1(x, t)
 
         # Layer 2
@@ -100,19 +100,22 @@ class Network(SNNNetwork):
 #########################################################
 # Dataset
 #########################################################
-data_transform = transforms.Compose([NumpyToTensor(),
-                                     transforms.Lambda(lambda x: x*intensity),
-                                     DiscretizeFloat()])
-label_transform = transforms.Lambda(lambda x: x*intensity)
+data_transform = transforms.Compose(
+    [NumpyToTensor(), transforms.Lambda(lambda x: x * intensity), DiscretizeFloat()]
+)
+label_transform = transforms.Lambda(lambda x: x * intensity)
 
-train_dataset = SineData(M=n_in,
-                         n_samples=n_samples,
-                         encoder=PoissonEncoder(time=time, dt=dt),
-                         label_encoder=PoissonEncoder(time=time, dt=dt),
-                         data_transform=data_transform,
-                         label_transform=label_transform)
-train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False,
-                              num_workers=num_workers)
+train_dataset = SineData(
+    M=n_in,
+    n_samples=n_samples,
+    encoder=PoissonEncoder(time=time, dt=dt),
+    label_encoder=PoissonEncoder(time=time, dt=dt),
+    data_transform=data_transform,
+    label_transform=label_transform,
+)
+train_dataloader = DataLoader(
+    train_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers
+)
 
 
 #########################################################
@@ -127,7 +130,7 @@ out = []
 for batch in tqdm(train_dataloader):
     batch = batch["input"].squeeze(2).squeeze(2).to(device)
     for idx in range(batch.shape[1]):
-        input = batch[:, idx:idx+1, :]
+        input = batch[:, idx : idx + 1, :]
         out.append(net(input))
     net.reset_state()
 

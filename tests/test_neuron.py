@@ -5,10 +5,13 @@ import torch
 ##########################################################
 # Test Base Neuron
 ##########################################################
-@pytest.fixture(scope="function", params=[
-    # cell_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac
-    ((2, 2), 0.5, 0., 0.3, 1., 1., 2)
-])
+@pytest.fixture(
+    scope="function",
+    params=[
+        # cell_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac
+        ((2, 2), 0.5, 0.0, 0.3, 1.0, 1.0, 2)
+    ],
+)
 def neuron(request):
     from pysnn.neuron import Neuron
 
@@ -19,13 +22,16 @@ def neuron(request):
 
 
 # Test spiking
-@pytest.mark.parametrize("mask,voltage,spikes", [
-    (torch.ones(2, 2, dtype=torch.uint8), 1, 4),
-    (torch.ones(2, 2, dtype=torch.uint8), 0.5, 4),
-    (torch.ones(2, 2, dtype=torch.uint8), 0, 0),
-    (torch.tensor([[1, 0], [0, 1]], dtype=torch.uint8), 1, 2),
-    (torch.tensor([[1, 0], [0, 0]], dtype=torch.uint8), 1, 1)
-])
+@pytest.mark.parametrize(
+    "mask,voltage,spikes",
+    [
+        (torch.ones(2, 2, dtype=torch.uint8), 1, 4),
+        (torch.ones(2, 2, dtype=torch.uint8), 0.5, 4),
+        (torch.ones(2, 2, dtype=torch.uint8), 0, 0),
+        (torch.tensor([[1, 0], [0, 1]], dtype=torch.uint8), 1, 2),
+        (torch.tensor([[1, 0], [0, 0]], dtype=torch.uint8), 1, 1),
+    ],
+)
 def test_spiking(mask, voltage, spikes, neuron):
     r"""Checks if the correct neurons spike based on neuron voltage."""
     neuron.v_cell.masked_fill_(mask, voltage)
@@ -33,10 +39,13 @@ def test_spiking(mask, voltage, spikes, neuron):
 
 
 # Test refrac
-@pytest.mark.parametrize("spikes", [
-    torch.tensor([[1, 1], [1, 1]], dtype=torch.uint8),
-    torch.tensor([[1, 0], [0, 1]], dtype=torch.uint8)
-])
+@pytest.mark.parametrize(
+    "spikes",
+    [
+        torch.tensor([[1, 1], [1, 1]], dtype=torch.uint8),
+        torch.tensor([[1, 0], [0, 1]], dtype=torch.uint8),
+    ],
+)
 def test_refrac(spikes, neuron):
     r"""Check if refrac counting is correct"""
     assert (neuron.refrac_counts == 0).all(), "Refrac count not initiated at zero"
@@ -55,7 +64,7 @@ def test_refrac(spikes, neuron):
         neuron.refrac(zero_spikes)
         neurons_in_refrac = (neuron.refrac_counts > 0).sum()
         assert neurons_in_refrac == total_spiking
-    
+
     # Last increment, check all cells out of refrac state
     neuron.refrac(zero_spikes)
     neurons_in_refrac = (neuron.refrac_counts > 0).sum()
@@ -65,10 +74,13 @@ def test_refrac(spikes, neuron):
 ##########################################################
 # Test IF neuron
 ##########################################################
-@pytest.fixture(scope="function", params=[
-    # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_t
-    ((1, 2, 2, 2), 1.,     0.,     1.,      1.,      1., 1,               2.)
-])
+@pytest.fixture(
+    scope="function",
+    params=[
+        # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_t
+        ((1, 2, 2, 2), 1.0, 0.0, 1.0, 1.0, 1.0, 1, 2.0)
+    ],
+)
 def if_neuron(request):
     from pysnn.neuron import IFNeuronTrace
 
@@ -79,22 +91,26 @@ def if_neuron(request):
 
 
 # Test forward
-@pytest.mark.parametrize("spikes,spikes_out", [
-    [torch.ones(1, 2, 2, 2)*4, torch.ones(1, 2, 2, 2, dtype=torch.uint8)]
-])
+@pytest.mark.parametrize(
+    "spikes,spikes_out",
+    [[torch.ones(1, 2, 2, 2) * 4, torch.ones(1, 2, 2, 2, dtype=torch.uint8)]],
+)
 def test_lif_forward(spikes, spikes_out, if_neuron):
     # Test correct output spiking pattern
     cell_out = if_neuron.forward(spikes)
     assert (cell_out == spikes_out).all()
-    
+
 
 ##########################################################
 # Test LIF neuron
 ##########################################################
-@pytest.fixture(scope="function", params=[
-    # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t
-    ((1, 2, 2, 2), 1.,     0.,     1.,      1.,      1., 1,               2.,    2.)
-])
+@pytest.fixture(
+    scope="function",
+    params=[
+        # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t
+        ((1, 2, 2, 2), 1.0, 0.0, 1.0, 1.0, 1.0, 1, 2.0, 2.0)
+    ],
+)
 def lif_neuron(request):
     from pysnn.neuron import LIFNeuronTrace
 
@@ -105,9 +121,10 @@ def lif_neuron(request):
 
 
 # Test forward
-@pytest.mark.parametrize("spikes,spikes_out", [
-    [torch.ones(1, 2, 2, 2)*4, torch.ones(1, 2, 2, 2, dtype=torch.uint8)]
-])
+@pytest.mark.parametrize(
+    "spikes,spikes_out",
+    [[torch.ones(1, 2, 2, 2) * 4, torch.ones(1, 2, 2, 2, dtype=torch.uint8)]],
+)
 def test_lif_forward(spikes, spikes_out, lif_neuron):
     # Test correct output spiking pattern
     cell_out = lif_neuron.forward(spikes)
@@ -117,10 +134,13 @@ def test_lif_forward(spikes, spikes_out, lif_neuron):
 ##########################################################
 # Test Fede's neuron
 ##########################################################
-@pytest.fixture(scope="function", params=[
-    # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t
-    ((1, 2, 2, 2), 1.,     0.,     1.,      1.,      1., 1,               2.,    2.)
-])
+@pytest.fixture(
+    scope="function",
+    params=[
+        # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t
+        ((1, 2, 2, 2), 1.0, 0.0, 1.0, 1.0, 1.0, 1, 2.0, 2.0)
+    ],
+)
 def fede_neuron(request):
     from pysnn.neuron import FedeNeuronTrace
 
@@ -131,9 +151,16 @@ def fede_neuron(request):
 
 
 # Test forward
-@pytest.mark.parametrize("spikes,trace_in,spikes_out", [
-    [torch.ones(1, 2, 2, 2)*4, torch.ones(1, 2, 2, 2, 2), torch.ones(1, 2, 2, 2, dtype=torch.uint8)]
-])
+@pytest.mark.parametrize(
+    "spikes,trace_in,spikes_out",
+    [
+        [
+            torch.ones(1, 2, 2, 2) * 4,
+            torch.ones(1, 2, 2, 2, 2),
+            torch.ones(1, 2, 2, 2, dtype=torch.uint8),
+        ]
+    ],
+)
 def test_fede_forward(spikes, trace_in, spikes_out, fede_neuron):
     # Test correct output spiking pattern
     cell_out = fede_neuron.forward(spikes, trace_in)
