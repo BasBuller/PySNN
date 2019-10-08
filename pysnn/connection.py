@@ -58,7 +58,7 @@ class Connection(nn.Module):
         self.trace.fill_(0)
         self.delay.fill_(0)
 
-    def reset_weights(self, distribution="uniform", gain=1.0, a=-1.0, b=1.0):
+    def reset_weights(self, distribution="uniform", gain=1.0, a=0.0, b=1.0):
         r"""Reinnitialize learnable network Parameters (e.g. weights)."""
         if distribution == "uniform":
             nn.init.uniform_(self.weight, a=a * gain, b=b * gain)
@@ -77,8 +77,10 @@ class Connection(nn.Module):
             nn.init.kaiming_normal_(self.weight)
         elif distribution == "kaiming_uniform":
             nn.init.kaiming_uniform_(self.weight)
+        elif distribution == "constant":
+            nn.init.constant_(self.weight, gain)
 
-    def reset_thresholds(self, distributions="uniform", gain=1., a=-1., b=1.):
+    def reset_thresholds(self, distributions="uniform", gain=1.0, a=-1.0, b=1.0):
         pass
 
     def init_connection(self):
@@ -196,9 +198,7 @@ class _ConvNd(Connection):
             assert isinstance(i, int), "Variables in im_dims should be int"
 
         # Convolution parameters
-        self.batch_size = (
-            batch_size
-        )  # Cannot infer, needed to reserve memory for storing trace and delay timing
+        self.batch_size = batch_size  # Cannot infer, needed to reserve memory for storing trace and delay timing
         self.out_channels = out_channels
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)
@@ -309,15 +309,16 @@ class Conv2d(_ConvNd):
 # Max Pooling
 #########################################################
 class _SpikeMaxPoolNd(nn.Module):
-    def __init__(self, kernel_size, stride=None, padding=0, dilation=1,
-                 ceil_mode=False):
-            super(_SpikeMaxPoolNd, self).__init__()
-            self.kernel_size = kernel_size
-            self.stride = stride or kernel_size
-            self.padding = padding
-            self.dilation = dilation
-            self.ceil_mode = ceil_mode
-            self.return_indices = True
+    def __init__(
+        self, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False
+    ):
+        super(_SpikeMaxPoolNd, self).__init__()
+        self.kernel_size = kernel_size
+        self.stride = stride or kernel_size
+        self.padding = padding
+        self.dilation = dilation
+        self.ceil_mode = ceil_mode
+        self.return_indices = True
 
     def reset_state(self):
         pass
@@ -333,7 +334,15 @@ class MaxPool2d(_SpikeMaxPoolNd):
 
     def forward(self, x, trace):
         x = x.to(torch.float32, non_blocking=True)
-        x, idx = F.max_pool2d(x, self.kernel_size, self.stride, self.padding, self.dilation, self.ceil_mode, self.return_indices)
+        x, idx = F.max_pool2d(
+            x,
+            self.kernel_size,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.ceil_mode,
+            self.return_indices,
+        )
         trace = trace.view(-1)[idx.view(-1)]
         trace = trace.view(idx.shape)
         return x > 0, trace
@@ -347,7 +356,7 @@ class _SpikeAdaptiveMaxPoolNd(nn.Module):
         super(_SpikeAdaptiveMaxPoolNd, self).__init__()
         self.output_size = output_size
         self.return_indices = True
-        
+
     def reset_state(self):
         pass
 

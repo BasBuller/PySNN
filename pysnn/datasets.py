@@ -286,7 +286,7 @@ class _Boolean(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        sample = self.data[idx]
+        sample = self.data[idx].unsqueeze(0)
         label = self.labels[idx]
 
         # Sample transforms
@@ -347,6 +347,14 @@ class BooleanNoise:
             elif sample == 1:
                 x[idx] = self.high_distr.sample()
         return x
+
+
+class Intensity:
+    def __init__(self, intensity):
+        self.intensity = intensity
+
+    def __call__(self, x):
+        return x * self.intensity
 
 
 if __name__ == "__main__":
