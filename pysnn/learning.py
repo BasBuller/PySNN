@@ -108,5 +108,4 @@ class MSTDPET(LearningRule):
 
     def forward(self, reward):
         # TODO: add weight clamping?
-        self.update_eligibility_trace()
         self.connection.weight += self.lr * reward * self.e_trace

@@ -56,6 +56,7 @@ class SNN(SNNNetwork):
         pre_spikes, pre_trace = self.pre_neuron(x)
         x, _ = self.linear(pre_spikes, pre_trace)
         post_spikes, post_trace = self.post_neuron(x)
+        self.rule.update_eligibility_trace()
 
         return pre_spikes, post_spikes, pre_trace, post_trace
 
