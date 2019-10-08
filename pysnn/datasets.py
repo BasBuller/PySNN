@@ -286,7 +286,7 @@ class _Boolean(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        sample = self.data[idx]
+        sample = self.data[idx].unsqueeze(0)
         label = self.labels[idx]
 
         # Sample transforms
@@ -349,14 +349,25 @@ class BooleanNoise:
         return x
 
 
-if __name__ == "__main__":
-    root_dir = "/home/basbuller/thesis_final/code/datasets/"
+class Intensity:
+    def __init__(self, intensity):
+        self.intensity = intensity
 
-    ncalt_train, ncalt_test = ncaltech_train_test(root_dir + "ncaltech101")
-    print("caltech")
-    print(ncalt_train[0][0].shape)
-    print(ncalt_train[0][1])
-    print(len(ncalt_train))
+    def __call__(self, x):
+        return x * self.intensity
+
+
+if __name__ == "__main__":
+    train = XOR()
+    print(train[0][0].shape)
+    print(train[0][1].shape)
+    print(len(train))
+
+    # ncalt_train, ncalt_test = ncaltech_train_test(root_dir + "ncaltech101")
+    # print("caltech")
+    # print(ncalt_train[0][0].shape)
+    # print(ncalt_train[0][1])
+    # print(len(ncalt_train))
 
     # nmnist_train, nmnist_test = nmnist_train_test(root_dir + "nmnist")
     # print("\nnmnist")
