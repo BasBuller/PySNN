@@ -38,7 +38,7 @@ a_pre = 1.0
 a_post = 1.0
 lr = 0.1
 e_trace_decay = 0.8
-l_params = (a_pre, a_post, lr, dt, e_trace_decay)
+l_params = (a_pre, a_post, lr, e_trace_decay)
 
 
 # Network
@@ -56,6 +56,7 @@ class SNN(SNNNetwork):
         pre_spikes, pre_trace = self.pre_neuron(x)
         x, _ = self.linear(pre_spikes, pre_trace)
         post_spikes, post_trace = self.post_neuron(x)
+        self.rule.update_eligibility_trace()
 
         return pre_spikes, post_spikes, pre_trace, post_trace
 
