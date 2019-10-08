@@ -73,14 +73,15 @@ class MSTDPET(LearningRule):
     """
 
     def __init__(
-        self, connection, pre_neuron, post_neuron, a_pre, a_post, lr, dt, e_trace_decay
+        self, connection, pre_neuron, post_neuron, a_pre, a_post, lr, e_trace_decay
     ):
         super(MSTDPET, self).__init__(connection, lr)
         self.pre_neuron = pre_neuron
         self.post_neuron = post_neuron
-        
-        self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
-        self.register_buffer("e_trace_decay", torch.tensor(e_trace_decay, dtype=torch.float))
+
+        self.register_buffer(
+            "e_trace_decay", torch.tensor(e_trace_decay, dtype=torch.float)
+        )
         self.register_buffer("a_pre", torch.tensor(a_pre, dtype=torch.float))
         self.register_buffer("a_post", torch.tensor(a_post, dtype=torch.float))
 
@@ -99,8 +100,6 @@ class MSTDPET(LearningRule):
         """
 
         self.e_trace *= self.e_trace_decay
-        # TODO: check dimensions
-        # TODO: does spiking() still give spikes or have these been reset?
         self.e_trace += self.a_pre * torch.ger(
             self.post_neuron.spikes.view(-1).float(), self.pre_neuron.trace.view(-1)
         ) - self.a_post * torch.ger(
@@ -109,4 +108,5 @@ class MSTDPET(LearningRule):
 
     def forward(self, reward):
         # TODO: add weight clamping?
+        self.update_eligibility_trace()
         self.connection.weight += self.lr * reward * self.e_trace

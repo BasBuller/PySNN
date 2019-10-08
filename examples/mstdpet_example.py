@@ -38,7 +38,7 @@ a_pre = 1.0
 a_post = 1.0
 lr = 0.1
 e_trace_decay = 0.8
-l_params = (a_pre, a_post, lr, dt, e_trace_decay)
+l_params = (a_pre, a_post, lr, e_trace_decay)
 
 
 # Network
