@@ -57,7 +57,9 @@ class InputTraceLinear(Input):
     def __init__(self, cells_shape, dt, alpha_t, trace_decay):
         super(InputTraceLinear, self).__init__(cells_shape, dt)
         self.register_buffer("alpha_t", torch.tensor(alpha_t, dtype=torch.float))
-        self.register_buffer("trace_decay", torch.tensor(trace_decay, dtype=torch.float))
+        self.register_buffer(
+            "trace_decay", torch.tensor(trace_decay, dtype=torch.float)
+        )
 
         self.init_neuron()
 
@@ -106,10 +108,16 @@ class Neuron(nn.Module):
 
         # Fixed parameters
         self.register_buffer("v_rest", torch.tensor(v_rest, dtype=torch.float))
-        self.register_buffer("alpha_v", torch.tensor(alpha_v, dtype=torch.float))  # TODO: Might want to move this out of base class
-        self.register_buffer("alpha_t", torch.tensor(alpha_t, dtype=torch.float))  # TODO: Might want to move this out of base class
+        self.register_buffer(
+            "alpha_v", torch.tensor(alpha_v, dtype=torch.float)
+        )  # TODO: Might want to move this out of base class
+        self.register_buffer(
+            "alpha_t", torch.tensor(alpha_t, dtype=torch.float)
+        )  # TODO: Might want to move this out of base class
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
-        self.register_buffer("duration_refrac", torch.tensor(duration_refrac + 1, dtype=torch.float))
+        self.register_buffer(
+            "duration_refrac", torch.tensor(duration_refrac + 1, dtype=torch.float)
+        )
         self.register_buffer("thresh_center", torch.tensor(thresh, dtype=torch.float))
 
         # Define dynamic parameters
@@ -165,10 +173,13 @@ class Neuron(nn.Module):
     def reset_state(self):
         r"""Reset cell states that accumulate over time during simulation."""
         self.v_cell.fill_(self.v_rest)
+        self.spikes.fill_(False)
         self.refrac_counts.fill_(0)
         self.trace.fill_(0)
         if self.complete_trace is not None:
-            self.complete_trace = torch.zeros(*self.v_cell.shape, 1, device=self.v_cell.device).to(torch.bool)
+            self.complete_trace = torch.zeros(
+                *self.v_cell.shape, 1, device=self.v_cell.device
+            ).to(torch.bool)
 
     def reset_thresh(self):
         r"""Reset threshold to initialization values, allows for different standard thresholds per neuron."""
@@ -322,8 +333,12 @@ class LIFNeuronTraceLinear(Neuron):
         )
 
         # Fixed parameters
-        self.register_buffer("voltage_decay", torch.tensor(voltage_decay, dtype=torch.float))
-        self.register_buffer("trace_decay", torch.tensor(trace_decay, dtype=torch.float))
+        self.register_buffer(
+            "voltage_decay", torch.tensor(voltage_decay, dtype=torch.float)
+        )
+        self.register_buffer(
+            "trace_decay", torch.tensor(trace_decay, dtype=torch.float)
+        )
         self.init_neuron()
 
     def update_trace(self, x):
