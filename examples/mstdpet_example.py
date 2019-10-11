@@ -3,8 +3,9 @@ import matplotlib.pyplot as plt
 
 from pysnn.network import SNNNetwork
 from pysnn.connection import Linear
-from pysnn.neuron import LIFNeuronTraceLinear
+from pysnn.neuron import LIFNeuron
 from pysnn.learning import MSTDPET
+from pysnn.utils import make_layer
 
 
 # Parameters
@@ -47,21 +48,18 @@ class SNN(SNNNetwork):
         super(SNN, self).__init__()
 
         # One layer
-        self.pre_neuron = LIFNeuronTraceLinear((batch_size, 1, inputs), *n_dynamics)
-        self.post_neuron = LIFNeuronTraceLinear((batch_size, 1, outputs), *n2_dynamics)
+        self.pre_neuron = LIFNeuron((batch_size, 1, inputs), *n_dynamics)
+        self.post_neuron = LIFNeuron((batch_size, 1, outputs), *n2_dynamics)
         self.linear = Linear(*c_shape, *c_dynamics)
-        self.rule = MSTDPET(self.linear, self.pre_neuron, self.post_neuron, *l_params)
+        # self.rule = MSTDPET(self.linear, self.pre_neuron, self.post_neuron, *l_params)
 
     def forward(self, x):
         pre_spikes, pre_trace = self.pre_neuron(x)
         x, _ = self.linear(pre_spikes, pre_trace)
         post_spikes, post_trace = self.post_neuron(x)
-        self.rule.update_eligibility_trace()
+        # self.rule.update_eligibility_trace()
 
         return pre_spikes, post_spikes, pre_trace, post_trace
-
-    def backward(self, reward):
-        self.rule(reward)
 
 
 if __name__ == "__main__":
@@ -74,8 +72,17 @@ if __name__ == "__main__":
     e_trace = []
     weight = []
 
+    # Setup network
     network = SNN()
-    network.linear.weight.data = torch.ones(*c_shape) * 3
+    network.linear.reset_weights("constant", 3)
+
+    # Determine layers and init learning rule
+    layers = [
+        make_layer(
+            pre=network.pre_neuron, connection=network.linear, post=network.post_neuron
+        )
+    ]
+    learning_rule = MSTDPET(layers, *l_params)
 
     for i in range(100):
         # Generate input spikes
@@ -84,6 +91,9 @@ if __name__ == "__main__":
 
         # Do forward pass
         pre_s, post_s, pre_t, post_t = network.forward(curr)
+        learning_rule.update_state()
+
+        # Append network spikes and traces
         pre_spikes.append(pre_s.item())
         post_spikes.append(post_s.item())
         pre_trace.append(pre_t.item())
@@ -94,10 +104,16 @@ if __name__ == "__main__":
             reward = 1.0
         else:
             reward = -1.0
-        network.backward(reward)
+        learning_rule.step(reward)
+
+        # Append last resulting items
         rewards.append(reward)
-        e_trace.append(network.rule.e_trace.item())
+        e_trace.append(learning_rule.layers[0]["e_trace"].item())
         weight.append(network.linear.weight.item())
+
+    # Reset states
+    network.reset_state()
+    learning_rule.reset_state()
 
     fig, axs = plt.subplots(8, 1)
 

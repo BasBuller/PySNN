@@ -3,13 +3,15 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
+from tensorboardX import SummaryWriter
 
 from pysnn.connection import Linear
-from pysnn.neuron import FedeNeuronTrace, InputTraceExponential
+from pysnn.neuron import FedeNeuron, Input
 from pysnn.learning import FedeSTDP
 from pysnn.encoding import PoissonEncoder
 from pysnn.network import SNNNetwork
-from pysnn.datasets import OR, BooleanNoise
+from pysnn.datasets import OR, BooleanNoise, Intensity
+from pysnn.utils import make_layer
 
 
 #########################################################
@@ -54,23 +56,21 @@ class Network(SNNNetwork):
         super(Network, self).__init__()
 
         # Input
-        self.input = InputTraceExponential((batch_size, 1, n_in), *i_dynamics)
+        self.input = Input((batch_size, 1, n_in), *i_dynamics)
 
         # Layer 1
         self.mlp1_c = Linear(n_in, n_hidden, *c_dynamics)
-        self.neuron1 = FedeNeuronTrace((batch_size, 1, n_hidden), *n_dynamics)
-        self.learning1 = FedeSTDP(self.mlp1_c, lr, w_init, a)
+        self.neuron1 = FedeNeuron((batch_size, 1, n_hidden), *n_dynamics)
 
         # Layer 2
         self.mlp2_c = Linear(n_hidden, n_out, *c_dynamics)
-        self.neuron2 = FedeNeuronTrace((batch_size, 1, n_out), *n_dynamics)
-        self.learning2 = FedeSTDP(self.mlp2_c, lr, w_init, a)
+        self.neuron2 = FedeNeuron((batch_size, 1, n_out), *n_dynamics)
 
     def forward(self, input):
         x, t = self.input(input)
 
         # Layer 1
-        x, t  = self.mlp1_c(x, t)
+        x, t = self.mlp1_c(x, t)
         x, t = self.neuron1(x, t)
 
         # Layer out
@@ -79,23 +79,27 @@ class Network(SNNNetwork):
 
         return x
 
-    def backward(self):
-        self.learning1()
-        self.learning2() 
-
 
 #########################################################
 # Dataset
 #########################################################
-data_transform = BooleanNoise(0.1, 0.9)
-lbl_transform = transforms.Lambda(lambda x: x*intensity)
+data_transform = transforms.Compose(
+    [
+        # BooleanNoise(0.2, 0.8),
+        Intensity(intensity)
+    ]
+)
+lbl_transform = transforms.Lambda(lambda x: x * intensity)
 
-train_dataset = OR(data_encoder=PoissonEncoder(duration, dt),
-                   data_transform=data_transform,
-                   lbl_transform=lbl_transform,
-                   repeats=3)
-train_dataloader = DataLoader(train_dataset, batch_size=batch_size, 
-                              shuffle=False, num_workers=num_workers)
+train_dataset = OR(
+    data_encoder=PoissonEncoder(duration, dt),
+    data_transform=data_transform,
+    lbl_transform=lbl_transform,
+    repeats=n_in / 2,
+)
+train_dataloader = DataLoader(
+    train_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers
+)
 
 
 #########################################################
@@ -104,6 +108,18 @@ train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
 device = torch.device("cpu")
 net = Network()
 
+# Add graph to tensorboard
+logger = SummaryWriter("/home/basbuller/thesis_final/experiments/trial/baasb2")
+input = next(iter(train_dataloader))
+input = input[0][:, :, :, 0]
+logger.add_graph(net, input)
+
+# Learning rule definition
+layers = [(net.mlp1_c, net.neuron1), (net.mlp2_c, net.neuron2)]
+layers = [make_layer(connection=layer[0], post=layer[1]) for layer in layers]
+learning_rule = FedeSTDP(layers, lr, w_init, a)
+
+# Training loop
 out = []
 for batch in tqdm(train_dataloader):
     single_out = []
@@ -111,10 +127,11 @@ for batch in tqdm(train_dataloader):
 
     # Iterate over input's time dimension
     for idx in range(sample.shape[-1]):
-        input = sample[:, :, idx].unsqueeze(1)
+        input = sample[:, :, :, idx]
         single_out.append(net(input))
-        net.backward()
-        
+
+        learning_rule.step()
+
     net.reset_state()
     out.append(torch.stack(single_out, dim=-1))
 
