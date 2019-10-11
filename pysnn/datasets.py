@@ -355,13 +355,6 @@ class Intensity:
 
     def __call__(self, x):
         return x * self.intensity
-<<<<<<< HEAD
-=======
-
-
-if __name__ == "__main__":
-    root_dir = "/home/basbuller/thesis_final/code/datasets/"
->>>>>>> bf1c2a15574c6e5c4a70b7b66ca0791a61e5ec9c
 
 
 if __name__ == "__main__":
