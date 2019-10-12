@@ -299,7 +299,7 @@ class LIFNeuron(BaseNeuron):
     def update_trace(self, x):
         spikes = self.convert_spikes(x)
         self.trace = self.trace_update(
-            self.trace, spikes, self.alpha_t, self.trace_decay, self.dt
+            self.trace, spikes, self.alpha_t, self.tau_t, self.dt
         )
 
     def update_voltage(self, x):
@@ -318,6 +318,98 @@ class LIFNeuron(BaseNeuron):
         self.update_voltage(x)
         spikes = self.spiking()
         self.update_trace(spikes)
+        self.refrac(spikes)
+        if self.complete_trace is not None:
+            self.concat_trace(spikes)
+        return spikes, self.trace
+
+
+#########################################################
+# Adaptive LIF Neuron
+#########################################################
+class AdaptiveLIFNeuron(BaseNeuron):
+    r"""Adaptive Leaky Integrate and Fire neuron."""
+
+    def __init__(
+        self,
+        cells_shape,
+        thresh,
+        v_rest,
+        alpha_v,
+        alpha_t,
+        dt,
+        duration_refrac,  # From here on class specific params
+        tau_v,
+        tau_t,
+        alpha_thresh,
+        tau_thresh,
+        update_type="linear",
+        store_trace=False,
+    ):
+        super(AdaptiveLIFNeuron, self).__init__(
+            cells_shape,
+            thresh,
+            v_rest,
+            alpha_v,
+            alpha_t,
+            dt,
+            duration_refrac,
+            store_trace=store_trace,
+        )
+
+        # TODO: here or in separate function? Or overwrite init_neuron?
+        # Type of updates
+        if update_type == "linear":
+            self.voltage_update = sf._lif_linear_voltage_update
+            self.trace_update = sf._linear_trace_update
+            self.thresh_update = sf._linear_thresh_update
+        elif update_type == "exponential":
+            self.voltage_update = sf._lif_voltage_update
+            self.trace_update = sf._exponential_trace_update
+            self.thresh_update = sf._exponential_thresh_update
+        else:
+            raise ValueError(f"Unsupported update type {update_type}")
+
+        # Fixed parameters
+        self.register_buffer("tau_v", torch.tensor(tau_v, dtype=torch.float))
+        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
+        self.register_buffer(
+            "alpha_thresh", torch.tensor(alpha_thresh, dtype=torch.float)
+        )
+        self.register_buffer("tau_thresh", torch.tensor(tau_thresh, dtype=torch.float))
+        self.init_neuron()
+
+    def update_trace(self, x):
+        spikes = self.convert_spikes(x)
+        self.trace = self.trace_update(
+            self.trace, spikes, self.alpha_t, self.tau_t, self.dt
+        )
+
+    def update_thresh(self, x):
+        r"""Return cells that are in spiking state and adjust threshold accordingly."""
+        spikes = self.convert_spikes(x)
+        self.thresh = self.thresh_update(
+            self.thresh, spikes, self.alpha_thresh, self.tau_thresh, self.dt
+        )
+        # No clamping needed since multiplication!
+
+    def update_voltage(self, x):
+        self.v_cell = self.voltage_update(
+            self.v_cell,
+            self.v_rest,
+            x,
+            self.alpha_v,
+            self.tau_v,
+            self.dt,
+            self.refrac_counts,
+        )
+
+    def forward(self, x):
+        x = self.fold(x)
+        self.update_voltage(x)
+        spikes = self.spiking()
+        self.update_trace(spikes)
+        self.update_thresh(spikes)
         self.refrac(spikes)
         if self.complete_trace is not None:
             self.concat_trace(spikes)

@@ -22,6 +22,26 @@ def _linear_trace_update(trace, x, alpha_t, trace_decay, dt):
 
 
 ########################################################
+# Neuron threshold updates
+########################################################
+def _exponential_thresh_update(thresh, x, alpha_thresh, tau_thresh, dt):
+    r"""Calculate change in cell's trace based on current trace and incoming spikes x."""
+    # TODO: shouldn't this be: trace += (-trace + alpha_t * x) * dt / tau_t? Following forward Euler discretisation?
+    thresh += ((-thresh * dt) + (alpha_thresh * x)) / tau_thresh
+    # TODO: Check for possible inplace instead of copying operation, should be inplace for best performance
+    return thresh
+
+
+# TODO: dt as useless argument or allow extra ones to be passed via *args?
+def _linear_thresh_update(thresh, x, alpha_thresh, thresh_decay, dt):
+    r"""Calculate change in cell's trace based on a fixed decay factor and incoming spikes x."""
+    thresh *= thresh_decay
+    thresh += alpha_thresh * x
+    # TODO: Check for possible inplace instead of copying operation, should be inplace for best performance
+    return thresh
+
+
+########################################################
 # Neuron voltage updates
 ########################################################
 def _if_voltage_update(v_cur, v_in, alpha, refrac_counts):
