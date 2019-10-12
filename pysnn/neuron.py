@@ -9,11 +9,11 @@ import pysnn.functional as sf
 #########################################################
 # Input Neuron
 #########################################################
-class Input(nn.Module):
+class BaseInput(nn.Module):
     r"""Simple feed-through layer of neurons used for storing a trace."""
 
     def __init__(self, cells_shape, dt):
-        super(Input, self).__init__()
+        super(BaseInput, self).__init__()
         self.register_buffer("trace", torch.zeros(*cells_shape, dtype=torch.float))
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
 
@@ -34,38 +34,26 @@ class Input(nn.Module):
         return x.type(self.trace.dtype)
 
 
-class InputTraceExponential(Input):
-    def __init__(self, cells_shape, dt, alpha_t, tau_t):
-        super(InputTraceExponential, self).__init__(cells_shape, dt)
+class Input(BaseInput):
+    def __init__(self, cells_shape, dt, alpha_t, tau_t, update_type="linear"):
+        super(Input, self).__init__(cells_shape, dt)
         self.register_buffer("alpha_t", torch.tensor(alpha_t, dtype=torch.float))
         self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
 
-        self.init_neuron()
-
-    def update_trace(self, x):
-        x = self.convert_input(x)
-        self.trace = sf._exponential_trace_update(
-            self.trace, x, self.alpha_t, self.tau_t, self.dt
-        )
-
-    def forward(self, x):
-        self.update_trace(x)
-        return x, self.trace
-
-
-class InputTraceLinear(Input):
-    def __init__(self, cells_shape, dt, alpha_t, trace_decay):
-        super(InputTraceLinear, self).__init__(cells_shape, dt)
-        self.register_buffer("alpha_t", torch.tensor(alpha_t, dtype=torch.float))
-        self.register_buffer("trace_decay", torch.tensor(trace_decay, dtype=torch.float))
+        # TODO: here or in separate function? Or overwrite init_neuron?
+        # Type of updates
+        if update_type == "linear":
+            self.trace_update = sf._linear_trace_update
+        elif update_type == "exponential":
+            self.trace_update = sf._exponential_trace_update
+        else:
+            raise ValueError(f"Unsupported trace type {update_type}")
 
         self.init_neuron()
 
     def update_trace(self, x):
         x = self.convert_input(x)
-        self.trace = sf._linear_trace_update(
-            self.trace, x, self.alpha_t, self.trace_decay
-        )
+        self.trace = self.trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
 
     def forward(self, x):
         self.update_trace(x)
@@ -75,7 +63,7 @@ class InputTraceLinear(Input):
 #########################################################
 # Base Neuron
 #########################################################
-class Neuron(nn.Module):
+class BaseNeuron(nn.Module):
     r"""Base neuron model, is a container to define basic neuron functionalties.
 
     Defines basic spiking, voltage and trace characteristics. Just has to
@@ -96,7 +84,7 @@ class Neuron(nn.Module):
         duration_refrac,
         store_trace=False,
     ):
-        super(Neuron, self).__init__()
+        super(BaseNeuron, self).__init__()
         self.cells_shape = torch.tensor(cells_shape)
 
         # Check compatibility of dt and refrac counting
@@ -106,10 +94,16 @@ class Neuron(nn.Module):
 
         # Fixed parameters
         self.register_buffer("v_rest", torch.tensor(v_rest, dtype=torch.float))
-        self.register_buffer("alpha_v", torch.tensor(alpha_v, dtype=torch.float))  # TODO: Might want to move this out of base class
-        self.register_buffer("alpha_t", torch.tensor(alpha_t, dtype=torch.float))  # TODO: Might want to move this out of base class
+        self.register_buffer(
+            "alpha_v", torch.tensor(alpha_v, dtype=torch.float)
+        )  # TODO: Might want to move this out of base class
+        self.register_buffer(
+            "alpha_t", torch.tensor(alpha_t, dtype=torch.float)
+        )  # TODO: Might want to move this out of base class
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
-        self.register_buffer("duration_refrac", torch.tensor(duration_refrac + 1, dtype=torch.float))
+        self.register_buffer(
+            "duration_refrac", torch.tensor(duration_refrac + 1, dtype=torch.float)
+        )
         self.register_buffer("thresh_center", torch.tensor(thresh, dtype=torch.float))
 
         # Define dynamic parameters
@@ -168,7 +162,9 @@ class Neuron(nn.Module):
         self.refrac_counts.fill_(0)
         self.trace.fill_(0)
         if self.complete_trace is not None:
-            self.complete_trace = torch.zeros(*self.v_cell.shape, 1, device=self.v_cell.device).to(torch.bool)
+            self.complete_trace = torch.zeros(
+                *self.v_cell.shape, 1, device=self.v_cell.device
+            ).to(torch.bool)
 
     def reset_thresh(self):
         r"""Reset threshold to initialization values, allows for different standard thresholds per neuron."""
@@ -184,14 +180,14 @@ class Neuron(nn.Module):
         self.reset_state()
         self.reset_thresh()
 
-    def forward(self):
+    def forward(self, x):
         return
 
 
 #########################################################
 # IF Neuron
 #########################################################
-class IFNeuronTraceLinear(Neuron):
+class IFNeuron(BaseNeuron):
     r"""Integrate and Fire neuron."""
 
     def __init__(
@@ -204,9 +200,10 @@ class IFNeuronTraceLinear(Neuron):
         dt,
         duration_refrac,
         tau_t,
+        update_type="linear",
         store_trace=False,
     ):
-        super(IFNeuronTraceLinear, self).__init__(
+        super(IFNeuron, self).__init__(
             cells_shape,
             thresh,
             v_rest,
@@ -217,55 +214,14 @@ class IFNeuronTraceLinear(Neuron):
             store_trace=store_trace,
         )
 
-        # Fixed parameters
-        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
-        self.init_neuron()
-
-    def update_trace(self, x):
-        spikes = self.convert_spikes(x)
-        self.trace = sf._linear_trace_update(
-            self.trace, spikes, self.alpha_t, self.tau_t
-        )
-
-    def update_voltage(self, x):
-        self.v_cell = sf._if_voltage_update(
-            self.v_cell, x, self.alpha_v, self.refrac_counts
-        )
-
-    def forward(self, x):
-        x = self.fold(x)
-        self.update_voltage(x)
-        spikes = self.spiking()
-        self.update_trace(spikes)
-        self.refrac(spikes)
-        return spikes, self.trace
-
-
-class IFNeuronTraceExponential(Neuron):
-    r"""Integrate and Fire neuron."""
-
-    def __init__(
-        self,
-        cells_shape,
-        thresh,
-        v_rest,
-        alpha_v,
-        alpha_t,
-        dt,
-        duration_refrac,
-        tau_t,
-        store_trace=False,
-    ):
-        super(IFNeuronTraceExponential, self).__init__(
-            cells_shape,
-            thresh,
-            v_rest,
-            alpha_v,
-            alpha_t,
-            dt,
-            duration_refrac,
-            store_trace=store_trace,
-        )
+        # TODO: here or in separate function? Or overwrite init_neuron?
+        # Type of updates
+        if update_type == "linear":
+            self.trace_update = sf._linear_trace_update
+        elif update_type == "exponential":
+            self.trace_update = sf._exponential_trace_update
+        else:
+            raise ValueError(f"Unsupported trace type {update_type}")
 
         # Fixed parameters
         self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
@@ -273,74 +229,13 @@ class IFNeuronTraceExponential(Neuron):
 
     def update_trace(self, x):
         spikes = self.convert_spikes(x)
-        self.trace = sf._exponential_trace_update(
+        self.trace = self.trace_update(
             self.trace, spikes, self.alpha_t, self.tau_t, self.dt
         )
 
     def update_voltage(self, x):
         self.v_cell = sf._if_voltage_update(
             self.v_cell, x, self.alpha_v, self.refrac_counts
-        )
-
-    def forward(self, x):
-        x = self.fold(x)
-        self.update_voltage(x)
-        spikes = self.spiking()
-        self.update_trace(spikes)
-        self.refrac(spikes)
-        return spikes, self.trace
-
-
-#########################################################
-# LIF Neuron
-#########################################################
-class LIFNeuronTraceLinear(Neuron):
-    r"""Leaky Integrate and Fire neuron."""
-
-    def __init__(
-        self,
-        cells_shape,
-        thresh,
-        v_rest,
-        alpha_v,
-        alpha_t,
-        dt,
-        duration_refrac,  # From here on class specific params
-        voltage_decay,
-        trace_decay,
-        store_trace=False,
-    ):
-        super(LIFNeuronTraceLinear, self).__init__(
-            cells_shape,
-            thresh,
-            v_rest,
-            alpha_v,
-            alpha_t,
-            dt,
-            duration_refrac,
-            store_trace=store_trace,
-        )
-
-        # Fixed parameters
-        self.register_buffer("voltage_decay", torch.tensor(voltage_decay, dtype=torch.float))
-        self.register_buffer("trace_decay", torch.tensor(trace_decay, dtype=torch.float))
-        self.init_neuron()
-
-    def update_trace(self, x):
-        spikes = self.convert_spikes(x)
-        self.trace = sf._linear_trace_update(
-            self.trace, spikes, self.alpha_t, self.trace_decay
-        )
-
-    def update_voltage(self, x):
-        self.v_cell = sf._lif_linear_voltage_update(
-            self.v_cell,
-            self.v_rest,
-            x,
-            self.alpha_v,
-            self.voltage_decay,
-            self.dt,
-            self.refrac_counts,
         )
 
     def forward(self, x):
@@ -354,7 +249,10 @@ class LIFNeuronTraceLinear(Neuron):
         return spikes, self.trace
 
 
-class LIFNeuronTraceExponential(Neuron):
+#########################################################
+# LIF Neuron
+#########################################################
+class LIFNeuron(BaseNeuron):
     r"""Leaky Integrate and Fire neuron."""
 
     def __init__(
@@ -368,9 +266,10 @@ class LIFNeuronTraceExponential(Neuron):
         duration_refrac,  # From here on class specific params
         tau_v,
         tau_t,
+        update_type="linear",
         store_trace=False,
     ):
-        super(LIFNeuronTraceExponential, self).__init__(
+        super(LIFNeuron, self).__init__(
             cells_shape,
             thresh,
             v_rest,
@@ -381,19 +280,30 @@ class LIFNeuronTraceExponential(Neuron):
             store_trace=store_trace,
         )
 
+        # TODO: here or in separate function? Or overwrite init_neuron?
+        # Type of updates
+        if update_type == "linear":
+            self.voltage_update = sf._lif_linear_voltage_update
+            self.trace_update = sf._linear_trace_update
+        elif update_type == "exponential":
+            self.voltage_update = sf._lif_voltage_update
+            self.trace_update = sf._exponential_trace_update
+        else:
+            raise ValueError(f"Unsupported update type {update_type}")
+
         # Fixed parameters
-        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
         self.register_buffer("tau_v", torch.tensor(tau_v, dtype=torch.float))
+        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
         self.init_neuron()
 
     def update_trace(self, x):
         spikes = self.convert_spikes(x)
-        self.trace = sf._exponential_trace_update(
-            self.trace, spikes, self.alpha_t, self.tau_t, self.dt
+        self.trace = self.trace_update(
+            self.trace, spikes, self.alpha_t, self.trace_decay, self.dt
         )
 
     def update_voltage(self, x):
-        self.v_cell = sf._lif_voltage_update(
+        self.v_cell = self.voltage_update(
             self.v_cell,
             self.v_rest,
             x,
@@ -409,13 +319,15 @@ class LIFNeuronTraceExponential(Neuron):
         spikes = self.spiking()
         self.update_trace(spikes)
         self.refrac(spikes)
+        if self.complete_trace is not None:
+            self.concat_trace(spikes)
         return spikes, self.trace
 
 
 #########################################################
 # Fede Neuron
 #########################################################
-class FedeNeuronTrace(Neuron):
+class FedeNeuron(BaseNeuron):
     r"""Leaky Integrate and Fire neuron.
 
     Defined in "Unsupervised Learning of a Hierarchical Spiking
@@ -436,7 +348,7 @@ class FedeNeuronTrace(Neuron):
         tau_t,
         store_trace=False,
     ):
-        super(FedeNeuronTrace, self).__init__(
+        super(FedeNeuron, self).__init__(
             cells_shape,
             thresh,
             v_rest,
@@ -448,8 +360,8 @@ class FedeNeuronTrace(Neuron):
         )
 
         # Fixed parameters
-        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
         self.register_buffer("tau_v", torch.tensor(tau_v, dtype=torch.float))
+        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
         self.init_neuron()
 
     def update_trace(self, x):
@@ -470,7 +382,6 @@ class FedeNeuronTrace(Neuron):
         )
 
     def forward(self, x, pre_trace):
-        # x = self.fold(x)
         self.update_voltage(x, pre_trace)
         spikes = self.spiking()
         self.update_trace(self.convert_spikes(spikes))

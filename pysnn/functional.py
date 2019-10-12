@@ -6,12 +6,14 @@ import torch
 ########################################################
 def _exponential_trace_update(trace, x, alpha_t, tau_t, dt):
     r"""Calculate change in cell's trace based on current trace and incoming spikes x."""
+    # TODO: shouldn't this be: trace += (-trace + alpha_t * x) * dt / tau_t? Following forward Euler discretisation?
     trace += ((-trace * dt) + (alpha_t * x)) / tau_t
     # TODO: Check for possible inplace instead of copying operation, should be inplace for best performance
     return trace
 
 
-def _linear_trace_update(trace, x, alpha_t, trace_decay):
+# TODO: dt as useless argument or allow extra ones to be passed via *args?
+def _linear_trace_update(trace, x, alpha_t, trace_decay, dt):
     r"""Calculate change in cell's trace based on a fixed decay factor and incoming spikes x."""
     trace *= trace_decay
     trace += alpha_t * x
@@ -44,6 +46,7 @@ def _lif_linear_voltage_update(
 
 def _lif_voltage_update(v_cur, v_rest, v_in, alpha_v, tau_v, dt, refrac_counts):
     r"""Calculate change in cell's voltage based on current and incoming voltage."""
+    # TODO: shouldn't this be: (-(v_cur - v_rest) + alpha_v * v_in) * dt / tau_v? Following forward Euler discretisation?
     v_delta = (-(v_cur - v_rest) * dt + alpha_v * v_in) / tau_v
     non_refrac = refrac_counts == 0
     v_cur += v_delta * non_refrac.to(v_delta.dtype)
@@ -56,6 +59,7 @@ def _fede_voltage_update(
 ):
     r"""Calculate change in cell's voltage based on current voltage and input trace."""
     forcing = alpha_v * (v_in - pre_trace).sum(-1)
+    # TODO: shouldn't this be: (-(v_cur - v_rest) + forcing) * dt / tau_v? Following forward Euler discretisation?
     v_delta = (-(v_cur - v_rest) * dt + forcing) / tau_v
     non_refrac = refrac_counts == 0
     v_cur += v_delta * non_refrac.to(v_delta.dtype)
