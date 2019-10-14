@@ -33,6 +33,12 @@ class BaseInput(nn.Module):
     def convert_input(self, x):
         return x.type(self.trace.dtype)
 
+    def forward(self, x):
+        raise NotImplementedError("Input neurons must implement `forward`")
+
+    def update_trace(self, x):
+        raise NotImplementedError("Input neurons must implement `update_trace`")
+
 
 class Input(BaseInput):
     def __init__(self, cells_shape, dt, alpha_t, tau_t, update_type="linear"):
@@ -40,7 +46,6 @@ class Input(BaseInput):
         self.register_buffer("alpha_t", torch.tensor(alpha_t, dtype=torch.float))
         self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
 
-        # TODO: here or in separate function? Or overwrite init_neuron?
         # Type of updates
         if update_type == "linear":
             self.trace_update = sf._linear_trace_update
@@ -181,7 +186,13 @@ class BaseNeuron(nn.Module):
         self.reset_thresh()
 
     def forward(self, x):
-        return
+        raise NotImplementedError("Neurons must implement `forward`")
+
+    def update_trace(self, x):
+        raise NotImplementedError("Neurons must implement `update_trace`")
+
+    def update_voltage(self, x):
+        raise NotImplementedError("Neurons must implement `update_voltage`")
 
 
 #########################################################
@@ -214,7 +225,6 @@ class IFNeuron(BaseNeuron):
             store_trace=store_trace,
         )
 
-        # TODO: here or in separate function? Or overwrite init_neuron?
         # Type of updates
         if update_type == "linear":
             self.trace_update = sf._linear_trace_update
@@ -280,13 +290,12 @@ class LIFNeuron(BaseNeuron):
             store_trace=store_trace,
         )
 
-        # TODO: here or in separate function? Or overwrite init_neuron?
         # Type of updates
         if update_type == "linear":
             self.voltage_update = sf._lif_linear_voltage_update
             self.trace_update = sf._linear_trace_update
         elif update_type == "exponential":
-            self.voltage_update = sf._lif_voltage_update
+            self.voltage_update = sf._lif_exponential_voltage_update
             self.trace_update = sf._exponential_trace_update
         else:
             raise ValueError(f"Unsupported update type {update_type}")
@@ -357,7 +366,6 @@ class AdaptiveLIFNeuron(BaseNeuron):
             store_trace=store_trace,
         )
 
-        # TODO: here or in separate function? Or overwrite init_neuron?
         # Type of updates
         if update_type == "linear":
             self.voltage_update = sf._lif_linear_voltage_update
