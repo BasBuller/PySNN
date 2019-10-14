@@ -164,6 +164,7 @@ class BaseNeuron(nn.Module):
     def reset_state(self):
         r"""Reset cell states that accumulate over time during simulation."""
         self.v_cell.fill_(self.v_rest)
+        self.spikes.fill_(False)
         self.refrac_counts.fill_(0)
         self.trace.fill_(0)
         if self.complete_trace is not None:
