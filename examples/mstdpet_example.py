@@ -51,13 +51,11 @@ class SNN(SNNNetwork):
         self.pre_neuron = LIFNeuron((batch_size, 1, inputs), *n_dynamics)
         self.post_neuron = LIFNeuron((batch_size, 1, outputs), *n2_dynamics)
         self.linear = Linear(*c_shape, *c_dynamics)
-        # self.rule = MSTDPET(self.linear, self.pre_neuron, self.post_neuron, *l_params)
 
     def forward(self, x):
         pre_spikes, pre_trace = self.pre_neuron(x)
         x, _ = self.linear(pre_spikes, pre_trace)
         post_spikes, post_trace = self.post_neuron(x)
-        # self.rule.update_eligibility_trace()
 
         return pre_spikes, post_spikes, pre_trace, post_trace
 

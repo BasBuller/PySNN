@@ -1,11 +1,5 @@
-from collections import defaultdict
-
 import numpy as np
 import torch
-import torch.nn as nn
-
-from pysnn.connection import Connection
-from pysnn.utils import _set_no_grad, tensor_clamp
 
 
 #########################################################
@@ -19,11 +13,11 @@ class LearningRule:
             The latter is a dict that contains a :class:`pysnn.Connection`s state dict, a pre-synaptic :class:`pysnn.Neuron`s state dict, 
             and a post-synaptic :class:`pysnn.Neuron`s state dict that together form a single layer. These objects their state's will be 
             used for optimizing weights.
-            During initialization of a learning rule that inherits from this class it is supposed to select only the paramters it needs
+            During initialization of a learning rule that inherits from this class it is supposed to select only the parameters it needs
             from these objects.
             The higher lever iterable or :class:`dict` contain groups that use the same parameter during training. This is analogous to
             PyTorch optimizers' parameter groups.
-        defaults: A dict containing default hyper paramters. This is a placeholder for possible changes later on, these groups would work
+        defaults: A dict containing default hyper parameters. This is a placeholder for possible changes later on, these groups would work
             exactly the same as those for PyTorch optimizers.
     """
 
@@ -97,7 +91,7 @@ class MSTDPET(LearningRule):
         self.lr = lr
         self.e_trace_decay = e_trace_decay
 
-        # To possibly later support groups, without chaning interface
+        # To possibly later support groups, without changing interface
         defaults = {
             "a_pre": a_pre,
             "a_post": a_post,
@@ -130,7 +124,7 @@ class MSTDPET(LearningRule):
     def step(self, reward):
         # TODO: add weight clamping?
         for layer in self.layers:
-            layer["weight"] += self.defaults["lr"] * reward * layer["e_trace"]
+            layer["weight"] += self.lr * reward * layer["e_trace"]
 
 
 #########################################################
@@ -141,6 +135,9 @@ class FedeSTDP(LearningRule):
     dimension before weight update."""
 
     def __init__(self, layers, lr, w_init, a):
+        assert lr > 0, "Learning rate should be positive."
+        assert (a <= 1) and (a >= 0), "For FedeSTDP 'a' should fall between 0 and 1."
+
         # Check layer formats
         self.check_layers(layers)
 
@@ -149,10 +146,10 @@ class FedeSTDP(LearningRule):
         self.w_init = w_init
         self.a = a
 
-        # To possibly later support groups, without chaning interface
+        # To possibly later support groups, without changing interface
         defaults = {"lr": lr, "w_init": w_init, "a": a}
 
-        # Select only necessary paramters
+        # Select only necessary parameters
         for idx, layer in enumerate(layers):
             new_layer = {}
             new_layer["trace"] = layer["connection"]["trace"]
@@ -164,19 +161,22 @@ class FedeSTDP(LearningRule):
     def step(self):
         for layer in self.layers:
             w = layer["weight"]
+
+            # Normalize trace
             trace = layer["trace"].view(-1, *w.shape)
+            norm_trace = trace / trace.max()
 
             # LTP and LTD
             dw = w - self.w_init
 
             # LTP computation
             ltp_w = torch.exp(-dw)
-            ltp_t = torch.exp(trace) - self.a
+            ltp_t = torch.exp(norm_trace) - self.a
             ltp = ltp_w * ltp_t
 
             # LTD computation
             ltd_w = -(torch.exp(dw))
-            ltd_t = torch.exp(1 - trace) - self.a
+            ltd_t = torch.exp(1 - norm_trace) - self.a
             ltd = ltd_w * ltd_t
 
             # Perform weight update

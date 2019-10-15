@@ -61,11 +61,11 @@ class Connection(nn.Module):
     def reset_weights(self, distribution="uniform", gain=1.0, a=0.0, b=1.0):
         r"""Reinnitialize learnable network Parameters (e.g. weights)."""
         if distribution == "uniform":
-            nn.init.uniform_(self.weight, a=a * gain, b=b * gain)
+            nn.init.uniform_(self.weight, a=a, b=b)
         if distribution == "neuron_scaled_uniform":
             scaling = np.sqrt(self.weight.shape[1])
-            a = (a + gain) / scaling
-            b = (b + gain) / scaling
+            a = a / scaling
+            b = b / scaling
             nn.init.uniform_(self.weight, a=a, b=b)
         elif distribution == "normal":
             nn.init.normal_(self.weight)
