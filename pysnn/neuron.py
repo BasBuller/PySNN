@@ -16,10 +16,12 @@ class BaseInput(nn.Module):
         super(BaseInput, self).__init__()
         self.register_buffer("trace", torch.zeros(*cells_shape, dtype=torch.float))
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
+        self.register_buffer("spikes", torch.tensor(dt, dtype=torch.bool))
 
     def reset_state(self):
         r"""Reset cell states that accumulate over time during simulation."""
         self.trace.fill_(0)
+        self.spikes.fill_(False)
 
     def no_grad(self):
         r"""Turn off learning and gradient storing."""
