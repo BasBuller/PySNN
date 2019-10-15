@@ -1,6 +1,8 @@
 # __PySNN__
 
-Spiking neural network (SNN) framework written on top of PyTorch for efficient simulation of SNNs both on _**CPU**_ and _**GPU**_. The framework is intended for with correlation based learning methods. The library adheres to the highly modular and dynamic design of PyTorch, and does not require its user to learn a new framework like when using BindsNet. *This framework's power lies in the ease of defining and mixing new Neuron and Connection objects that seamlessly work together, even different versions, in a single network.*
+Spiking neural network (SNN) framework written on top of PyTorch for efficient simulation of SNNs both on _**CPU**_ and _**GPU**_. The framework is intended for with correlation based learning methods. The library adheres to the highly modular and dynamic design of PyTorch, and does not require its user to learn a new framework like when using BindsNet. 
+
+*This framework's power lies in the ease of defining and mixing new Neuron and Connection objects that seamlessly work together, even different versions, in a single network.*
 
 PySNN is designed to truely be an engineering framework, providing mainly low level objects to its user that can be combined and mixed, just as in PyTorch. The biggest difference is that a network now consists of two types of modules, instead of the single nn.Module in regular PyTorch. These new modules are the pysnn.Neuron and pysnn.Connection. The Neuron object contains many of the methods that define a SNN. The Connection object really just is a small extension to a regular PyTorch Module that routes signals between different layers. More information can be found in the following sections.
 
