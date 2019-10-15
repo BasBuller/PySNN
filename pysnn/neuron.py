@@ -16,7 +16,7 @@ class BaseInput(nn.Module):
         super(BaseInput, self).__init__()
         self.register_buffer("trace", torch.zeros(*cells_shape, dtype=torch.float))
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
-        self.register_buffer("spikes", torch.tensor(dt, dtype=torch.bool))
+        self.register_buffer("spikes", torch.zeros(*cells_shape, dtype=torch.bool))
 
     def reset_state(self):
         r"""Reset cell states that accumulate over time during simulation."""
@@ -64,6 +64,7 @@ class Input(BaseInput):
 
     def forward(self, x):
         self.update_trace(x)
+        self.spikes.copy_(x)
         return x, self.trace
 
 
