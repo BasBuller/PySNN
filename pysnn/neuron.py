@@ -137,8 +137,11 @@ class BaseNeuron(nn.Module):
 
         Can be overwritten in case of the need of more refined functionality.
         """
-        self.refrac_counts[self.refrac_counts > 0] -= self.dt
-        self.refrac_counts += self.duration_refrac * self.convert_spikes(spikes)
+        if self.duration_refrac > 1:
+            self.refrac_counts[self.refrac_counts > 0] -= self.dt
+            self.refrac_counts += self.duration_refrac * self.convert_spikes(spikes)
+        else:
+            self.refrac_counts.copy_(self.convert_spikes(spikes))
         self.v_cell.masked_fill_(spikes, self.v_rest)
 
     def concat_trace(self, x):
