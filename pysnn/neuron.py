@@ -424,6 +424,10 @@ class AdaptiveLIFNeuron(BaseNeuron):
             self.concat_trace(spikes)
         return spikes, self.trace
 
+    def reset_state(self):
+        super(AdaptiveLIFNeuron, self).reset_state()
+        self.reset_thresh()
+
 
 #########################################################
 # Fede Neuron
