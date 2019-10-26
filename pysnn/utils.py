@@ -47,3 +47,18 @@ def tensor_clamp(tensor, min, max):
     clamp = torch.min(tensor, max)  # upper boundary
     clamp = torch.max(clamp, min)  # lower boundary
     return clamp
+
+
+#########################################################
+# Select state dicts for set of modules
+#########################################################
+def make_layer(pre=None, connection=None, post=None):
+    # TODO: Move this into constructing an SNN network
+    states = {}
+    if pre:
+        states["pre_neuron"] = pre.state_dict()
+    if connection:
+        states["connection"] = connection.state_dict()
+    if post:
+        states["post_neuron"] = post.state_dict()
+    return states
