@@ -341,11 +341,12 @@ class BooleanNoise:
         self.high_distr = torch.distributions.Uniform(high_thresh, 1.0)
 
     def __call__(self, x):
-        for idx, sample in enumerate(x):
-            if sample == 0:
-                x[idx] = self.low_distr.sample()
-            elif sample == 1:
-                x[idx] = self.high_distr.sample()
+        zero_idx = x == 0
+        one_idx = x == 1
+        if zero_idx.any():
+            x[zero_idx] = self.low_distr.sample(zero_idx.shape)
+        if one_idx.any():
+            x[one_idx] = self.high_distr.sample(one_idx.shape)
         return x
 
 

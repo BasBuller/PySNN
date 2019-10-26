@@ -1,3 +1,5 @@
+"""NOTE: This example does not work yet!"""
+
 from tqdm import tqdm
 
 import torch
@@ -7,7 +9,7 @@ from torchvision import transforms
 
 from pysnn.network import SNNNetwork
 from pysnn.connection import Conv2dExponential, AdaptiveMaxPool2d
-from pysnn.neuron import FedeNeuronTrace
+from pysnn.neuron import FedeNeuron
 from pysnn.learning import FedeSTDP
 from pysnn.utils import conv2d_output_shape
 from pysnn.datasets import nmnist_train_test
@@ -56,18 +58,18 @@ class Network(SNNNetwork):
         # Layer 1
         self.conv1 = Conv2dExponential(2, 4, 5, (34, 34), *c_dynamics, padding=1)
         # conv1_out = conv2d_output_shape(34, 34, 5, padding=1)
-        self.neuron1 = FedeNeuronTrace((batch_size, 4, 32, 32), *n_dynamics)
+        self.neuron1 = FedeNeuron((batch_size, 4, 32, 32), *n_dynamics)
 
         # Layer 2
         self.pool2 = AdaptiveMaxPool2d((16, 16))
         self.conv2 = Conv2dExponential(4, 8, 5, (16, 16), *c_dynamics, padding=1)
         # conv2_out = conv2d_output_shape(*conv1_out, 3, padding=1)
-        self.neuron2 = FedeNeuronTrace((batch_size, 8, 14, 14), *n_dynamics)
+        self.neuron2 = FedeNeuron((batch_size, 8, 14, 14), *n_dynamics)
 
         # # Layer out
         self.conv3 = Conv2dExponential(8, 1, 5, (14, 14), *c_dynamics, padding=1)
         # conv3_out = conv2d_output_shape(*conv2_out, 3, padding=1)
-        self.neuron3 = FedeNeuronTrace((batch_size, 1, 12, 12), *n_dynamics)
+        self.neuron3 = FedeNeuron((batch_size, 1, 12, 12), *n_dynamics)
 
         # # Learning rule
         connections = [self.conv1, self.conv2, self.conv3]

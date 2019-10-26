@@ -12,6 +12,7 @@ def poisson_encoding(intensities, duration, dt):
     """
 
     assert (intensities >= 0).all(), "Inputs must be non-negative"
+    assert intensities.dtype == torch.float, "Intensities must be floats"
 
     # Get shape and size of data.
     shape, size = intensities.shape, intensities.numel()
@@ -21,7 +22,8 @@ def poisson_encoding(intensities, duration, dt):
     # Compute firing rates in seconds as function of data intensity,
     # accounting for simulation time step.
     rate = torch.zeros(size)
-    rate[intensities != 0] = 1 / intensities[intensities != 0] * (1000 / dt)
+    non_zero = intensities != 0
+    rate[non_zero] = 1 / intensities[non_zero] * (1000 / dt)
 
     # Create Poisson distribution and sample inter-spike intervals
     # (incrementing by 1 to avoid zero intervals).
@@ -37,6 +39,7 @@ def poisson_encoding(intensities, duration, dt):
     spikes = torch.zeros(time + 1, size).bool()
     spikes[times, torch.arange(size)] = 1
     spikes = spikes[1:]
+    spikes = spikes.permute(1, 0)
 
     return spikes.view(*shape, time)
 

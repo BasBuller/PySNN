@@ -16,10 +16,12 @@ class BaseInput(nn.Module):
         super(BaseInput, self).__init__()
         self.register_buffer("trace", torch.zeros(*cells_shape, dtype=torch.float))
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
+        self.register_buffer("spikes", torch.zeros(*cells_shape, dtype=torch.bool))
 
     def reset_state(self):
         r"""Reset cell states that accumulate over time during simulation."""
         self.trace.fill_(0)
+        self.spikes.fill_(False)
 
     def no_grad(self):
         r"""Turn off learning and gradient storing."""
@@ -62,6 +64,7 @@ class Input(BaseInput):
 
     def forward(self, x):
         self.update_trace(x)
+        self.spikes.copy_(x)
         return x, self.trace
 
 
@@ -112,7 +115,7 @@ class BaseNeuron(nn.Module):
         self.register_buffer("thresh_center", torch.tensor(thresh, dtype=torch.float))
 
         # Define dynamic parameters
-        self.register_buffer("spikes", torch.Tensor(*cells_shape))
+        self.register_buffer("spikes", torch.Tensor(*cells_shape).bool())
         self.register_buffer("v_cell", torch.Tensor(*cells_shape))
         self.register_buffer("trace", torch.Tensor(*cells_shape))
         self.register_buffer("refrac_counts", torch.Tensor(*cells_shape))
@@ -129,8 +132,8 @@ class BaseNeuron(nn.Module):
 
     def spiking(self):
         r"""Return cells that are in spiking state."""
-        self.spikes = self.v_cell >= self.thresh
-        return self.spikes
+        self.spikes.copy_(self.v_cell >= self.thresh)
+        return self.spikes.clone()
 
     def refrac(self, spikes):
         r"""Basic counting version of cell refractory period.
