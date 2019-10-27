@@ -1,0 +1,6 @@
+pysnn\.functional
+=================
+
+.. automodule:: pysnn.functional
+   :members:
+   :undoc-members:

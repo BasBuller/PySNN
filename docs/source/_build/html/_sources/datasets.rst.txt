@@ -1,0 +1,6 @@
+pysnn\.datasets
+=================
+
+.. automodule:: pysnn.datasets
+   :members:
+   :undoc-members:

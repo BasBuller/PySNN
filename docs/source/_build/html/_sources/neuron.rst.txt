@@ -1,0 +1,6 @@
+pysnn\.neuron
+=============
+
+.. automodule:: pysnn.neuron
+   :members:
+   :undoc-members:

@@ -1,0 +1,6 @@
+pysnn\.learning
+=================
+
+.. automodule:: pysnn.learning
+   :members:
+   :undoc-members:
