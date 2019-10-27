@@ -35,10 +35,10 @@ refrac_counts = torch.zeros(*cells_shape)
     ],
 )
 def test_exponential_trace_update(trace, spikes_in, trace_out):
-    from pysnn.functional import _exponential_trace_update
+    from pysnn.functional import exponential_trace_update
 
     for tr_out in trace_out:
-        trace = _exponential_trace_update(trace, spikes_in, alpha_t, tau_t, dt)
+        trace = exponential_trace_update(trace, spikes_in, alpha_t, tau_t, dt)
         assert (trace == tr_out).all()
 
 
@@ -53,10 +53,10 @@ def test_exponential_trace_update(trace, spikes_in, trace_out):
     ],
 )
 def test_linear_trace_update(trace, spikes_in, trace_out):
-    from pysnn.functional import _linear_trace_update
+    from pysnn.functional import linear_trace_update
 
     for tr_out in trace_out:
-        trace = _linear_trace_update(trace, spikes_in, alpha_t, trace_decay, dt)
+        trace = linear_trace_update(trace, spikes_in, alpha_t, trace_decay, dt)
         assert (trace == tr_out).all()
 
 
@@ -74,10 +74,10 @@ def test_linear_trace_update(trace, spikes_in, trace_out):
     ],
 )
 def test_exponential_thresh_update(thresh, spikes_in, thresh_out):
-    from pysnn.functional import _exponential_thresh_update
+    from pysnn.functional import exponential_thresh_update
 
     for th_out in thresh_out:
-        thresh = _exponential_thresh_update(
+        thresh = exponential_thresh_update(
             thresh, spikes_in, alpha_thresh, tau_thresh, dt
         )
         assert thresh.allclose(th_out)
@@ -94,10 +94,10 @@ def test_exponential_thresh_update(thresh, spikes_in, thresh_out):
     ],
 )
 def test_linear_thresh_update(thresh, spikes_in, thresh_out):
-    from pysnn.functional import _linear_thresh_update
+    from pysnn.functional import linear_thresh_update
 
     for th_out in thresh_out:
-        thresh = _linear_thresh_update(
+        thresh = linear_thresh_update(
             thresh, spikes_in, alpha_thresh, thresh_decay, dt
         )
         assert thresh.allclose(th_out)
@@ -118,10 +118,10 @@ def test_linear_thresh_update(thresh, spikes_in, thresh_out):
     ],
 )
 def test_if_voltage_update(v_cur, v_in, v_out):
-    from pysnn.functional import _if_voltage_update
+    from pysnn.functional import if_voltage_update
 
     for volt_out in v_out:
-        v_cur = _if_voltage_update(v_cur, v_in, alpha_v, refrac_counts)
+        v_cur = if_voltage_update(v_cur, v_in, alpha_v, refrac_counts)
         assert (v_cur == volt_out).all()
 
 
@@ -137,10 +137,10 @@ def test_if_voltage_update(v_cur, v_in, v_out):
     ],
 )
 def test_lif_linear_voltage_update(v_cur, v_in, v_out):
-    from pysnn.functional import _lif_linear_voltage_update
+    from pysnn.functional import lif_linear_voltage_update
 
     for volt_out in v_out:
-        v_cur = _lif_linear_voltage_update(
+        v_cur = lif_linear_voltage_update(
             v_cur, v_rest, v_in, alpha_v, v_decay, dt, refrac_counts
         )
         assert (v_cur == volt_out).all()
@@ -158,10 +158,10 @@ def test_lif_linear_voltage_update(v_cur, v_in, v_out):
     ],
 )
 def test_lif_exponential_voltage_update(v_cur, v_in, v_out):
-    from pysnn.functional import _lif_exponential_voltage_update
+    from pysnn.functional import lif_exponential_voltage_update
 
     for volt_out in v_out:
-        v_cur = _lif_exponential_voltage_update(
+        v_cur = lif_exponential_voltage_update(
             v_cur, v_rest, v_in, alpha_v, tau_v, dt, refrac_counts
         )
         assert (v_cur == volt_out).all()
@@ -180,10 +180,10 @@ def test_lif_exponential_voltage_update(v_cur, v_in, v_out):
     ],
 )
 def test_fede_voltage_update(v_cur, v_in, trace_in, v_out):
-    from pysnn.functional import _fede_voltage_update
+    from pysnn.functional import fede_voltage_update
 
     for volt_out in v_out:
-        v_cur = _fede_voltage_update(
+        v_cur = fede_voltage_update(
             v_cur, v_rest, v_in, alpha_v, tau_v, dt, refrac_counts, trace_in
         )
         assert (v_cur == volt_out).all()

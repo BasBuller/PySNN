@@ -9,9 +9,9 @@ import torch
 class LearningRule:
     r"""Base class for correlation based learning rules in spiking neural networks.
     
-    :param layers: an iterable or :class:`dict` of :class:`dict`s. 
-        The latter is a dict that contains a :class:`pysnn.Connection`s state dict, a pre-synaptic :class:`pysnn.Neuron`s state dict, 
-        and a post-synaptic :class:`pysnn.Neuron`s state dict that together form a single layer. These objects their state's will be 
+    :param layers: An iterable or :class:`dict` of :class:`dict` 
+        the latter is a dict that contains a :class:`pysnn.Connection` state dict, a pre-synaptic :class:`pysnn.Neuron` state dict, 
+        and a post-synaptic :class:`pysnn.Neuron` state dict that together form a single layer. These objects their state's will be 
         used for optimizing weights.
         During initialization of a learning rule that inherits from this class it is supposed to select only the parameters it needs
         from these objects.
@@ -34,13 +34,14 @@ class LearningRule:
         raise NotImplementedError
 
     def reset_state(self):
+        r"""Reset state parameters of LearningRule."""
         raise NotImplementedError
 
-    def add_layer_group(self, layer):
-        pass
-
     def check_layers(self, layers):
-        r"""Check if layers provided to constructor are of the right format."""
+        r"""Check if layers provided to constructor are of the right format.
+        
+        :param layers: OrderedDict containing state dicts for each layer.
+        """
 
         # Check if layers is iterator
         if not isinstance(layers, OrderedDict):
@@ -123,6 +124,12 @@ class MSTDPET(LearningRule):
     
     Uses just a single, scalar reward value.
     Update rule can be applied at any desired time step.
+
+    :param layers: OrderedDict containing state dicts for each layer.
+    :param a_pre: Scaling factor for presynaptic spikes influence on the eligibilty trace.
+    :param a_post: Scaling factor for postsynaptic spikes influence on the eligibilty trace.
+    :param lr: Learning rate.
+    :param e_trace_decay: Decay factor for the eligibility trace.
     """
 
     def __init__(self, layers, a_pre, a_post, lr, e_trace_decay):
@@ -158,8 +165,7 @@ class MSTDPET(LearningRule):
     def update_state(self):
         r"""Update eligibility trace based on pre and postsynaptic spiking activity.
         
-        This function has to be called manually after each timestep. Should not be called from within forward, 
-        as this does is likely not called every timestep.
+        This function has to be called manually at desired times, often after each timestep.
         """
 
         for layer in self.layers.values():
@@ -177,6 +183,11 @@ class MSTDPET(LearningRule):
             layer["e_trace"].fill_(0)
 
     def step(self, reward):
+        r"""Performs single learning step.
+        
+        :param reward: Scalar reward value.
+        """
+
         # TODO: add weight clamping?
         for layer in self.layers.values():
             dw = self.reduce_connections(layer["e_trace"], layer["type"])
@@ -187,8 +198,15 @@ class MSTDPET(LearningRule):
 # Fede STDP
 #########################################################
 class FedeSTDP(LearningRule):
-    r"""STDP version for Paredes Valles, performs mean operation over the batch 
-    dimension before weight update."""
+    r"""STDP version for Paredes Valles, performs mean operation over the batch dimension before weight update.
+
+    Defined in "Unsupervised Learning of a Hierarchical Spiking Neural Network for Optical Flow Estimation: From Events to Global Motion Perception - F.P. Valles, et al."
+
+    :param layers: OrderedDict containing state dicts for each layer.
+    :param lr: Learning rate.
+    :param w_init: Initialization/reference value for all weights.
+    :param a: Stability parameter, a < 1.
+    """
 
     def __init__(self, layers, lr, w_init, a):
         assert lr > 0, "Learning rate should be positive."
@@ -215,6 +233,7 @@ class FedeSTDP(LearningRule):
         super(FedeSTDP, self).__init__(layers, defaults)
 
     def step(self):
+        r"""Performs single learning step."""
         for layer in self.layers.values():
             w = layer["weight"]
 

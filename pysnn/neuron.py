@@ -10,7 +10,11 @@ import pysnn.functional as sf
 # Input Neuron
 #########################################################
 class BaseInput(nn.Module):
-    r"""Simple feed-through layer of neurons used for storing a trace."""
+    r"""Simple feed-through layer of neurons used for generating a trace.
+    
+    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    :param dt: duration of a single timestep.
+    """
 
     def __init__(self, cells_shape, dt):
         super(BaseInput, self).__init__()
@@ -24,25 +28,39 @@ class BaseInput(nn.Module):
         self.spikes.fill_(False)
 
     def no_grad(self):
-        r"""Turn off learning and gradient storing."""
+        r"""Turn off gradient storing."""
         _set_no_grad(self)
 
     def init_neuron(self):
-        r"""Initialize state, parameters and turn off gradients."""
+        r"""Initialize state, and turn off gradients."""
         self.no_grad()
         self.reset_state()
 
     def convert_input(self, x):
+        r"""Convert torch.bool input to the datatype set for arithmetics.
+        
+        :param x: Input Tensor of torch.bool type.
+        """
         return x.type(self.trace.dtype)
 
     def forward(self, x):
         raise NotImplementedError("Input neurons must implement `forward`")
 
     def update_trace(self, x):
+        r"""Placeholder for trace update function."""
         raise NotImplementedError("Input neurons must implement `update_trace`")
 
 
 class Input(BaseInput):
+    r"""Standard input neuron, used to propagate input traces to the following :class:`Connection` object, and calculates a trace.
+    
+    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    :param dt: duration of a single timestep.
+    :param alpha_t: scaling constant for the increase of the trace by a single spike.
+    :param tau_t: decay parameter for the trace.
+    :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``.
+    """
+
     def __init__(self, cells_shape, dt, alpha_t, tau_t, update_type="linear"):
         super(Input, self).__init__(cells_shape, dt)
         self.register_buffer("alpha_t", torch.tensor(alpha_t, dtype=torch.float))
@@ -53,19 +71,27 @@ class Input(BaseInput):
             assert (
                 tau_t >= 0.0 and tau_t <= 1.0
             ), "Decays for linear updates should be in the interval [0, 1]."
-            self.trace_update = sf._linear_trace_update
+            self.trace_update = sf.linear_trace_update
         elif update_type == "exponential":
-            self.trace_update = sf._exponential_trace_update
+            self.trace_update = sf.exponential_trace_update
         else:
             raise ValueError(f"Unsupported trace type {update_type}")
 
         self.init_neuron()
 
     def update_trace(self, x):
+        r"""Converts input spikes and updates the trace.
+        
+        :param x: Tensor with the input spikes.
+        """
         x = self.convert_input(x)
         self.trace = self.trace_update(self.trace, x, self.alpha_t, self.tau_t, self.dt)
 
     def forward(self, x):
+        r"""Propagate spikes through input neurons and compute trace.
+        
+        :param x: Input spikes
+        """
         self.update_trace(x)
         self.spikes.copy_(x)
         return x, self.trace
@@ -82,6 +108,16 @@ class BaseNeuron(nn.Module):
 
     Make sure the Neuron class receives input voltage for each neuron and
     returns a Tensor indicating which neurons have spiked.
+
+    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    :param thresh: spiking threshold, when the cells' voltage surpasses this value it generates a spike.
+    :param v_rest: voltage resting value, the :class:`Neuron` will default back to this over time or after spiking.
+    :param alpha_v: scaling constant for the increase of the voltage by a single spike.
+    :param alpha_t: scaling constant for the increase of the trace by a single spike.
+    :param dt: duration of a single timestep.
+    :param duration_refrac: Number of timesteps the :class:`Neuron` is dormant after spiking. Make sure ``dt`` fits an integer number of times in ``duration refrac``.
+    :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``.
+    :param store_trace: ``Boolean`` flag to store the complete spiking history, defaults to ``False``.
     """
 
     def __init__(
@@ -166,7 +202,7 @@ class BaseNeuron(nn.Module):
         return x.view(shape[-1], *shape[:-1])
 
     def convert_spikes(self, spikes):
-        r"""Cast uint8 spikes to datatype that is used for voltage and weights"""
+        r"""Cast ``torch.bool`` spikes to datatype that is used for voltage and weights"""
         return spikes.to(self.v_cell.dtype)
 
     def reset_state(self):
@@ -189,7 +225,7 @@ class BaseNeuron(nn.Module):
         _set_no_grad(self)
 
     def init_neuron(self):
-        r"""Initialize state, parameters and turn off gradients."""
+        r"""Initialize state, parameters, and turn off gradients."""
         self.no_grad()
         self.reset_state()
         self.reset_thresh()
@@ -198,9 +234,11 @@ class BaseNeuron(nn.Module):
         raise NotImplementedError("Neurons must implement `forward`")
 
     def update_trace(self, x):
+        r"""Placeholder for trace update function."""
         raise NotImplementedError("Neurons must implement `update_trace`")
 
     def update_voltage(self, x):
+        r"""Placeholder for voltage update function."""
         raise NotImplementedError("Neurons must implement `update_voltage`")
 
 
@@ -208,7 +246,19 @@ class BaseNeuron(nn.Module):
 # IF Neuron
 #########################################################
 class IFNeuron(BaseNeuron):
-    r"""Integrate and Fire neuron."""
+    r"""Basic integrate and fire neuron, cell voltage does not decay over time.
+
+    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    :param thresh: spiking threshold, when the cells' voltage surpasses this value it generates a spike.
+    :param v_rest: voltage resting value, the :class:`Neuron` will default back to this over time or after spiking.
+    :param alpha_v: scaling constant for the increase of the voltage by a single spike.
+    :param alpha_t: scaling constant for the increase of the trace by a single spike.
+    :param dt: duration of a single timestep.
+    :param duration_refrac: Number of timesteps the :class:`Neuron` is dormant after spiking. Make sure ``dt`` fits an integer number of times in ``duration refrac``.
+    :param tau_t: decay parameter for the trace.
+    :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``.
+    :param store_trace: ``Boolean`` flag to store the complete spiking history, defaults to ``False``.
+    """
 
     def __init__(
         self,
@@ -239,9 +289,9 @@ class IFNeuron(BaseNeuron):
             assert (
                 tau_t >= 0.0 and tau_t <= 1.0
             ), "Decays for linear updates should be in the interval [0, 1]."
-            self.trace_update = sf._linear_trace_update
+            self.trace_update = sf.linear_trace_update
         elif update_type == "exponential":
-            self.trace_update = sf._exponential_trace_update
+            self.trace_update = sf.exponential_trace_update
         else:
             raise ValueError(f"Unsupported trace type {update_type}")
 
@@ -250,17 +300,28 @@ class IFNeuron(BaseNeuron):
         self.init_neuron()
 
     def update_trace(self, x):
+        r"""
+        :param x: Incoming/presynaptic spikes
+        """
         spikes = self.convert_spikes(x)
         self.trace = self.trace_update(
             self.trace, spikes, self.alpha_t, self.tau_t, self.dt
         )
 
     def update_voltage(self, x):
-        self.v_cell = sf._if_voltage_update(
+        r"""
+        :param x: Incoming/presynaptic spikes
+        """
+        self.v_cell = sf.if_voltage_update(
             self.v_cell, x, self.alpha_v, self.refrac_counts
         )
 
     def forward(self, x):
+        r"""
+        :param x: Incoming/presynaptic spikes
+
+        :return: Neuron output spikes and trace
+        """
         x = self.fold(x)
         self.update_voltage(x)
         spikes = self.spiking()
@@ -275,7 +336,20 @@ class IFNeuron(BaseNeuron):
 # LIF Neuron
 #########################################################
 class LIFNeuron(BaseNeuron):
-    r"""Leaky Integrate and Fire neuron."""
+    r"""Leaky integrate and fire neuron, cell voltage decays over time.
+    
+    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    :param thresh: spiking threshold, when the cells' voltage surpasses this value it generates a spike.
+    :param v_rest: voltage resting value, the :class:`Neuron` will default back to this over time or after spiking.
+    :param alpha_v: scaling constant for the increase of the voltage by a single spike.
+    :param alpha_t: scaling constant for the increase of the trace by a single spike.
+    :param dt: duration of a single timestep.
+    :param duration_refrac: Number of timesteps the :class:`Neuron` is dormant after spiking. Make sure ``dt`` fits an integer number of times in ``duration refrac``.
+    :param tau_v: decay parameter for the voltage.
+    :param tau_t: decay parameter for the trace.
+    :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``.
+    :param store_trace: ``Boolean`` flag to store the complete spiking history, defaults to ``False``.
+    """
 
     def __init__(
         self,
@@ -307,11 +381,11 @@ class LIFNeuron(BaseNeuron):
             assert all(
                 [tau_v >= 0.0, tau_v <= 1.0, tau_t >= 0.0, tau_t <= 1.0]
             ), "Decays for linear updates should be in the interval [0, 1]."
-            self.voltage_update = sf._lif_linear_voltage_update
-            self.trace_update = sf._linear_trace_update
+            self.voltage_update = sf.lif_linear_voltage_update
+            self.trace_update = sf.linear_trace_update
         elif update_type == "exponential":
-            self.voltage_update = sf._lif_exponential_voltage_update
-            self.trace_update = sf._exponential_trace_update
+            self.voltage_update = sf.lif_exponential_voltage_update
+            self.trace_update = sf.exponential_trace_update
         else:
             raise ValueError(f"Unsupported update type {update_type}")
 
@@ -321,12 +395,18 @@ class LIFNeuron(BaseNeuron):
         self.init_neuron()
 
     def update_trace(self, x):
+        r"""
+        :param x: Incoming/presynaptic spikes
+        """
         spikes = self.convert_spikes(x)
         self.trace = self.trace_update(
             self.trace, spikes, self.alpha_t, self.tau_t, self.dt
         )
 
     def update_voltage(self, x):
+        r"""
+        :param x: Incoming/presynaptic spikes
+        """
         self.v_cell = self.voltage_update(
             self.v_cell,
             self.v_rest,
@@ -338,6 +418,11 @@ class LIFNeuron(BaseNeuron):
         )
 
     def forward(self, x):
+        r"""
+        :param x: Incoming/presynaptic spikes
+
+        :return: Neuron output spikes and trace
+        """
         x = self.fold(x)
         self.update_voltage(x)
         spikes = self.spiking()
@@ -352,7 +437,24 @@ class LIFNeuron(BaseNeuron):
 # Adaptive LIF Neuron
 #########################################################
 class AdaptiveLIFNeuron(BaseNeuron):
-    r"""Adaptive Leaky Integrate and Fire neuron."""
+    r"""Adaptive leaky integrate and fire neuron. 
+    
+    The cell voltage decays over time, the spiking threshold adapts based on the recent spiking activity of the :class:`Neuron`.
+
+    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    :param thresh: spiking threshold, when the cells' voltage surpasses this value it generates a spike.
+    :param v_rest: voltage resting value, the :class:`Neuron` will default back to this over time or after spiking.
+    :param alpha_v: scaling constant for the increase of the voltage by a single spike.
+    :param alpha_t: scaling constant for the increase of the trace by a single spike.
+    :param dt: duration of a single timestep.
+    :param duration_refrac: Number of timesteps the :class:`Neuron` is dormant after spiking. Make sure ``dt`` fits an integer number of times in ``duration refrac``.
+    :param tau_v: decay parameter for the voltage.
+    :param tau_t: decay parameter for the trace.
+    :param alpha_thresh: scaling constant for the increase of the threshold by a single spike.
+    :param tau_thresh: decay parameter for the threshold.
+    :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``.
+    :param store_trace: ``Boolean`` flag to store the complete spiking history, defaults to ``False``.
+    """
 
     def __init__(
         self,
@@ -393,13 +495,13 @@ class AdaptiveLIFNeuron(BaseNeuron):
                     tau_thresh <= 1.0,
                 ]
             ), "Decays for linear updates should be in the interval [0, 1]."
-            self.voltage_update = sf._lif_linear_voltage_update
-            self.trace_update = sf._linear_trace_update
-            self.thresh_update = sf._linear_thresh_update
+            self.voltage_update = sf.lif_linear_voltage_update
+            self.trace_update = sf.linear_trace_update
+            self.thresh_update = sf.linear_thresh_update
         elif update_type == "exponential":
-            self.voltage_update = sf._lif_exponential_voltage_update
-            self.trace_update = sf._exponential_trace_update
-            self.thresh_update = sf._exponential_thresh_update
+            self.voltage_update = sf.lif_exponential_voltage_update
+            self.trace_update = sf.exponential_trace_update
+            self.thresh_update = sf.exponential_thresh_update
         else:
             raise ValueError(f"Unsupported update type {update_type}")
 
@@ -413,12 +515,18 @@ class AdaptiveLIFNeuron(BaseNeuron):
         self.init_neuron()
 
     def update_trace(self, x):
+        r"""
+        :param x: Incoming/presynaptic spikes
+        """
         spikes = self.convert_spikes(x)
         self.trace = self.trace_update(
             self.trace, spikes, self.alpha_t, self.tau_t, self.dt
         )
 
     def update_thresh(self, x):
+        r"""
+        :param x: Incoming/presynaptic spikes
+        """
         r"""Return cells that are in spiking state and adjust threshold accordingly."""
         spikes = self.convert_spikes(x)
         self.thresh = self.thresh_update(
@@ -427,6 +535,9 @@ class AdaptiveLIFNeuron(BaseNeuron):
         # No clamping needed since multiplication!
 
     def update_voltage(self, x):
+        r"""
+        :param x: Incoming/presynaptic spikes
+        """
         self.v_cell = self.voltage_update(
             self.v_cell,
             self.v_rest,
@@ -438,6 +549,11 @@ class AdaptiveLIFNeuron(BaseNeuron):
         )
 
     def forward(self, x):
+        r"""
+        :param x: Incoming/presynaptic spikes
+
+        :return: Neuron output spikes and trace
+        """
         x = self.fold(x)
         self.update_voltage(x)
         spikes = self.spiking()
@@ -459,9 +575,18 @@ class AdaptiveLIFNeuron(BaseNeuron):
 class FedeNeuron(BaseNeuron):
     r"""Leaky Integrate and Fire neuron.
 
-    Defined in "Unsupervised Learning of a Hierarchical Spiking
-    Neural Network for Optical Flow Estimation: From Events to
-    Global Motion Perception - F.P. Valles, et al."
+    Defined in "Unsupervised Learning of a Hierarchical Spiking Neural Network for Optical Flow Estimation: From Events to Global Motion Perception - F.P. Valles, et al."
+
+    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    :param thresh: spiking threshold, when the cells' voltage surpasses this value it generates a spike.
+    :param v_rest: voltage resting value, the :class:`Neuron` will default back to this over time or after spiking.
+    :param alpha_v: scaling constant for the increase of the voltage by a single spike.
+    :param alpha_t: scaling constant for the increase of the trace by a single spike.
+    :param dt: duration of a single timestep.
+    :param duration_refrac: Number of timesteps the :class:`Neuron` is dormant after spiking. Make sure ``dt`` fits an integer number of times in ``duration refrac``.
+    :param tau_v: decay parameter for the voltage.
+    :param tau_t: decay parameter for the trace.
+    :param store_trace: ``Boolean`` flag to store the complete spiking history, defaults to ``False``.
     """
 
     def __init__(
@@ -494,12 +619,19 @@ class FedeNeuron(BaseNeuron):
         self.init_neuron()
 
     def update_trace(self, x):
-        self.trace = sf._exponential_trace_update(
+        r"""
+        :param x: Incoming/presynaptic spikes
+        """
+        self.trace = sf.exponential_trace_update(
             self.trace, x, self.alpha_t, self.tau_t, self.dt
         )
 
     def update_voltage(self, x, pre_trace):
-        self.v_cell = sf._fede_voltage_update(
+        r"""
+        :param x: Incoming/presynaptic spikes
+        :param pre_trace: Incoming/presynaptic trace
+        """
+        self.v_cell = sf.fede_voltage_update(
             self.v_cell,
             self.v_rest,
             x,
@@ -511,6 +643,12 @@ class FedeNeuron(BaseNeuron):
         )
 
     def forward(self, x, pre_trace):
+        r"""
+        :param x: Incoming/presynaptic spikes
+        :param pre_trace: Incoming/presynaptic trace
+
+        :return: Neuron output spikes and trace
+        """
         self.update_voltage(x, pre_trace)
         spikes = self.spiking()
         self.update_trace(self.convert_spikes(spikes))

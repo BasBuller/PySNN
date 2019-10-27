@@ -31,6 +31,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
 
@@ -98,8 +99,6 @@
 </li>
       <li><a href="network_reference.html#pysnn.network.SNNNetwork.add_layer">add_layer() (pysnn.network.SNNNetwork method)</a>
 </li>
-      <li><a href="learning_reference.html#pysnn.learning.LearningRule.add_layer_group">add_layer_group() (pysnn.learning.LearningRule method)</a>
-</li>
       <li><a href="datasets_reference.html#pysnn.datasets.AND">AND (class in pysnn.datasets)</a>
 </li>
   </ul></td>
@@ -110,9 +109,11 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="neuron_reference.html#pysnn.neuron.BaseInput">BaseInput (class in pysnn.neuron)</a>
 </li>
+      <li><a href="neuron_reference.html#pysnn.neuron.BaseNeuron">BaseNeuron (class in pysnn.neuron)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="neuron_reference.html#pysnn.neuron.BaseNeuron">BaseNeuron (class in pysnn.neuron)</a>
+      <li><a href="datasets_reference.html#pysnn.datasets.Boolean">Boolean (class in pysnn.datasets)</a>
 </li>
       <li><a href="datasets_reference.html#pysnn.datasets.BooleanNoise">BooleanNoise (class in pysnn.datasets)</a>
 </li>
@@ -160,13 +161,17 @@
 </li>
       <li><a href="file_io_reference.html#pysnn.file_io.encode_1d_spikes">encode_1d_spikes() (in module pysnn.file_io)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="file_io_reference.html#pysnn.file_io.encode_2d_spikes">encode_2d_spikes() (in module pysnn.file_io)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="file_io_reference.html#pysnn.file_io.encode_3d_spikes">encode_3d_spikes() (in module pysnn.file_io)</a>
 </li>
       <li><a href="file_io_reference.html#pysnn.file_io.Events">Events (class in pysnn.file_io)</a>
+</li>
+      <li><a href="functional_reference.html#pysnn.functional.exponential_thresh_update">exponential_thresh_update() (in module pysnn.functional)</a>
+</li>
+      <li><a href="functional_reference.html#pysnn.functional.exponential_trace_update">exponential_trace_update() (in module pysnn.functional)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -174,6 +179,8 @@
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="functional_reference.html#pysnn.functional.fede_voltage_update">fede_voltage_update() (in module pysnn.functional)</a>
+</li>
       <li><a href="neuron_reference.html#pysnn.neuron.FedeNeuron">FedeNeuron (class in pysnn.neuron)</a>
 </li>
       <li><a href="learning_reference.html#pysnn.learning.FedeSTDP">FedeSTDP (class in pysnn.learning)</a>
@@ -210,6 +217,8 @@
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="functional_reference.html#pysnn.functional.if_voltage_update">if_voltage_update() (in module pysnn.functional)</a>
+</li>
       <li><a href="neuron_reference.html#pysnn.neuron.IFNeuron">IFNeuron (class in pysnn.neuron)</a>
 </li>
       <li><a href="connection_reference.html#pysnn.connection.Connection.init_connection">init_connection() (pysnn.connection.Connection method)</a>
@@ -238,11 +247,19 @@
 </li>
       <li><a href="learning_reference.html#pysnn.learning.LearningRule">LearningRule (class in pysnn.learning)</a>
 </li>
+      <li><a href="functional_reference.html#pysnn.functional.lif_exponential_voltage_update">lif_exponential_voltage_update() (in module pysnn.functional)</a>
+</li>
+      <li><a href="functional_reference.html#pysnn.functional.lif_linear_voltage_update">lif_linear_voltage_update() (in module pysnn.functional)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="neuron_reference.html#pysnn.neuron.LIFNeuron">LIFNeuron (class in pysnn.neuron)</a>
 </li>
       <li><a href="connection_reference.html#pysnn.connection.Linear">Linear (class in pysnn.connection)</a>
+</li>
+      <li><a href="functional_reference.html#pysnn.functional.linear_thresh_update">linear_thresh_update() (in module pysnn.functional)</a>
+</li>
+      <li><a href="functional_reference.html#pysnn.functional.linear_trace_update">linear_trace_update() (in module pysnn.functional)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -250,12 +267,10 @@
 <h2 id="M">M</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="utils_reference.html#pysnn.utils.make_layer">make_layer() (in module pysnn.utils)</a>
+      <li><a href="connection_reference.html#pysnn.connection.MaxPool2d">MaxPool2d (class in pysnn.connection)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="connection_reference.html#pysnn.connection.MaxPool2d">MaxPool2d (class in pysnn.connection)</a>
-</li>
       <li><a href="learning_reference.html#pysnn.learning.MSTDPET">MSTDPET (class in pysnn.learning)</a>
 </li>
   </ul></td>
@@ -300,16 +315,18 @@
 </li>
       <li><a href="encoding_reference.html#pysnn.encoding.PoissonEncoder">PoissonEncoder (class in pysnn.encoding)</a>
 </li>
+      <li><a href="learning_reference.html#pysnn.learning.LearningRule.pre_mult_post">pre_mult_post() (pysnn.learning.LearningRule method)</a>
+</li>
       <li><a href="connection_reference.html#pysnn.connection.Connection.propagate_spike">propagate_spike() (pysnn.connection.Connection method)</a>
 </li>
       <li><a href="connection_reference.html#module-pysnn.connection">pysnn.connection (module)</a>
 </li>
       <li><a href="datasets_reference.html#module-pysnn.datasets">pysnn.datasets (module)</a>
 </li>
-      <li><a href="encoding_reference.html#module-pysnn.encoding">pysnn.encoding (module)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="encoding_reference.html#module-pysnn.encoding">pysnn.encoding (module)</a>
+</li>
       <li><a href="file_io_reference.html#module-pysnn.file_io">pysnn.file_io (module)</a>
 </li>
       <li><a href="functional_reference.html#module-pysnn.functional">pysnn.functional (module)</a>
@@ -336,6 +353,8 @@
 </li>
       <li><a href="file_io_reference.html#pysnn.file_io.read_3d_spikes">read_3d_spikes() (in module pysnn.file_io)</a>
 </li>
+      <li><a href="learning_reference.html#pysnn.learning.LearningRule.reduce_connections">reduce_connections() (pysnn.learning.LearningRule method)</a>
+</li>
       <li><a href="neuron_reference.html#pysnn.neuron.BaseNeuron.refrac">refrac() (pysnn.neuron.BaseNeuron method)</a>
 </li>
       <li><a href="connection_reference.html#pysnn.connection.Connection.reset_state">reset_state() (pysnn.connection.Connection method)</a>
@@ -347,6 +366,8 @@
 </li>
         <li><a href="network_reference.html#pysnn.network.SNNNetwork.reset_state">(pysnn.network.SNNNetwork method)</a>
 </li>
+        <li><a href="neuron_reference.html#pysnn.neuron.AdaptiveLIFNeuron.reset_state">(pysnn.neuron.AdaptiveLIFNeuron method)</a>
+</li>
         <li><a href="neuron_reference.html#pysnn.neuron.BaseInput.reset_state">(pysnn.neuron.BaseInput method)</a>
 </li>
         <li><a href="neuron_reference.html#pysnn.neuron.BaseNeuron.reset_state">(pysnn.neuron.BaseNeuron method)</a>
@@ -355,8 +376,6 @@
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="neuron_reference.html#pysnn.neuron.BaseNeuron.reset_thresh">reset_thresh() (pysnn.neuron.BaseNeuron method)</a>
-</li>
-      <li><a href="connection_reference.html#pysnn.connection.Connection.reset_thresholds">reset_thresholds() (pysnn.connection.Connection method)</a>
 </li>
       <li><a href="connection_reference.html#pysnn.connection.Connection.reset_weights">reset_weights() (pysnn.connection.Connection method)</a>
 </li>

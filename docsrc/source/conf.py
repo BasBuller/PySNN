@@ -10,9 +10,10 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
+import os
+import sys
 # sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('_ext'))
 
 
 # -- Project information -----------------------------------------------------
@@ -49,6 +50,7 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 # html_theme = 'sphinx_materialdesign_theme'
+# html_theme = "flask"
 html_theme = "insegel"
 
 # Add any paths that contain custom static files (such as style sheets) here,

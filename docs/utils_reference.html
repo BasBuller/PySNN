@@ -30,6 +30,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
 
@@ -62,22 +63,55 @@
 <dl class="function">
 <dt id="pysnn.utils.conv2d_output_shape">
 <code class="sig-prename descclassname">pysnn.utils.</code><code class="sig-name descname">conv2d_output_shape</code><span class="sig-paren">(</span><em class="sig-param">h_in</em>, <em class="sig-param">w_in</em>, <em class="sig-param">kernel_size</em>, <em class="sig-param">stride=1</em>, <em class="sig-param">padding=0</em>, <em class="sig-param">dilation=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.utils.conv2d_output_shape" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Determine output shape after a 2D convolutional layer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>h_in</strong> – Height of input image.</p></li>
+<li><p><strong>w_in</strong> – Width of input image.</p></li>
+<li><p><strong>kernel_size</strong> – Dimensions of the convolutional kernel.</p></li>
+<li><p><strong>stride</strong> – Stride of convolutional operation.</p></li>
+<li><p><strong>padding</strong> – Padding of convolutional operation.</p></li>
+<li><p><strong>dilation</strong> – Dilation of convolutional operation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>(Height, Width) of output image.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="function">
 <dt id="pysnn.utils.interspike_time">
 <code class="sig-prename descclassname">pysnn.utils.</code><code class="sig-name descname">interspike_time</code><span class="sig-paren">(</span><em class="sig-param">spike_array</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.utils.interspike_time" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Determine number of timesteps between all consecutive spikes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>spike_array</strong> – 1 dimensional spike array</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>array with the time between all consecutive spikes.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="function">
 <dt id="pysnn.utils.tensor_clamp">
 <code class="sig-prename descclassname">pysnn.utils.</code><code class="sig-name descname">tensor_clamp</code><span class="sig-paren">(</span><em class="sig-param">tensor</em>, <em class="sig-param">min</em>, <em class="sig-param">max</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.utils.tensor_clamp" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="pysnn.utils.make_layer">
-<code class="sig-prename descclassname">pysnn.utils.</code><code class="sig-name descname">make_layer</code><span class="sig-paren">(</span><em class="sig-param">pre=None</em>, <em class="sig-param">connection=None</em>, <em class="sig-param">post=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.utils.make_layer" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Clamp tensor with a separate value for each element in the input tensor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tensor</strong> – Tensor to clamp.</p></li>
+<li><p><strong>min</strong> – <code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code> containing minimum value for each element.</p></li>
+<li><p><strong>max</strong> – <code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code> containing maximum value for each element.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Clamped input <code class="xref py py-class docutils literal notranslate"><span class="pre">Tensor</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
 
 </div>
 
