@@ -11,7 +11,6 @@ from pysnn.learning import FedeSTDP
 from pysnn.encoding import PoissonEncoder
 from pysnn.network import SNNNetwork
 from pysnn.datasets import OR, BooleanNoise, Intensity
-from pysnn.utils import make_layer
 
 
 #########################################################
@@ -111,7 +110,7 @@ device = torch.device("cpu")
 net = Network()
 
 # Add graph to tensorboard
-logger = SummaryWriter("/home/basbuller/thesis_final/experiments/trial/baasb2")
+logger = SummaryWriter()
 input = next(iter(train_dataloader))
 input = input[0][:, :, :, 0]
 logger.add_graph(net, input)

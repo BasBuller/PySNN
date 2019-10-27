@@ -5,7 +5,6 @@ from pysnn.network import SNNNetwork
 from pysnn.connection import Linear
 from pysnn.neuron import LIFNeuron
 from pysnn.learning import MSTDPET
-from pysnn.utils import make_layer
 
 
 # Parameters
