@@ -99,6 +99,7 @@ class BaseNeuron(nn.Module):
         assert (
             duration_refrac % dt == 0
         ), "dt does not fit an integer amount of times in duration_refrac"
+        assert duration_refrac >= 0, "duration_refrac should be non-negative"
 
         # Fixed parameters
         self.register_buffer("v_rest", torch.tensor(v_rest, dtype=torch.float))
@@ -110,7 +111,7 @@ class BaseNeuron(nn.Module):
         )  # TODO: Might want to move this out of base class
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
         self.register_buffer(
-            "duration_refrac", torch.tensor(duration_refrac + 1, dtype=torch.float)
+            "duration_refrac", torch.tensor(duration_refrac, dtype=torch.float)
         )
         self.register_buffer("thresh_center", torch.tensor(thresh, dtype=torch.float))
 
@@ -140,8 +141,9 @@ class BaseNeuron(nn.Module):
 
         Can be overwritten in case of the need of more refined functionality.
         """
-        self.refrac_counts[self.refrac_counts > 0] -= self.dt
-        self.refrac_counts += self.duration_refrac * self.convert_spikes(spikes)
+        if self.duration_refrac > 0:
+            self.refrac_counts[self.refrac_counts > 0] -= self.dt
+            self.refrac_counts += self.duration_refrac * self.convert_spikes(spikes)
         self.v_cell.masked_fill_(spikes, self.v_rest)
 
     def concat_trace(self, x):
