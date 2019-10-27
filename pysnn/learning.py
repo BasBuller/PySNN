@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import numpy as np
 import torch
 
@@ -43,9 +44,9 @@ class LearningRule:
         r"""Check if layers provided to constructor are of the right format."""
 
         # Check if layers is iterator
-        if not isinstance(layers, (list, tuple)):
+        if not isinstance(layers, OrderedDict):
             raise TypeError(
-                "Layers should be an iterator with deterministic ordering, a list or a tuple. Current type is "
+                "Layers should be an iterator with deterministic ordering, a list, a tuple, or an OrderedDict. Current type is "
                 + type(layers)
             )
 
@@ -54,7 +55,7 @@ class LearningRule:
             raise ValueError("Got an empty layers iterator.")
 
         # Check for type of layers
-        if not isinstance(layers[0], dict):
+        if not isinstance(list(layers.values())[0], (dict, OrderedDict)):
             raise TypeError(
                 "A layer object should be a dict. Currently got a " + type(layers[0])
             )
@@ -76,15 +77,15 @@ class MSTDPET(LearningRule):
         self.check_layers(layers)
 
         # Collect desired tensors from state dict in a layer object
-        for idx, layer in enumerate(layers):
+        for key, layer in layers.items():
             new_layer = {}
-            new_layer["pre_spikes"] = layer["pre_neuron"]["spikes"]
-            new_layer["pre_trace"] = layer["pre_neuron"]["trace"]
-            new_layer["post_spikes"] = layer["post_neuron"]["spikes"]
-            new_layer["post_trace"] = layer["post_neuron"]["trace"]
+            new_layer["pre_spikes"] = layer["connection"]["spikes"]
+            new_layer["pre_trace"] = layer["connection"]["trace"]
+            new_layer["post_spikes"] = layer["neuron"]["spikes"]
+            new_layer["post_trace"] = layer["neuron"]["trace"]
             new_layer["weight"] = layer["connection"]["weight"]
-            new_layer["e_trace"] = torch.zeros_like(layer["connection"]["weight"])
-            layers[idx] = new_layer
+            new_layer["e_trace"] = torch.zeros_like(layer["connection"]["trace"])
+            layers[key] = new_layer
 
         self.a_pre = a_pre
         self.a_post = a_post
@@ -108,23 +109,24 @@ class MSTDPET(LearningRule):
         as this does is likely not called every timestep.
         """
 
-        for layer in self.layers:
+        for layer in self.layers.values():
             # Update eligibility trace
             layer["e_trace"] *= self.e_trace_decay
-            layer["e_trace"] += self.a_pre * torch.ger(
-                layer["post_spikes"].view(-1).float(), layer["pre_trace"].view(-1)
-            ) - self.a_post * torch.ger(
-                layer["post_trace"].view(-1), layer["pre_spikes"].view(-1).float()
-            )
+            layer["e_trace"] += (
+                layer["post_spikes"].float() * layer["pre_trace"].transpose(-2, -1)
+            ).transpose(-2, -1)
+            layer["e_trace"] -= (
+                layer["pre_spikes"].float().transpose(-2, -1) * layer["post_trace"]
+            ).transpose(-2, -1)
 
     def reset_state(self):
-        for layer in self.layers:
+        for layer in self.layers.values():
             layer["e_trace"].fill_(0)
 
     def step(self, reward):
         # TODO: add weight clamping?
-        for layer in self.layers:
-            layer["weight"] += self.lr * reward * layer["e_trace"]
+        for layer in self.layers.values():
+            layer["weight"] += self.lr * reward * layer["e_trace"].mean(0)
 
 
 #########################################################
@@ -150,16 +152,16 @@ class FedeSTDP(LearningRule):
         defaults = {"lr": lr, "w_init": w_init, "a": a}
 
         # Select only necessary parameters
-        for idx, layer in enumerate(layers):
+        for key, layer in layers.items():
             new_layer = {}
             new_layer["trace"] = layer["connection"]["trace"]
             new_layer["weight"] = layer["connection"]["weight"]
-            layers[idx] = new_layer
+            layers[key] = new_layer
 
         super(FedeSTDP, self).__init__(layers, defaults)
 
     def step(self):
-        for layer in self.layers:
+        for layer in self.layers.values():
             w = layer["weight"]
 
             # Normalize trace
