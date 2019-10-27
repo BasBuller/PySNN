@@ -13,6 +13,17 @@ requirements = [
     "pre-commit",
 ]
 
+extras = {
+    "examples": [
+        "gym",
+        "tensorboardX",
+        "pytorch-lightning",
+        "ray[tune]",
+        "ray[debug]",
+        "hyperopt",
+    ]
+}
+
 setup(
     name="pysnn",
     version="0.1",
@@ -22,4 +33,5 @@ setup(
     author_email="bas.buller@gmail.com",
     packages=find_packages(exclude=("tests", "examples")),
     install_requires=requirements,
+    extras_require=extras,
 )
