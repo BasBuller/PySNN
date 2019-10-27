@@ -61,10 +61,12 @@ class Network(SNNNetwork):
         # Layer 1
         self.mlp1_c = Linear(n_in, n_hidden, *c_dynamics)
         self.neuron1 = FedeNeuron((batch_size, 1, n_hidden), *n_dynamics)
+        self.add_layer("fc1", self.mlp1_c, self.neuron1)
 
         # Layer 2
         self.mlp2_c = Linear(n_hidden, n_out, *c_dynamics)
         self.neuron2 = FedeNeuron((batch_size, 1, n_out), *n_dynamics)
+        self.add_layer("fc2", self.mlp2_c, self.neuron2)
 
     def forward(self, input):
         x, t = self.input(input)
@@ -115,8 +117,7 @@ input = input[0][:, :, :, 0]
 logger.add_graph(net, input)
 
 # Learning rule definition
-layers = [(net.mlp1_c, net.neuron1), (net.mlp2_c, net.neuron2)]
-layers = [make_layer(connection=layer[0], post=layer[1]) for layer in layers]
+layers = net.layer_state_dict()
 learning_rule = FedeSTDP(layers, lr, w_init, a)
 
 # Training loop

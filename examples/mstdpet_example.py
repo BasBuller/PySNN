@@ -51,6 +51,7 @@ class SNN(SNNNetwork):
         self.pre_neuron = LIFNeuron((batch_size, 1, inputs), *n_dynamics)
         self.post_neuron = LIFNeuron((batch_size, 1, outputs), *n2_dynamics)
         self.linear = Linear(*c_shape, *c_dynamics)
+        self.add_layer("layer1", self.linear, self.post_neuron)
 
     def forward(self, x):
         pre_spikes, pre_trace = self.pre_neuron(x)
@@ -75,11 +76,7 @@ if __name__ == "__main__":
     network.linear.reset_weights("constant", 3)
 
     # Determine layers and init learning rule
-    layers = [
-        make_layer(
-            pre=network.pre_neuron, connection=network.linear, post=network.post_neuron
-        )
-    ]
+    layers = network.layer_state_dict()
     learning_rule = MSTDPET(layers, *l_params)
 
     for i in range(100):
@@ -106,7 +103,7 @@ if __name__ == "__main__":
 
         # Append last resulting items
         rewards.append(reward)
-        e_trace.append(learning_rule.layers[0]["e_trace"].item())
+        e_trace.append(learning_rule.layers["layer1"]["e_trace"].item())
         weight.append(network.linear.weight.item())
 
     # Reset states

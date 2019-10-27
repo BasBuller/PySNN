@@ -44,6 +44,7 @@ class Connection(nn.Module):
         # State parameters
         self.register_buffer("trace", torch.Tensor(*shape))
         self.register_buffer("delay", torch.Tensor(*shape))
+        self.register_buffer("spikes", torch.Tensor(*shape).bool())
 
     def convert_spikes(self, x):
         r"""Convert input from Byte Tensor to same data type as the weights."""
@@ -108,6 +109,7 @@ class Connection(nn.Module):
             self.delay += self.delay_init * x
         else:
             spike_out = x
+        self.spikes.copy_(spike_out)
         return self.convert_spikes(spike_out)
 
 
@@ -198,7 +200,9 @@ class _ConvNd(Connection):
             assert isinstance(i, int), "Variables in im_dims should be int"
 
         # Convolution parameters
-        self.batch_size = batch_size  # Cannot infer, needed to reserve memory for storing trace and delay timing
+        self.batch_size = (
+            batch_size
+        )  # Cannot infer, needed to reserve memory for storing trace and delay timing
         self.out_channels = out_channels
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)
