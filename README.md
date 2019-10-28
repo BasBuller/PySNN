@@ -6,6 +6,8 @@ Spiking neural network (SNN) framework written on top of PyTorch for efficient s
 
 PySNN is designed to mostly provide low level objects to its user that can be combined and mixed, just as in PyTorch. The biggest difference is that a network now consists of two types of modules, instead of the single nn.Module in regular PyTorch. These new modules are the pysnn.Neuron and pysnn.Connection.
 
+Documentation can be found at: [https://basbuller.github.io/PySNN/](https://basbuller.github.io/PySNN/)
+
 <!-- Inspiration taken from [cuSNN](https://github.com/tudelft/cuSNN) and [bindsnet](https://github.com/Hananel-Hazan/bindsnet). -->
 
 ## __Installation__
