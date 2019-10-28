@@ -13,7 +13,4 @@ class that should be inherited by each custom connection. Each :class:`Connectio
     * Spikes
     * Activation potential, this is not actually an input but a result of multiplying incoming spikes with the connection weight.
 
-Connections
------------
-
 .. automodule:: pysnn.connection

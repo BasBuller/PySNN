@@ -9,8 +9,4 @@ design should inherit from the :class:`BaseNeuron` class. Each :class:`Neuron` s
 * **Refractory period/mechanism** that is activated once a :class:`Neuron` has spiked. During this period the :class:`Neuron` is incapable, or less likely, to spike again.
 * **Trace** that is a numerical representation of recent activity of the :class:`Neuron`.
 
-
-Neurons
--------
-
 .. automodule:: pysnn.neuron
