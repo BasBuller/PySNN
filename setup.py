@@ -22,4 +22,5 @@ setup(
     author_email="bas.buller@gmail.com",
     packages=find_packages(exclude=("tests", "examples")),
     install_requires=requirements,
+    python_requires=">=3.6.0"
 )

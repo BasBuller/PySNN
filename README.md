@@ -28,6 +28,9 @@ Code is formatted with [Black](https://github.com/psf/black) using a pre-commit 
 $ pre-commit install
 ```
 
+### Requirements
+Installting PySNN requires a Python version of 3.6 or higher, Python 2 is not supported. It also requires PyTorch to be of version 1.2 or higher.
+
 ## __Repository Structure__
 
 Intention is to mirror most of the structure of PyTorch framework. Several core functions are defined in the functional module. 
