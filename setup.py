@@ -32,7 +32,7 @@ setup(
     author="Bas Buller",
     author_email="bas.buller@gmail.com",
     packages=find_packages(exclude=("tests", "examples")),
-    python_requires=">=3.6",
     install_requires=requirements,
     extras_require=extras,
+    python_requires=">=3.6.0",
 )

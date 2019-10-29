@@ -11,6 +11,7 @@ pysnn.egg-info/
 venv/
 
 # Other folders
+docsrc/_build/
 experiments/
 build/
 dist/

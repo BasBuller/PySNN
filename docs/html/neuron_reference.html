@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySNN :: pysnn.neuron</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+
+  <link rel="stylesheet" href="_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'0.0.1',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="index.html"><img src="_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySNN Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1>pysnn.neuron</h1>
+        </div>
+        <div id="main-content">
+          
+  <div class="section" id="pysnn-neuron">
+<h1>pysnn.neuron<a class="headerlink" href="#pysnn-neuron" title="Permalink to this headline">¶</a></h1>
+<p>The <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> is the basic and most fundamental object that is used in constructing a spiking neural network (SNN). Each new neuron
+design should inherit from the <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseNeuron</span></code> class. Each <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> shares a set of basic functionalities/dynamics:</p>
+<ul class="simple">
+<li><p><strong>Internal (possibly decaying) voltage</strong> that represents recent incoming activity.</p></li>
+<li><p><strong>Spiking mechanism</strong>, once the voltage of the neuron surpasses its threshold value it will generate a <code class="xref py py-class docutils literal notranslate"><span class="pre">Boolean</span></code> spike.</p></li>
+<li><p><strong>Refractory period/mechanism</strong> that is activated once a <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> has spiked. During this period the <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> is incapable, or less likely, to spike again.</p></li>
+<li><p><strong>Trace</strong> that is a numerical representation of recent activity of the <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code>.</p></li>
+</ul>
+<span class="target" id="module-pysnn.neuron"></span><dl class="class">
+<dt id="pysnn.neuron.BaseInput">
+<em class="property">class </em><code class="sig-prename descclassname">pysnn.neuron.</code><code class="sig-name descname">BaseInput</code><span class="sig-paren">(</span><em class="sig-param">cells_shape</em>, <em class="sig-param">dt</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseInput" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple feed-through layer of neurons used for storing a trace.</p>
+<dl class="method">
+<dt id="pysnn.neuron.BaseInput.reset_state">
+<code class="sig-name descname">reset_state</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseInput.reset_state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reset cell states that accumulate over time during simulation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseInput.no_grad">
+<code class="sig-name descname">no_grad</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseInput.no_grad" title="Permalink to this definition">¶</a></dt>
+<dd><p>Turn off learning and gradient storing.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseInput.init_neuron">
+<code class="sig-name descname">init_neuron</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseInput.init_neuron" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize state, parameters and turn off gradients.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseInput.convert_input">
+<code class="sig-name descname">convert_input</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseInput.convert_input" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseInput.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseInput.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseInput.update_trace">
+<code class="sig-name descname">update_trace</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseInput.update_trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pysnn.neuron.Input">
+<em class="property">class </em><code class="sig-prename descclassname">pysnn.neuron.</code><code class="sig-name descname">Input</code><span class="sig-paren">(</span><em class="sig-param">cells_shape</em>, <em class="sig-param">dt</em>, <em class="sig-param">alpha_t</em>, <em class="sig-param">tau_t</em>, <em class="sig-param">update_type='linear'</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.Input" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="pysnn.neuron.Input.update_trace">
+<code class="sig-name descname">update_trace</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.Input.update_trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.Input.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.Input.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pysnn.neuron.BaseNeuron">
+<em class="property">class </em><code class="sig-prename descclassname">pysnn.neuron.</code><code class="sig-name descname">BaseNeuron</code><span class="sig-paren">(</span><em class="sig-param">cells_shape</em>, <em class="sig-param">thresh</em>, <em class="sig-param">v_rest</em>, <em class="sig-param">alpha_v</em>, <em class="sig-param">alpha_t</em>, <em class="sig-param">dt</em>, <em class="sig-param">duration_refrac</em>, <em class="sig-param">store_trace=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base neuron model, is a container to define basic neuron functionalties.</p>
+<p>Defines basic spiking, voltage and trace characteristics. Just has to
+adhere to the API functionalities to integrate within Connection modules.</p>
+<p>Make sure the Neuron class receives input voltage for each neuron and
+returns a Tensor indicating which neurons have spiked.</p>
+<dl class="method">
+<dt id="pysnn.neuron.BaseNeuron.spiking">
+<code class="sig-name descname">spiking</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.spiking" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return cells that are in spiking state.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseNeuron.refrac">
+<code class="sig-name descname">refrac</code><span class="sig-paren">(</span><em class="sig-param">spikes</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.refrac" title="Permalink to this definition">¶</a></dt>
+<dd><p>Basic counting version of cell refractory period.</p>
+<p>Can be overwritten in case of the need of more refined functionality.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseNeuron.concat_trace">
+<code class="sig-name descname">concat_trace</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.concat_trace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Concatenate most recent timestep to the trace storage.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseNeuron.fold">
+<code class="sig-name descname">fold</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.fold" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fold incoming spike train by summing last dimension.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseNeuron.unfold">
+<code class="sig-name descname">unfold</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.unfold" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move the last dimension (all incoming to single neuron in current layer) to first dim.</p>
+<p>This is done because PyTorch broadcasting does not support broadcasting over the last dim.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseNeuron.convert_spikes">
+<code class="sig-name descname">convert_spikes</code><span class="sig-paren">(</span><em class="sig-param">spikes</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.convert_spikes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cast uint8 spikes to datatype that is used for voltage and weights</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseNeuron.reset_state">
+<code class="sig-name descname">reset_state</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.reset_state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reset cell states that accumulate over time during simulation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseNeuron.reset_thresh">
+<code class="sig-name descname">reset_thresh</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.reset_thresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reset threshold to initialization values, allows for different standard thresholds per neuron.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseNeuron.no_grad">
+<code class="sig-name descname">no_grad</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.no_grad" title="Permalink to this definition">¶</a></dt>
+<dd><p>Turn off learning and gradient storing.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseNeuron.init_neuron">
+<code class="sig-name descname">init_neuron</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.init_neuron" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize state, parameters and turn off gradients.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseNeuron.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseNeuron.update_trace">
+<code class="sig-name descname">update_trace</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.update_trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.BaseNeuron.update_voltage">
+<code class="sig-name descname">update_voltage</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.update_voltage" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pysnn.neuron.IFNeuron">
+<em class="property">class </em><code class="sig-prename descclassname">pysnn.neuron.</code><code class="sig-name descname">IFNeuron</code><span class="sig-paren">(</span><em class="sig-param">cells_shape</em>, <em class="sig-param">thresh</em>, <em class="sig-param">v_rest</em>, <em class="sig-param">alpha_v</em>, <em class="sig-param">alpha_t</em>, <em class="sig-param">dt</em>, <em class="sig-param">duration_refrac</em>, <em class="sig-param">tau_t</em>, <em class="sig-param">update_type='linear'</em>, <em class="sig-param">store_trace=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.IFNeuron" title="Permalink to this definition">¶</a></dt>
+<dd><p>Integrate and Fire neuron.</p>
+<dl class="method">
+<dt id="pysnn.neuron.IFNeuron.update_trace">
+<code class="sig-name descname">update_trace</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.IFNeuron.update_trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.IFNeuron.update_voltage">
+<code class="sig-name descname">update_voltage</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.IFNeuron.update_voltage" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.IFNeuron.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.IFNeuron.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pysnn.neuron.LIFNeuron">
+<em class="property">class </em><code class="sig-prename descclassname">pysnn.neuron.</code><code class="sig-name descname">LIFNeuron</code><span class="sig-paren">(</span><em class="sig-param">cells_shape</em>, <em class="sig-param">thresh</em>, <em class="sig-param">v_rest</em>, <em class="sig-param">alpha_v</em>, <em class="sig-param">alpha_t</em>, <em class="sig-param">dt</em>, <em class="sig-param">duration_refrac</em>, <em class="sig-param">tau_v</em>, <em class="sig-param">tau_t</em>, <em class="sig-param">update_type='linear'</em>, <em class="sig-param">store_trace=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.LIFNeuron" title="Permalink to this definition">¶</a></dt>
+<dd><p>Leaky Integrate and Fire neuron.</p>
+<dl class="method">
+<dt id="pysnn.neuron.LIFNeuron.update_trace">
+<code class="sig-name descname">update_trace</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.LIFNeuron.update_trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.LIFNeuron.update_voltage">
+<code class="sig-name descname">update_voltage</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.LIFNeuron.update_voltage" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.LIFNeuron.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.LIFNeuron.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pysnn.neuron.AdaptiveLIFNeuron">
+<em class="property">class </em><code class="sig-prename descclassname">pysnn.neuron.</code><code class="sig-name descname">AdaptiveLIFNeuron</code><span class="sig-paren">(</span><em class="sig-param">cells_shape</em>, <em class="sig-param">thresh</em>, <em class="sig-param">v_rest</em>, <em class="sig-param">alpha_v</em>, <em class="sig-param">alpha_t</em>, <em class="sig-param">dt</em>, <em class="sig-param">duration_refrac</em>, <em class="sig-param">tau_v</em>, <em class="sig-param">tau_t</em>, <em class="sig-param">alpha_thresh</em>, <em class="sig-param">tau_thresh</em>, <em class="sig-param">update_type='linear'</em>, <em class="sig-param">store_trace=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.AdaptiveLIFNeuron" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adaptive Leaky Integrate and Fire neuron.</p>
+<dl class="method">
+<dt id="pysnn.neuron.AdaptiveLIFNeuron.update_trace">
+<code class="sig-name descname">update_trace</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.AdaptiveLIFNeuron.update_trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.AdaptiveLIFNeuron.update_thresh">
+<code class="sig-name descname">update_thresh</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.AdaptiveLIFNeuron.update_thresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return cells that are in spiking state and adjust threshold accordingly.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.AdaptiveLIFNeuron.update_voltage">
+<code class="sig-name descname">update_voltage</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.AdaptiveLIFNeuron.update_voltage" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.AdaptiveLIFNeuron.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.AdaptiveLIFNeuron.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pysnn.neuron.FedeNeuron">
+<em class="property">class </em><code class="sig-prename descclassname">pysnn.neuron.</code><code class="sig-name descname">FedeNeuron</code><span class="sig-paren">(</span><em class="sig-param">cells_shape</em>, <em class="sig-param">thresh</em>, <em class="sig-param">v_rest</em>, <em class="sig-param">alpha_v</em>, <em class="sig-param">alpha_t</em>, <em class="sig-param">dt</em>, <em class="sig-param">duration_refrac</em>, <em class="sig-param">tau_v</em>, <em class="sig-param">tau_t</em>, <em class="sig-param">store_trace=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.FedeNeuron" title="Permalink to this definition">¶</a></dt>
+<dd><p>Leaky Integrate and Fire neuron.</p>
+<p>Defined in “Unsupervised Learning of a Hierarchical Spiking
+Neural Network for Optical Flow Estimation: From Events to
+Global Motion Perception - F.P. Valles, et al.”</p>
+<dl class="method">
+<dt id="pysnn.neuron.FedeNeuron.update_trace">
+<code class="sig-name descname">update_trace</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.FedeNeuron.update_trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.FedeNeuron.update_voltage">
+<code class="sig-name descname">update_voltage</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">pre_trace</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.FedeNeuron.update_voltage" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.FedeNeuron.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">pre_trace</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.FedeNeuron.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Usage:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="neurons.html">Neurons</a></li>
+<li class="toctree-l1"><a class="reference internal" href="connections.html">Connections</a></li>
+<li class="toctree-l1"><a class="reference internal" href="learning_rules.html">Learning Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="networks.html">Networks</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="connection_reference.html">pysnn.connection</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">pysnn.neuron</a></li>
+<li class="toctree-l1"><a class="reference internal" href="network_reference.html">pysnn.network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_io_reference.html">pysnn.file_io</a></li>
+<li class="toctree-l1"><a class="reference internal" href="functional_reference.html">pysnn.functional</a></li>
+<li class="toctree-l1"><a class="reference internal" href="encoding_reference.html">pysnn.encoding</a></li>
+<li class="toctree-l1"><a class="reference internal" href="datasets_reference.html">pysnn.datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="learning_reference.html">pysnn.learning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils_reference.html">pysnn.utils</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+                <li class="footer-element">
+                    
+                        <a href="_sources/neuron_reference.rst.txt" rel="nofollow"> source</a>
+                    
+                </li>
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>

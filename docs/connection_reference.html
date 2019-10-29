@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySNN :: pysnn.connection</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+
+  <link rel="stylesheet" href="_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'0.0.1',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="index.html"><img src="_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySNN Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1>pysnn.connection</h1>
+        </div>
+        <div id="main-content">
+          
+  <div class="section" id="pysnn-connection">
+<h1>pysnn.connection<a class="headerlink" href="#pysnn-connection" title="Permalink to this headline">¶</a></h1>
+<p>A <code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code> object is used to pass spikes, activations, and traces between two sets of <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseNeuron</span></code> objects. The <code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code> is the base
+class that should be inherited by each custom connection. Each <code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code> shares a set of basic functionalities/dynamics:</p>
+<ul class="simple">
+<li><p><strong>Presynaptic Neuron</strong>, which is the <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> that precedes the <code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code>.</p></li>
+<li><p><strong>Postsynaptic Neuron</strong>, which is the <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> that succedes the <code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code>.</p></li>
+<li><p><strong>Delay</strong> in the transmission of incoming signals from its presynaptic <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> to its postsynaptic <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code>.</p></li>
+<li><p><strong>Weights</strong>, which are the relative weights that are assigned from spikes originating from each presynaptic <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code>.</p></li>
+<li><dl class="simple">
+<dt><strong>Signals</strong> from the presynaptic <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> that are passed on by the <code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code>, which are the following:</dt><dd><ul>
+<li><p>Traces</p></li>
+<li><p>Spikes</p></li>
+<li><p>Activation potential, this is not actually an input but a result of multiplying incoming spikes with the connection weight.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<span class="target" id="module-pysnn.connection"></span><dl class="class">
+<dt id="pysnn.connection.Connection">
+<em class="property">class </em><code class="sig-prename descclassname">pysnn.connection.</code><code class="sig-name descname">Connection</code><span class="sig-paren">(</span><em class="sig-param">shape</em>, <em class="sig-param">dt</em>, <em class="sig-param">delay</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Connection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base class for defining SNN connection/layer.</p>
+<p>This object connects layers of neurons, it also contains the synaptic weights.</p>
+<dl class="method">
+<dt id="pysnn.connection.Connection.convert_spikes">
+<code class="sig-name descname">convert_spikes</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Connection.convert_spikes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert input from Byte Tensor to same data type as the weights.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.connection.Connection.no_grad">
+<code class="sig-name descname">no_grad</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Connection.no_grad" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set require_gradients to False and turn off training mode.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.connection.Connection.reset_state">
+<code class="sig-name descname">reset_state</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Connection.reset_state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set state Parameters (e.g. trace) to their resting state.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.connection.Connection.reset_weights">
+<code class="sig-name descname">reset_weights</code><span class="sig-paren">(</span><em class="sig-param">distribution='uniform'</em>, <em class="sig-param">gain=1.0</em>, <em class="sig-param">a=0.0</em>, <em class="sig-param">b=1.0</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Connection.reset_weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reinnitialize learnable network Parameters (e.g. weights).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.connection.Connection.reset_thresholds">
+<code class="sig-name descname">reset_thresholds</code><span class="sig-paren">(</span><em class="sig-param">distributions='uniform'</em>, <em class="sig-param">gain=1.0</em>, <em class="sig-param">a=-1.0</em>, <em class="sig-param">b=1.0</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Connection.reset_thresholds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pysnn.connection.Connection.init_connection">
+<code class="sig-name descname">init_connection</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Connection.init_connection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Collection of all intialization methods.</p>
+<p>Assumes weights are implemented by the class that inherits from this base class.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.connection.Connection.propagate_spike">
+<code class="sig-name descname">propagate_spike</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Connection.propagate_spike" title="Permalink to this definition">¶</a></dt>
+<dd><p>Track propagation of spikes through synapses if the connection.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pysnn.connection.Linear">
+<em class="property">class </em><code class="sig-prename descclassname">pysnn.connection.</code><code class="sig-name descname">Linear</code><span class="sig-paren">(</span><em class="sig-param">in_features</em>, <em class="sig-param">out_features</em>, <em class="sig-param">batch_size</em>, <em class="sig-param">dt</em>, <em class="sig-param">delay</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Linear" title="Permalink to this definition">¶</a></dt>
+<dd><p>SNN linear (fully connected) layer with interface comparable to torch.nn.Linear.</p>
+<dl class="method">
+<dt id="pysnn.connection.Linear.activation_potential">
+<code class="sig-name descname">activation_potential</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Linear.activation_potential" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine activation potentials from each synapse for current time step.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.connection.Linear.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">trace_in</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Linear.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pysnn.connection.Conv2d">
+<em class="property">class </em><code class="sig-prename descclassname">pysnn.connection.</code><code class="sig-name descname">Conv2d</code><span class="sig-paren">(</span><em class="sig-param">in_channels</em>, <em class="sig-param">out_channels</em>, <em class="sig-param">kernel_size</em>, <em class="sig-param">im_dims</em>, <em class="sig-param">batch_size</em>, <em class="sig-param">dt</em>, <em class="sig-param">delay</em>, <em class="sig-param">tau_t</em>, <em class="sig-param">alpha_t</em>, <em class="sig-param">stride=1</em>, <em class="sig-param">padding=0</em>, <em class="sig-param">dilation=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Conv2d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convolutional SNN layer interface comparable to torch.nn.Conv2d.</p>
+<dl class="method">
+<dt id="pysnn.connection.Conv2d.activation_potential">
+<code class="sig-name descname">activation_potential</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Conv2d.activation_potential" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine activation potentials from each synapse for current time step.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.connection.Conv2d.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Conv2d.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pysnn.connection.MaxPool2d">
+<em class="property">class </em><code class="sig-prename descclassname">pysnn.connection.</code><code class="sig-name descname">MaxPool2d</code><span class="sig-paren">(</span><em class="sig-param">kernel_size</em>, <em class="sig-param">stride=None</em>, <em class="sig-param">padding=0</em>, <em class="sig-param">dilation=1</em>, <em class="sig-param">ceil_mode=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.MaxPool2d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple port of PyTorch MaxPool2d with small adjustment for spiking operations.</p>
+<p>Currently pooling only supports operations on floating point numbers, thus it casts the uint8 spikes to floats back and forth.
+The trace of the ‘maximum’ spike is also returned. In case of multiple spikes within pooling window, returns first spike of 
+the window (top left corner).</p>
+<dl class="method">
+<dt id="pysnn.connection.MaxPool2d.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">trace</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.MaxPool2d.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pysnn.connection.AdaptiveMaxPool2d">
+<em class="property">class </em><code class="sig-prename descclassname">pysnn.connection.</code><code class="sig-name descname">AdaptiveMaxPool2d</code><span class="sig-paren">(</span><em class="sig-param">output_size</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.AdaptiveMaxPool2d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple port of PyTorch AdaptiveMaxPool2d with small adjustment for spiking operations.</p>
+<p>Currently pooling only supports operations on floating point numbers, thus it casts the uint8 spikes to floats back and forth.
+The trace of the ‘maximum’ spike is also returned. In case of multiple spikes within pooling window, returns first spike of 
+the window (top left corner).</p>
+<dl class="method">
+<dt id="pysnn.connection.AdaptiveMaxPool2d.forward">
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">trace</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.AdaptiveMaxPool2d.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Usage:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="neurons.html">Neurons</a></li>
+<li class="toctree-l1"><a class="reference internal" href="connections.html">Connections</a></li>
+<li class="toctree-l1"><a class="reference internal" href="learning_rules.html">Learning Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="networks.html">Networks</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">pysnn.connection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="neuron_reference.html">pysnn.neuron</a></li>
+<li class="toctree-l1"><a class="reference internal" href="network_reference.html">pysnn.network</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_io_reference.html">pysnn.file_io</a></li>
+<li class="toctree-l1"><a class="reference internal" href="functional_reference.html">pysnn.functional</a></li>
+<li class="toctree-l1"><a class="reference internal" href="encoding_reference.html">pysnn.encoding</a></li>
+<li class="toctree-l1"><a class="reference internal" href="datasets_reference.html">pysnn.datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="learning_reference.html">pysnn.learning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils_reference.html">pysnn.utils</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+                <li class="footer-element">
+                    
+                        <a href="_sources/connection_reference.rst.txt" rel="nofollow"> source</a>
+                    
+                </li>
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>
