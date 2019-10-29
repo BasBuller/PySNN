@@ -1,9 +1,8 @@
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 from tqdm import tqdm
-from tensorboardX import SummaryWriter
 
 from pysnn.connection import Linear
 from pysnn.neuron import FedeNeuron, Input

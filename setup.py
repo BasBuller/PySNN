@@ -16,11 +16,11 @@ requirements = [
 extras = {
     "examples": [
         "gym",
-        "tensorboardX",
-        "pytorch-lightning",
+        "tensorflow>=2.0.0",
         "ray[tune]",
         "ray[debug]",
-        "hyperopt",
+        "requests",
+        "bayesian-optimization",
     ]
 }
 
@@ -32,6 +32,7 @@ setup(
     author="Bas Buller",
     author_email="bas.buller@gmail.com",
     packages=find_packages(exclude=("tests", "examples")),
+    python_requires=">=3.6",
     install_requires=requirements,
     extras_require=extras,
 )
