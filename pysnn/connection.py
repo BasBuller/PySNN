@@ -21,7 +21,7 @@ class Connection(nn.Module):
 
     def __init__(self, shape, dt, delay):
         super(Connection, self).__init__()
-        self.synapse_shape = shape
+        self.synapse_shape = torch.tensor(shape)
 
         # TODO: Should there be a check for dt fitting integer number of times in delay duration?
 
@@ -60,6 +60,7 @@ class Connection(nn.Module):
         r"""Set state Parameters (e.g. trace) to their resting state."""
         self.trace.fill_(0)
         self.delay.fill_(0)
+        self.spikes.fill_(False)
 
     def reset_weights(self, distribution="uniform", gain=1.0, a=0.0, b=1.0):
         r"""Reinnitialize network weights.
@@ -117,6 +118,16 @@ class Connection(nn.Module):
         self.spikes.copy_(spike_out)
         return self.convert_spikes(spike_out)
 
+    def change_batch_size(self, batch_size):
+        r"""Changes the batch dimension of all state tensors. Be careful, only call this method after resetting state, otherwise part of your data will be lost."""
+        # Update to new shape
+        self.synapse_shape[0] = batch_size
+        n_shape = self.synapse_shape
+
+        self.spikes.resize_(*n_shape)
+        self.delay.resize_(*n_shape)
+        self.trace.resize_(*n_shape)
+
 
 #########################################################
 # Linear Layers
@@ -154,7 +165,7 @@ class _Linear(Connection):
         :return: Folder input tensor.
         """
         return x.view(
-            self.batch_size, -1, self.out_features, self.in_features
+            self.synapse_shape[0], -1, self.out_features, self.in_features
         )  # TODO: Add posibility for a channel dim at dim 2
 
     def update_trace(self, t_in):
