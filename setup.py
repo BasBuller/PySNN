@@ -34,5 +34,6 @@ setup(
     packages=find_packages(exclude=("tests", "examples")),
     install_requires=requirements,
     extras_require=extras,
+    tests_require=["pytest"],
     python_requires=">=3.6.0",
 )

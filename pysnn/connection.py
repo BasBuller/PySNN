@@ -89,14 +89,12 @@ class Connection(nn.Module):
         
         Assumes weights are implemented by the class that inherits from this base class.
         """
-        assert hasattr(self, "weight"), "Weight attribute is missing for {}.".format(
-            self.__class__.__name__
-        )
+        assert hasattr(
+            self, "weight"
+        ), f"Weight attribute is missing for {self.__class__.__name__}."
         assert isinstance(
             self.weight, Parameter
-        ), "Weight attribute is not a PyTorch Parameter for {}.".format(
-            self.__class__.__name__
-        )
+        ), f"Weight attribute is not a PyTorch Parameter for {self.__class__.__name__}."
         self.no_grad()
         self.reset_state()
         self.reset_weights()
@@ -195,9 +193,9 @@ class _ConvNd(Connection):
         # Assertions
         assert isinstance(
             im_dims, (tuple, list)
-        ), "Parameter im_dims should be a tuple or list of ints"
+        ), "Parameter im_dims should be a tuple or list of ints."
         for i in im_dims:
-            assert isinstance(i, int), "Variables in im_dims should be int"
+            assert isinstance(i, int), "Variables in im_dims should be int."
 
         # Convolution parameters
         self.batch_size = (
@@ -227,7 +225,7 @@ class _ConvNd(Connection):
                 self.kernel_size,
                 stride=self.stride,
                 padding=self.padding,
-                dilation=self.dilation
+                dilation=self.dilation,
             )
         elif len(im_dims) == 3:
             self.image_out_shape = (0, 0, 0)

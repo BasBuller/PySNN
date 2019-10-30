@@ -48,7 +48,7 @@ def test_spiking(mask, voltage, spikes, neuron):
 )
 def test_refrac(spikes, neuron):
     r"""Check if refrac counting is correct"""
-    assert (neuron.refrac_counts == 0).all(), "Refrac count not initiated at zero"
+    assert (neuron.refrac_counts == 0).all(), "Refraction count not initiated at zero."
 
     # Setup voltage for check reset
     neuron.v_cell.fill_(1)
