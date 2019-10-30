@@ -16,16 +16,29 @@ class BaseInput(nn.Module):
     :param dt: duration of a single timestep.
     """
 
-    def __init__(self, cells_shape, dt):
+    def __init__(self, cells_shape, dt, store_trace=False):
         super(BaseInput, self).__init__()
+        self.cells_shape = torch.tensor(cells_shape)
+
         self.register_buffer("trace", torch.zeros(*cells_shape, dtype=torch.float))
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
         self.register_buffer("spikes", torch.zeros(*cells_shape, dtype=torch.bool))
+
+        # In case of storing a complete, local copy of the activity of a neuron
+        if store_trace:
+            complete_trace = torch.zeros(*cells_shape, 1, dtype=torch.bool)
+        else:
+            complete_trace = None
+        self.register_buffer("complete_trace", complete_trace)
 
     def reset_state(self):
         r"""Reset cell states that accumulate over time during simulation."""
         self.trace.fill_(0)
         self.spikes.fill_(False)
+        if self.complete_trace is not None:
+            # TODO: Quite sure this replacement of the tensor also drops the pointer..., not sure how to solve
+            self.complete_trace.resize_(*self.trace.shape, 1)
+            self.complete_trace.fill_(False)
 
     def no_grad(self):
         r"""Turn off gradient storing."""
@@ -36,12 +49,27 @@ class BaseInput(nn.Module):
         self.no_grad()
         self.reset_state()
 
+    def concat_trace(self, x):
+        r"""Concatenate most recent timestep to the trace storage."""
+        self.complete_trace = torch.cat([self.complete_trace, x.unsqueeze(-1)], dim=-1)
+
     def convert_input(self, x):
         r"""Convert torch.bool input to the datatype set for arithmetics.
         
         :param x: Input Tensor of torch.bool type.
         """
         return x.type(self.trace.dtype)
+
+    def change_batch_size(self, batch_size):
+        r"""Changes the batch dimension of all state tensors. Be careful, only call this method after resetting state, otherwise part of your data will be lost."""
+        # Update to new shape
+        self.cells_shape[0] = batch_size
+        n_shape = self.cells_shape
+
+        self.spikes.resize_(*n_shape)
+        self.trace.resize_(*n_shape)
+        if self.complete_trace is not None:
+            self.complete_trace.resize_(*n_shape, 1)
 
     def forward(self, x):
         raise NotImplementedError("Input neurons must implement `forward`")
@@ -61,16 +89,12 @@ class Input(BaseInput):
     :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``.
     """
 
-    def __init__(self, cells_shape, dt, alpha_t, tau_t, update_type="linear"):
-        super(Input, self).__init__(cells_shape, dt)
-
-        # Fixed parameters
-        self.register_buffer(
-            "alpha_t", alpha_t * torch.ones(cells_shape, dtype=torch.float)
-        )
-        self.register_buffer(
-            "tau_t", tau_t * torch.ones(cells_shape, dtype=torch.float)
-        )
+    def __init__(
+        self, cells_shape, dt, alpha_t, tau_t, update_type="linear", store_trace=False
+    ):
+        super(Input, self).__init__(cells_shape, dt, store_trace=store_trace)
+        self.register_buffer("alpha_t", torch.tensor(alpha_t, dtype=torch.float))
+        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
 
         # Type of updates
         if update_type == "linear":
@@ -100,6 +124,8 @@ class Input(BaseInput):
         """
         self.update_trace(x)
         self.spikes.copy_(x)
+        if self.complete_trace is not None:
+            self.concat_trace(x)
         return x, self.trace
 
 
@@ -207,6 +233,7 @@ class BaseNeuron(nn.Module):
         self.refrac_counts.fill_(0)
         self.trace.fill_(0)
         if self.complete_trace is not None:
+            # TODO: Quite shure this replacement of the tensor also drops the pointer..., not sure how to solve
             self.complete_trace = torch.zeros(
                 *self.v_cell.shape, 1, device=self.v_cell.device
             ).bool()
@@ -214,6 +241,20 @@ class BaseNeuron(nn.Module):
     def reset_thresh(self):
         r"""Reset threshold to initialization values, allows for different standard thresholds per neuron."""
         self.thresh.copy_(torch.ones_like(self.thresh) * self.thresh_center)
+
+    def change_batch_size(self, batch_size):
+        r"""Changes the batch dimension of all state tensors. Be careful, only call this method after resetting state, otherwise part of your data will be lost."""
+        # Update to new shape
+        self.cells_shape[0] = batch_size
+        n_shape = self.cells_shape
+
+        self.spikes.resize_(*n_shape)
+        self.v_cell.resize_(*n_shape)
+        self.trace.resize_(*n_shape)
+        self.refrac_counts.resize_(*n_shape)
+        self.thresh.resize_(*n_shape)
+        if self.complete_trace is not None:
+            self.complete_trace.resize_(*n_shape, 1)
 
     def no_grad(self):
         r"""Turn off learning and gradient storing."""
@@ -344,7 +385,7 @@ class LIFNeuron(BaseNeuron):
     :param duration_refrac: Number of timesteps the :class:`Neuron` is dormant after spiking. Make sure ``dt`` fits an integer number of times in ``duration refrac``.
     :param tau_v: decay parameter for the voltage.
     :param tau_t: decay parameter for the trace.
-    :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``.
+    :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``. Also support custom functions, should be added as elements in the following dict: update_types = {"voltage_update": ..., "trace_update": ...}
     :param store_trace: ``Boolean`` flag to store the complete spiking history, defaults to ``False``.
     """
 
@@ -393,6 +434,13 @@ class LIFNeuron(BaseNeuron):
         elif update_type == "exponential":
             self.voltage_update = sf.lif_exponential_voltage_update
             self.trace_update = sf.exponential_trace_update
+        elif (  # check if dict contains actual functions
+            isinstance(update_type, dict)
+            and callable(update_type["voltage_update"])
+            and callable(update_type["trace_update"])
+        ):
+            self.voltage_update = update_type["voltage_update"]
+            self.trace_update = update_type["trace_update"]
         else:
             raise ValueError(f"Unsupported update type {update_type}")
 
@@ -574,6 +622,192 @@ class AdaptiveLIFNeuron(BaseNeuron):
     def reset_state(self):
         super(AdaptiveLIFNeuron, self).reset_state()
         self.reset_thresh()
+
+
+#########################################################
+# Stochastic Neuron
+#########################################################
+def exponential_prob_update(v):
+    return 1 - torch.exp(-v)
+
+
+class StochasticNeuron(BaseNeuron):
+    r"""Stochastic neuron."""
+
+    def __init__(
+        self,
+        cells_shape,
+        thresh,
+        v_rest,
+        alpha_v,
+        alpha_t,
+        dt,
+        duration_refrac,  # From here on class specific params
+        tau_v,
+        tau_t,
+        update_type="linear",
+        store_trace=False,
+        spike_prob="exp",
+    ):
+        super(StochasticNeuron, self).__init__(
+            cells_shape,
+            thresh,
+            v_rest,
+            alpha_v,
+            alpha_t,
+            dt,
+            duration_refrac,
+            store_trace=store_trace,
+        )
+
+        # Type of updates
+        if update_type == "linear":
+            self.voltage_update = sf.lif_linear_voltage_update
+            self.trace_update = sf.linear_trace_update
+        elif update_type == "exponential":
+            self.voltage_update = sf.lif_exponential_voltage_update
+            self.trace_update = sf.exponential_trace_update
+        elif (  # check if dict contains actual functions
+            isinstance(update_type, dict)
+            and callable(update_type["voltage_update"])
+            and callable(update_type["trace_update"])
+        ):
+            self.voltage_update = update_type["voltage_update"]
+            self.trace_update = update_type["trace_update"]
+        else:
+            raise ValueError(f"Unsupported update type {update_type}")
+
+        # Spiking threshold generator
+        if spike_prob == "exp":
+            self.prob_update = exponential_prob_update
+        elif callable(spike_prob):
+            self.prob_update = spike_prob
+        else:
+            raise TypeError(
+                "spike_prob has to be either a selected string or a callable, currently is {}".format(
+                    type(spike_prob)
+                )
+            )
+
+        # Fixed parameters
+        self.register_buffer("tau_v", torch.tensor(tau_v, dtype=torch.float))
+        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
+        self.register_buffer("spike_prob", torch.zeros(*cells_shape))
+        self.init_neuron()
+
+    def reset_state(self):
+        super(StochasticNeuron, self).reset_state()
+        self.spike_prob.fill_(0)
+
+    def update_trace(self, x):
+        spikes = self.convert_spikes(x)
+        self.trace = self.trace_update(
+            self.trace, spikes, self.alpha_t, self.tau_t, self.dt
+        )
+
+    def update_voltage(self, x):
+        self.v_cell = self.voltage_update(
+            self.v_cell,
+            self.v_rest,
+            x,
+            self.alpha_v,
+            self.tau_v,
+            self.dt,
+            self.refrac_counts,
+        )
+
+    def spiking(self):
+        thresh = torch.rand_like(self.v_cell)
+        self.spike_prob.copy_(self.prob_update(self.v_cell))
+        self.spikes.copy_(self.spike_prob >= thresh)
+        return self.spikes.clone()
+
+    def forward(self, x):
+        x = self.fold(x)
+        self.update_voltage(x)
+        spikes = self.spiking()
+        self.update_trace(spikes)
+        self.refrac(spikes)
+        if self.complete_trace is not None:
+            self.concat_trace(spikes)
+        return spikes, self.trace
+
+
+#########################################################
+# Izhikevich Neuron
+#########################################################
+class IzhikevichNeuron(BaseNeuron):
+    r"""Copy from the neuron model published in: https://www.izhikevich.org/publications/spikes.htm"""
+
+    def __init__(
+        self,
+        cells_shape,
+        a,
+        b,
+        c,
+        d,
+        thresh,
+        dt,
+        alpha_t,
+        tau_t,
+        update_type="linear",
+        store_trace=False,
+    ):
+        super(IzhikevichNeuron, self).__init__(
+            cells_shape, thresh, 0, 0, alpha_t, dt, 0, store_trace=store_trace
+        )
+
+        # Type of updates
+        if update_type == "linear":
+            self.voltage_update = sf._lif_linear_voltage_update
+            self.trace_update = sf._linear_trace_update
+        elif update_type == "exponential":
+            self.voltage_update = sf._lif_exponential_voltage_update
+            self.trace_update = sf._exponential_trace_update
+        else:
+            raise ValueError(f"Unsupported update type {update_type}")
+
+        # Fixed parameters
+        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
+
+        # Fixed parameters
+        self.register_buffer("a", torch.tensor(a, dtype=torch.float))
+        self.register_buffer("b", torch.tensor(b, dtype=torch.float))
+        self.register_buffer("c", torch.tensor(c, dtype=torch.float))
+        self.register_buffer("d", torch.tensor(d, dtype=torch.float))
+        self.register_buffer("u", torch.zeros(*cells_shape))
+        self.init_neuron()
+
+    def update_trace(self, x):
+        spikes = self.convert_spikes(x)
+        self.trace = self.trace_update(
+            self.trace, spikes, self.alpha_t, self.tau_t, self.dt
+        )
+
+    def update_voltage(self, x):
+        dv = 0.04 * self.v_cell ** 2 + 5 * self.v_cell + 140 - self.u + x
+        self.v_cell += dv
+
+    def update_u(self):
+        du = self.a * (self.b * self.v_cell - self.u)
+        self.u += du
+
+    def spiking(self):
+        # Determine which neurons spiked and reset their v and u values
+        self.spikes.copy_(self.v_cell >= self.thresh)
+        self.v_cell[self.spikes] = self.c[self.spikes]
+        self.u[self.spikes] += self.d[self.spikes]
+
+        return self.spikes.clone()
+
+    def forward(self, x):
+        x = self.fold(x)
+        self.update_voltage(x)
+        spikes = self.spiking()
+        self.update_trace(spikes)
+        if self.complete_trace is not None:
+            self.concat_trace(spikes)
+        return spikes, self.trace
 
 
 #########################################################

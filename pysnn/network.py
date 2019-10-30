@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 
 from pysnn.connection import Connection, Linear, Conv2d
-from pysnn.neuron import BaseNeuron
+from pysnn.neuron import BaseNeuron, BaseInput
 
 
 #########################################################
@@ -73,3 +73,10 @@ class SNNNetwork(nn.Module):
                     states[k] = v
             state_dicts[name] = states
         return state_dicts
+
+    def change_batch_size(self, batch_size):
+        r"""Changes the batch dimension of all state tensors. Be careful, only call this method after resetting state, otherwise part of your data will be lost."""
+
+        for module in self.modules():
+            if isinstance(module, (BaseNeuron, BaseInput, Connection)):
+                module.change_batch_size(batch_size)
