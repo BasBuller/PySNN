@@ -378,7 +378,7 @@ class AdaptiveLIFNeuron(BaseNeuron):
             self.trace_update = sf._linear_trace_update
             self.thresh_update = sf._linear_thresh_update
         elif update_type == "exponential":
-            self.voltage_update = sf._lif_voltage_update
+            self.voltage_update = sf._lif_exponential_voltage_update
             self.trace_update = sf._exponential_trace_update
             self.thresh_update = sf._exponential_thresh_update
         else:
