@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 
 from pysnn.connection import Connection, Linear, Conv2d
-from pysnn.neuron import BaseNeuron
+from pysnn.neuron import BaseNeuron, BaseInput
 
 
 #########################################################
