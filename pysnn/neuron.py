@@ -16,16 +16,30 @@ class BaseInput(nn.Module):
     :param dt: duration of a single timestep.
     """
 
-    def __init__(self, cells_shape, dt):
+    def __init__(self, cells_shape, dt, store_trace=False):
         super(BaseInput, self).__init__()
+        self.cells_shape = torch.tensor(cells_shape)
+
         self.register_buffer("trace", torch.zeros(*cells_shape, dtype=torch.float))
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
         self.register_buffer("spikes", torch.zeros(*cells_shape, dtype=torch.bool))
+
+        # In case of storing a complete, local copy of the activity of a neuron
+        if store_trace:
+            complete_trace = torch.zeros(*cells_shape, 1, dtype=torch.bool)
+        else:
+            complete_trace = None
+        self.register_buffer("complete_trace", complete_trace)
 
     def reset_state(self):
         r"""Reset cell states that accumulate over time during simulation."""
         self.trace.fill_(0)
         self.spikes.fill_(False)
+        if self.complete_trace is not None:
+            # TODO: Quite sure this replacement of the tensor also drops the pointer..., not sure how to solve
+            self.complete_trace = torch.zeros(
+                *self.trace.shape, 1, dtype=torch.bool, device=self.trace.device
+            )
 
     def no_grad(self):
         r"""Turn off gradient storing."""
@@ -36,12 +50,27 @@ class BaseInput(nn.Module):
         self.no_grad()
         self.reset_state()
 
+    def concat_trace(self, x):
+        r"""Concatenate most recent timestep to the trace storage."""
+        self.complete_trace = torch.cat([self.complete_trace, x.unsqueeze(-1)], dim=-1)
+
     def convert_input(self, x):
         r"""Convert torch.bool input to the datatype set for arithmetics.
         
         :param x: Input Tensor of torch.bool type.
         """
         return x.type(self.trace.dtype)
+
+    def change_batch_size(self, batch_size):
+        r"""Changes the batch dimension of all state tensors. Be careful, only call this method after resetting state, otherwise part of your data will be lost."""
+        # Update to new shape
+        self.cells_shape[0] = batch_size
+        n_shape = self.cells_shape
+
+        self.spikes.resize_(*n_shape)
+        self.trace.resize_(*n_shape)
+        if self.complete_trace is not None:
+            self.complete_trace.resize_(*n_shape, 1)
 
     def forward(self, x):
         raise NotImplementedError("Input neurons must implement `forward`")
@@ -61,8 +90,10 @@ class Input(BaseInput):
     :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``.
     """
 
-    def __init__(self, cells_shape, dt, alpha_t, tau_t, update_type="linear"):
-        super(Input, self).__init__(cells_shape, dt)
+    def __init__(
+        self, cells_shape, dt, alpha_t, tau_t, update_type="linear", store_trace=False
+    ):
+        super(Input, self).__init__(cells_shape, dt, store_trace=store_trace)
         self.register_buffer("alpha_t", torch.tensor(alpha_t, dtype=torch.float))
         self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
 
@@ -94,6 +125,8 @@ class Input(BaseInput):
         """
         self.update_trace(x)
         self.spikes.copy_(x)
+        if self.complete_trace is not None:
+            self.concat_trace(x)
         return x, self.trace
 
 
@@ -212,6 +245,7 @@ class BaseNeuron(nn.Module):
         self.refrac_counts.fill_(0)
         self.trace.fill_(0)
         if self.complete_trace is not None:
+            # TODO: Quite shure this replacement of the tensor also drops the pointer..., not sure how to solve
             self.complete_trace = torch.zeros(
                 *self.v_cell.shape, 1, device=self.v_cell.device
             ).bool()
@@ -219,6 +253,20 @@ class BaseNeuron(nn.Module):
     def reset_thresh(self):
         r"""Reset threshold to initialization values, allows for different standard thresholds per neuron."""
         self.thresh.copy_(torch.ones_like(self.thresh) * self.thresh_center)
+
+    def change_batch_size(self, batch_size):
+        r"""Changes the batch dimension of all state tensors. Be careful, only call this method after resetting state, otherwise part of your data will be lost."""
+        # Update to new shape
+        self.cells_shape[0] = batch_size
+        n_shape = self.cells_shape
+
+        self.spikes.resize_(*n_shape)
+        self.v_cell.resize_(*n_shape)
+        self.trace.resize_(*n_shape)
+        self.refrac_counts.resize_(*n_shape)
+        self.thresh.resize_(*n_shape)
+        if self.complete_trace is not None:
+            self.complete_trace.resize_(*n_shape, 1)
 
     def no_grad(self):
         r"""Turn off learning and gradient storing."""

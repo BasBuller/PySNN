@@ -297,13 +297,30 @@ class Boolean(Dataset):
     """
 
     def __init__(
-        self, data_encoder=None, data_transform=None, lbl_transform=None, repeats=1
+        self,
+        labels,
+        data_encoder=None,
+        lbl_encoder=None,
+        data_transform=None,
+        lbl_transform=None,
+        repeats=1,
+        sample_repeats=None,
     ):
         self.data_encoder = data_encoder
+        self.lbl_encoder = lbl_encoder
         self.data_transform = data_transform
         self.lbl_transform = lbl_transform
+
+        # Generate data and labels
         self.data = torch.tensor([[0, 0], [1, 0], [0, 1], [1, 1]], dtype=torch.float)
         self.data = torch.repeat_interleave(self.data, int(repeats), dim=1)
+        self.labels = labels
+        self.classes = torch.arange(4).unsqueeze(1)
+
+        if sample_repeats:
+            self.data = self.data.repeat(sample_repeats, 1)
+            self.labels = self.labels.repeat(sample_repeats, 1)
+            self.classes = self.classes.repeat(sample_repeats, 1)
 
     def __len__(self):
         return len(self.data)
@@ -311,6 +328,7 @@ class Boolean(Dataset):
     def __getitem__(self, idx):
         sample = self.data[idx].unsqueeze(0)
         label = self.labels[idx]
+        sample_class = self.classes[idx]
 
         # Sample transforms
         if self.data_transform:
@@ -321,38 +339,82 @@ class Boolean(Dataset):
         # Label transforms
         if self.lbl_transform:
             label = self.lbl_transform(label)
+        if self.lbl_encoder:
+            label = self.lbl_encoder(label)
 
-        return sample, label
+        return sample, label, sample_class
 
 
 class XOR(Boolean):
     r"""XOR dataset, inherits directly from :class:`Boolean`."""
 
     def __init__(
-        self, data_encoder=None, data_transform=None, lbl_transform=None, repeats=1
+        self,
+        data_encoder=None,
+        lbl_encoder=None,
+        data_transform=None,
+        lbl_transform=None,
+        repeats=1,
+        sample_repeats=None,
     ):
-        super(XOR, self).__init__(data_encoder, data_transform, lbl_transform, repeats)
-        self.labels = torch.tensor([[0], [1], [1], [0]])
+        classes = torch.tensor([[0], [1], [1], [0]])
+        super(XOR, self).__init__(
+            classes,
+            data_encoder,
+            lbl_encoder,
+            data_transform,
+            lbl_transform,
+            repeats,
+            sample_repeats,
+        )
 
 
 class AND(Boolean):
     r"""AND dataset, inherits directly from :class:`Boolean`."""
 
     def __init__(
-        self, data_encoder=None, data_transform=None, lbl_transform=None, repeats=1
+        self,
+        data_encoder=None,
+        lbl_encoder=None,
+        data_transform=None,
+        lbl_transform=None,
+        repeats=1,
+        sample_repeats=None,
     ):
-        super(AND, self).__init__(data_encoder, data_transform, lbl_transform, repeats)
-        self.labels = torch.tensor([[0], [0], [0], [1]])
+        classes = torch.tensor([[0], [0], [0], [1]])
+        super(AND, self).__init__(
+            classes,
+            data_encoder,
+            lbl_encoder,
+            data_transform,
+            lbl_transform,
+            repeats,
+            sample_repeats,
+        )
 
 
 class OR(Boolean):
     r"""OR dataset, inherits directly from :class:`Boolean`."""
 
     def __init__(
-        self, data_encoder=None, data_transform=None, lbl_transform=None, repeats=1
+        self,
+        data_encoder=None,
+        lbl_encoder=None,
+        data_transform=None,
+        lbl_transform=None,
+        repeats=1,
+        sample_repeats=None,
     ):
-        super(OR, self).__init__(data_encoder, data_transform, lbl_transform, repeats)
-        self.labels = torch.tensor([[0], [1], [1], [1]])
+        classes = torch.tensor([[0], [1], [1], [1]])
+        super(OR, self).__init__(
+            classes,
+            data_encoder,
+            lbl_encoder,
+            data_transform,
+            lbl_transform,
+            repeats,
+            sample_repeats,
+        )
 
 
 ############################
@@ -381,9 +443,9 @@ class BooleanNoise:
         zero_idx = x == 0
         one_idx = x == 1
         if zero_idx.any():
-            x[zero_idx] = self.low_distr.sample(zero_idx.shape)
+            x[zero_idx] = self.low_distr.sample(zero_idx.shape)[zero_idx]
         if one_idx.any():
-            x[one_idx] = self.high_distr.sample(one_idx.shape)
+            x[one_idx] = self.high_distr.sample(one_idx.shape)[one_idx]
         return x
 
 
@@ -395,28 +457,3 @@ class Intensity:
 
     def __call__(self, x):
         return x * self.intensity
-
-
-if __name__ == "__main__":
-    train = XOR()
-    print(train[0][0].shape)
-    print(train[0][1].shape)
-    print(len(train))
-
-    # ncalt_train, ncalt_test = ncaltech_train_test(root_dir + "ncaltech101")
-    # print("caltech")
-    # print(ncalt_train[0][0].shape)
-    # print(ncalt_train[0][1])
-    # print(len(ncalt_train))
-
-    # nmnist_train, nmnist_test = nmnist_train_test(root_dir + "nmnist")
-    # print("\nnmnist")
-    # print(nmnist_train[0][0].shape)
-    # print(nmnist_train[0][1])
-    # print(len(nmnist_train))
-
-    # ncars_train, ncars_test = ncars_train_test(root_dir + "n-cars")
-    # print("\nncars")
-    # print(ncars_train[0][0].shape)
-    # print(ncars_train[0][1])
-    # print(len(ncars_train))
