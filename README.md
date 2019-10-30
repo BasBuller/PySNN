@@ -1,6 +1,6 @@
 # __PySNN__
 
-Spiking neural network (SNN) framework written on top of PyTorch for efficient simulation of SNNs both on _**CPU**_ and _**GPU**_. The framework is intended for with correlation based learning methods. The library adheres to the highly modular and dynamic design of PyTorch, and does not require its user to learn a new framework like when using BindsNet. 
+Spiking neural network (SNN) framework written on top of PyTorch for efficient simulation of SNNs both on _**CPU**_ and _**GPU**_. The framework is intended for with correlation based learning methods. The library adheres to the highly modular and dynamic design of PyTorch, and does not require its user to learn a new framework like when using BindsNET. 
 
 *This framework's power lies in the ease of defining and mixing new Neuron and Connection objects that seamlessly work together, even different versions, in a single network.*
 
@@ -15,13 +15,19 @@ Documentation can be found at: [https://basbuller.github.io/PySNN/](https://basb
 Installation can be done with pip:
 
 ```bash
-$ git clone https://github.com/BasBuller/PySNN
-$ pip install PySNN/
+$ git clone https://github.com/BasBuller/PySNN.git
+$ cd PySNN/
+$ pip install .  # or pip install pysnn
 ```
 
 If you want to make updates to the library without having to reinstall it, use the following install command instead:
 ```bash
-$ pip install -e PySNN/
+$ pip install -e .
+```
+
+Some examples need additional libraries. To install these, run:
+```bash
+$ pip install pysnn[examples]
 ```
 
 Code is formatted with [Black](https://github.com/psf/black) using a pre-commit hook. To configure it, run:
