@@ -13,6 +13,17 @@ requirements = [
     "pre-commit",
 ]
 
+extras = {
+    "examples": [
+        "gym",
+        "tensorflow>=2.0.0",
+        "ray[tune]",
+        "ray[debug]",
+        "requests",
+        "bayesian-optimization",
+    ]
+}
+
 setup(
     name="pysnn",
     version="0.1",
@@ -22,5 +33,6 @@ setup(
     author_email="bas.buller@gmail.com",
     packages=find_packages(exclude=("tests", "examples")),
     install_requires=requirements,
-    python_requires=">=3.6.0"
+    extras_require=extras,
+    python_requires=">=3.6.0",
 )
