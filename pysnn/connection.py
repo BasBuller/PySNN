@@ -301,10 +301,11 @@ class Conv2d(_ConvNd):
         x = x * self.weight.view(self.weight.shape[0], -1).unsqueeze(2)
         return self.fold(x)
 
-    def forward(self, x):
+    def forward(self, x, trace_in):
+        trace_in = self.unfold(trace_in)
+        self.update_trace(trace_in)
         x = self.convert_spikes(x)
         x = self.unfold(x)  # Till here it is a rather easy set of steps
-        self.update_trace(x)
         x = self.propagate_spike(x)  # Output spikes
         return self.activation_potential(x), self.fold(self.trace)
 
