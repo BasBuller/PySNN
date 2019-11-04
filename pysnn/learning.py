@@ -9,17 +9,16 @@ import torch
 class LearningRule:
     r"""Base class for correlation based learning rules in spiking neural networks.
     
-    Arguments:
-        layers (iterable): an iterable or :class:`dict` of :class:`dict`s. 
-            The latter is a dict that contains a :class:`pysnn.Connection`s state dict, a pre-synaptic :class:`pysnn.Neuron`s state dict, 
-            and a post-synaptic :class:`pysnn.Neuron`s state dict that together form a single layer. These objects their state's will be 
-            used for optimizing weights.
-            During initialization of a learning rule that inherits from this class it is supposed to select only the parameters it needs
-            from these objects.
-            The higher lever iterable or :class:`dict` contain groups that use the same parameter during training. This is analogous to
-            PyTorch optimizers' parameter groups.
-        defaults: A dict containing default hyper parameters. This is a placeholder for possible changes later on, these groups would work
-            exactly the same as those for PyTorch optimizers.
+    :param layers: an iterable or :class:`dict` of :class:`dict`s. 
+        The latter is a dict that contains a :class:`pysnn.Connection`s state dict, a pre-synaptic :class:`pysnn.Neuron`s state dict, 
+        and a post-synaptic :class:`pysnn.Neuron`s state dict that together form a single layer. These objects their state's will be 
+        used for optimizing weights.
+        During initialization of a learning rule that inherits from this class it is supposed to select only the parameters it needs
+        from these objects.
+        The higher lever iterable or :class:`dict` contain groups that use the same parameter during training. This is analogous to
+        PyTorch optimizers parameter groups.
+    :param defaults: A dict containing default hyper parameters. This is a placeholder for possible changes later on, these groups would work
+        exactly the same as those for PyTorch optimizers.
     """
 
     def __init__(self, layers, defaults):
@@ -60,6 +59,61 @@ class LearningRule:
                 "A layer object should be a dict. Currently got a " + type(layers[0])
             )
 
+    def pre_mult_post(self, pre, post, con_type):
+        r"""Multiply a presynaptic term with a postsynaptic term, in the following order: pre x post.
+
+        The outcome of this operation preserves batch size, but furthermore is directly broadcastable 
+        with the weight of the connection.
+
+        This operation differs for Linear or Convolutional connections. 
+
+        :param pre: Presynaptic term
+        :param post: Postsynaptic term
+        :param con_type: Connection type, supports Linear and Conv2d
+
+        :return: Tensor broadcastable with the weight of the connection
+        """
+        # Select target datatype
+        if pre.dtype == torch.bool:
+            pre = pre.to(post.dtype)
+        elif post.dtype == torch.bool:
+            post = post.to(pre.dtype)
+        elif pre.dtype != post.dtype:
+            assert TypeError(
+                "The pre and post synaptic terms should either be of the same datatype, or one of them has to be a Boolean."
+            )
+
+        # Perform actual multiplication
+        if con_type == "linear":
+            pre = pre.transpose(2, 1)
+        elif con_type == "conv2d":
+            pre = pre.transpose(2, 1)
+            post = post.view(post.shape[0], 1, post.shape[1], -1)
+
+        output = pre * post
+        return output.transpose(2, 1)
+
+    def reduce_connections(self, tensor, con_type, red_method=torch.mean):
+        r"""Reduces the tensor along the dimensions that represent seperate connections to an element of the weight Tensor.
+
+        The function used for reducing has to be a callable that can be applied to single axes of a tensor.
+        
+        This operation differs or Linear or Convolutional connections.
+        For Linear, only the batch dimension (dim 0) is reduced.
+        For Conv2d, the batch (dim 0) and the number of kernel multiplications dimension (dim 3) are reduced.
+
+        :param tensor: Tensor that will be reduced
+        :param con_type: Connection type, support Linear and Conv2d
+        :param red_method: Method used to reduce each dimension
+
+        :return: Reduced Tensor
+        """
+        if con_type == "linear":
+            output = red_method(tensor, dim=0)
+        if con_type == "conv2d":
+            output = red_method(tensor, dim=(0, 3))
+        return output
+
 
 #########################################################
 # MSTDPET
@@ -85,6 +139,7 @@ class MSTDPET(LearningRule):
             new_layer["post_trace"] = layer["neuron"]["trace"]
             new_layer["weight"] = layer["connection"]["weight"]
             new_layer["e_trace"] = torch.zeros_like(layer["connection"]["trace"])
+            new_layer["type"] = layer["type"]
             layers[key] = new_layer
 
         self.a_pre = a_pre
@@ -112,12 +167,12 @@ class MSTDPET(LearningRule):
         for layer in self.layers.values():
             # Update eligibility trace
             layer["e_trace"] *= self.e_trace_decay
-            layer["e_trace"] += (
-                layer["post_spikes"].float() * layer["pre_trace"].transpose(-2, -1)
-            ).transpose(-2, -1)
-            layer["e_trace"] -= (
-                layer["pre_spikes"].float().transpose(-2, -1) * layer["post_trace"]
-            ).transpose(-2, -1)
+            layer["e_trace"] += self.pre_mult_post(
+                layer["pre_trace"], layer["post_spikes"], layer["type"]
+            )
+            layer["e_trace"] -= self.pre_mult_post(
+                layer["pre_spikes"], layer["post_trace"], layer["type"]
+            )
 
     def reset_state(self):
         for layer in self.layers.values():
@@ -126,7 +181,8 @@ class MSTDPET(LearningRule):
     def step(self, reward):
         # TODO: add weight clamping?
         for layer in self.layers.values():
-            layer["weight"] += self.lr * reward * layer["e_trace"].mean(0)
+            dw = self.reduce_connections(layer["e_trace"], layer["type"])
+            layer["weight"] += self.lr * reward * dw.view(*layer["weight"].shape)
 
 
 #########################################################

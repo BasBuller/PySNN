@@ -2,7 +2,7 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 
-from pysnn.connection import Connection
+from pysnn.connection import Connection, Linear, Conv2d
 from pysnn.neuron import BaseNeuron
 
 
@@ -40,13 +40,28 @@ class SNNNetwork(nn.Module):
         elif name == "":
             raise KeyError("Name cannot be an empty string.")
 
+        # Check specific connection type
+        if isinstance(connection, Linear):
+            ctype = "linear"
+        elif isinstance(connection, Conv2d):
+            ctype = "conv2d"
+        else:
+            raise TypeError("Connection is of an unkown type.")
+
         # Add layer
-        self._layers[name] = {"connection": connection, "neuron": neuron}
+        self._layers[name] = {"connection": connection, "neuron": neuron, "type": ctype}
 
     def layer_state_dict(self):
         r"""Return state dicts grouped per layer, so a single Connection and a single Neuron state dict per layer."""
+        dict_names = ["connection", "neuron"]
+
         state_dicts = OrderedDict()
         for name, layer in self._layers.items():
-            states = {k: v.state_dict() for k, v in layer.items()}
+            states = {}
+            for k, v in layer.items():
+                if k in dict_names:
+                    states[k] = v.state_dict()
+                elif k == "type":
+                    states[k] = v
             state_dicts[name] = states
         return state_dicts
