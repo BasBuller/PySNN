@@ -268,8 +268,6 @@ class Conv2d(_ConvNd):
         batch_size,
         dt,
         delay,
-        tau_t,
-        alpha_t,
         stride=1,
         padding=0,
         dilation=1,
@@ -286,10 +284,6 @@ class Conv2d(_ConvNd):
             padding,
             dilation,
         )
-
-        # Fixed parameters
-        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
-        self.register_buffer("alpha_t", torch.tensor(alpha_t, dtype=torch.float))
 
         # Intialize layer
         self.init_connection()

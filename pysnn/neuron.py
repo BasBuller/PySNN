@@ -178,7 +178,7 @@ class BaseNeuron(nn.Module):
         if self.complete_trace is not None:
             self.complete_trace = torch.zeros(
                 *self.v_cell.shape, 1, device=self.v_cell.device
-            ).to(torch.bool)
+            ).bool()
 
     def reset_thresh(self):
         r"""Reset threshold to initialization values, allows for different standard thresholds per neuron."""

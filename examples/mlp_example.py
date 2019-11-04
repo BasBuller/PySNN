@@ -54,7 +54,9 @@ class Network(SNNNetwork):
         super(Network, self).__init__()
 
         # Input
-        self.input = Input((batch_size, 1, n_in), *i_dynamics)
+        self.input = Input(
+            (batch_size, 1, n_in), *i_dynamics, update_type="exponential"
+        )
 
         # Layer 1
         self.mlp1_c = Linear(n_in, n_hidden, *c_dynamics)

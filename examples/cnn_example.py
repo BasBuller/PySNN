@@ -39,7 +39,7 @@ duration_refrac = 5
 dt = 1
 delay = 3
 n_dynamics = (thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t)
-c_dynamics = (batch_size, dt, delay, tau_t, alpha_t)
+c_dynamics = (batch_size, dt, delay)
 i_dynamics = (dt, alpha_t, tau_t)
 
 # Learning
@@ -56,7 +56,9 @@ class Network(SNNNetwork):
         super(Network, self).__init__()
 
         # Input
-        self.input = Input((batch_size, 2, 34, 34), *i_dynamics)
+        self.input = Input(
+            (batch_size, 2, 34, 34), *i_dynamics, update_type="exponential"
+        )
 
         # Layer 1
         self.conv1 = Conv2d(2, 4, 5, (34, 34), *c_dynamics, padding=1, stride=1)
