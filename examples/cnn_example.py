@@ -95,7 +95,13 @@ class Network(SNNNetwork):
 #########################################################
 # Dataset
 #########################################################
-train_dataset, test_dataset = nmnist_train_test("nmnist")
+root = "nmnist"
+if os.path.isdir(root):
+    train_dataset, test_dataset = nmnist_train_test(root)
+else:
+    raise NotADirectoryError(
+        "Make sure to download the N-MNIST dataset from https://www.garrickorchard.com/datasets/n-mnist and put it in the 'nmnist' folder."
+    )
 
 train_dataloader = DataLoader(
     train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers
