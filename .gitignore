@@ -15,6 +15,7 @@ docsrc/_build/
 experiments/
 build/
 dist/
+*/runs/
 
 # Files
 trial.py
