@@ -6,52 +6,52 @@ import torch
 
 
 ##########################################################
-# Test delayed propagation of spikes
+# Test Connection: delayed propagation of spikes and spike conversion
 ##########################################################
 @pytest.fixture(
     scope="function",
     params=[
-        # in_features, out_features, batch_size, dt, delay, tau_t, alpha_t
-        (2, 4, 1, 1, 1, 1.0, 1.0)
+        # shape (in feat, out feat, batch), dt, delay
+        ((1, 4, 2), 1.0, 3)
     ],
 )
 def delayed_connection(request):
-    from pysnn.connection import LinearExponential
+    from torch.nn.parameter import Parameter
+    from pysnn.connection import Connection
 
     params = request.param
-    connection = LinearExponential(*params)
+    connection = Connection(*params)
+    connection.weight = Parameter(torch.Tensor(params[0][1], params[0][0]))
     connection.init_connection()
     return connection
 
 
 # Test spike propagation
 @pytest.mark.parametrize(
-    "spikes_in,spikes_out",
+    "spikes_in, spikes_out",
     [
         (
-            torch.zeros(1, 1, 2, dtype=torch.float),
+            torch.zeros(1, 1, 2, dtype=torch.bool),
             torch.zeros(1, 4, 2, dtype=torch.float),
         ),
+        (torch.ones(1, 1, 2, dtype=torch.bool), torch.ones(1, 4, 2, dtype=torch.float)),
         (
-            torch.ones(1, 1, 2, dtype=torch.float),
-            torch.ones(1, 4, 2, dtype=torch.float),
-        ),
-        (
-            torch.tensor([[[1, 0]]], dtype=torch.float),
+            torch.tensor([[[1, 0]]], dtype=torch.bool),
             torch.tensor([[[1, 0], [1, 0], [1, 0], [1, 0]]], dtype=torch.float),
         ),
     ],
 )
 def test_propagate_delayed(spikes_in, spikes_out, delayed_connection):
-    r"""Same function as for conv layer, so only tested here."""
+    r"""Checks if delayed spikes are properly converted and propagated."""
+    spikes_in = delayed_connection.convert_spikes(spikes_in)
     conn_out = delayed_connection.propagate_spike(spikes_in)
     empty_out = torch.zeros_like(spikes_out)
     assert (conn_out == empty_out).all()
 
     # Loop over delay until output from connection
     empty_in = torch.zeros_like(spikes_in)
-    n_timesteps = delayed_connection.delay_init.view(-1)[0].int() - 1
-    for delay_step in range(n_timesteps):
+    steps = delayed_connection.delay_init.view(-1)[0].int() - 1
+    for _ in range(steps):
         conn_out = delayed_connection.propagate_spike(empty_in)
     assert (conn_out == spikes_out).all()
 
@@ -61,121 +61,125 @@ def test_propagate_delayed(spikes_in, spikes_out, delayed_connection):
 
 
 ##########################################################
-# Test instant propagation of spikes
+# Test Connection: instant propagation of spikes
 ##########################################################
 @pytest.fixture(
     scope="function",
     params=[
-        # in_features, out_features, batch_size, dt, delay, tau_t, alpha_t
-        (2, 4, 1, 1, 0, 1.0, 1.0)
+        # shape (in feat, out feat, batch), dt, delay
+        ((1, 4, 2), 1.0, 0)
     ],
 )
 def instant_connection(request):
-    from pysnn.connection import LinearExponential
+    from torch.nn.parameter import Parameter
+    from pysnn.connection import Connection
 
     params = request.param
-    connection = LinearExponential(*params)
+    connection = Connection(*params)
+    connection.weight = Parameter(torch.Tensor(params[0][1], params[0][0]))
     connection.init_connection()
     return connection
 
 
 # Test spike propagation
 @pytest.mark.parametrize(
-    "spikes_in,spikes_out",
+    "spikes_in, spikes_out",
     [
         (
-            torch.zeros(1, 1, 2, dtype=torch.float),
+            torch.zeros(1, 1, 2, dtype=torch.bool),
             torch.zeros(1, 4, 2, dtype=torch.float),
         ),
+        (torch.ones(1, 1, 2, dtype=torch.bool), torch.ones(1, 4, 2, dtype=torch.float)),
         (
-            torch.ones(1, 1, 2, dtype=torch.float),
-            torch.ones(1, 4, 2, dtype=torch.float),
-        ),
-        (
-            torch.tensor([[[1, 0]]], dtype=torch.float),
+            torch.tensor([[[1, 0]]], dtype=torch.bool),
             torch.tensor([[[1, 0], [1, 0], [1, 0], [1, 0]]], dtype=torch.float),
         ),
     ],
 )
 def test_propagate_instant(spikes_in, spikes_out, instant_connection):
-    r"""Same function as for conv layer, so only tested here."""
+    r"""Checks if instant spikes are properly converted and propagated."""
+    spikes_in = instant_connection.convert_spikes(spikes_in)
     conn_out = instant_connection.propagate_spike(spikes_in)
     assert (conn_out == spikes_out).all()
 
 
 ##########################################################
-# Test linear layer functions
+# Test Linear Connection
 ##########################################################
 lnr_in_feat = 5
 lnr_out_feat = 10
 lnr_batch = 2
-lnr_inpt_shape = (lnr_batch, 1, lnr_in_feat)
-lnr_outpt_shape = (lnr_batch, 1, lnr_out_feat, lnr_in_feat)
+lnr_in_shape = (lnr_batch, 1, lnr_in_feat)
+lnr_out_shape = (lnr_batch, 1, lnr_out_feat, lnr_in_feat)
 lnr_wgt_shape = (lnr_out_feat, lnr_in_feat)
 
 
 @pytest.fixture(
     scope="function",
     params=[
-        # in_features, out_features, batch_size, dt, delay, tau_t, alpha_t, weight
-        (lnr_in_feat, lnr_out_feat, lnr_batch, 1, 0, 1.0, 1.0, 0.5)
+        # in_features, out_features, batch_size, dt, delay, weight
+        (lnr_in_feat, lnr_out_feat, lnr_batch, 1.0, 0, 0.5)
     ],
 )
 def linear_connection(request):
-    from pysnn.connection import LinearExponential
+    from pysnn.connection import Linear
 
     params = request.param
-    connection = LinearExponential(*params[:-1])
-    connection.init_connection()
-    connection.weight.fill_(params[-1])
+    connection = Linear(*params[:-1])
+    connection.reset_weights("constant", params[-1])
     return connection
 
 
 @pytest.mark.parametrize(
-    "spikes_in,weights,potential_out",
+    "spikes_in, weights, potential_out",
     [
         (
-            torch.ones(*lnr_outpt_shape),
-            torch.ones(*lnr_wgt_shape) * 0.5,
-            torch.ones(*lnr_outpt_shape) * 0.5,
+            torch.ones(*lnr_out_shape, dtype=torch.float),
+            0.5,
+            torch.ones(*lnr_out_shape, dtype=torch.float) * 0.5,
         ),
         (
-            torch.ones(*lnr_outpt_shape),
-            torch.ones(*lnr_wgt_shape) * 1,
-            torch.ones(*lnr_outpt_shape) * 1,
+            torch.ones(*lnr_out_shape, dtype=torch.float),
+            1.0,
+            torch.ones(*lnr_out_shape, dtype=torch.float) * 1.0,
         ),
         (
-            torch.ones(*lnr_outpt_shape),
-            torch.ones(*lnr_wgt_shape) * 2,
-            torch.ones(*lnr_outpt_shape) * 2,
+            torch.ones(*lnr_out_shape, dtype=torch.float),
+            2.0,
+            torch.ones(*lnr_out_shape, dtype=torch.float) * 2.0,
         ),
         (
-            torch.ones(*lnr_outpt_shape),
-            torch.ones(*lnr_wgt_shape) * 3,
-            torch.ones(*lnr_outpt_shape) * 3,
+            torch.ones(*lnr_out_shape, dtype=torch.float),
+            3.0,
+            torch.ones(*lnr_out_shape, dtype=torch.float) * 3.0,
         ),
     ],
 )
 def test_linear_activation_potential(
     spikes_in, weights, potential_out, linear_connection
 ):
-    linear_connection.weight.data = weights
+    r"""Checks if the proper activation potential is calculated."""
+    linear_connection.reset_weights("constant", weights)
     potential = linear_connection.activation_potential(spikes_in)
     assert (potential == potential_out).all()
 
 
 @pytest.mark.parametrize(
-    "spikes_in,activation_out,trace_out",
+    "spikes_in, trace_in, activation_out, trace_out",
     [
         (
-            torch.ones(*lnr_inpt_shape, dtype=torch.uint8),
-            torch.ones(*lnr_outpt_shape) * 0.5,
-            torch.ones(*lnr_outpt_shape),
+            torch.ones(*lnr_in_shape, dtype=torch.bool),
+            torch.ones(*lnr_in_shape, dtype=torch.float),
+            torch.ones(*lnr_out_shape, dtype=torch.float) * 0.5,
+            torch.ones(*lnr_out_shape, dtype=torch.float),
         )
     ],
 )
-def test_linear_forward(spikes_in, activation_out, trace_out, linear_connection):
-    activation, trace = linear_connection.forward(spikes_in)
+def test_linear_forward(
+    spikes_in, trace_in, activation_out, trace_out, linear_connection
+):
+    r"""Checks correct activation and trace increase."""
+    activation, trace = linear_connection.forward(spikes_in, trace_in)
     assert (activation == activation_out).all()
     assert (trace == trace_out).all()
 
@@ -183,52 +187,52 @@ def test_linear_forward(spikes_in, activation_out, trace_out, linear_connection)
 ##########################################################
 # Test Conv2d layer functions
 ##########################################################
-conv_batch = 2
 conv_chan_in = 1
 conv_chan_out = 2
-conv_in_im = (10, 10)
-conv_out_im = (8, 8)
 conv_kernel = (3, 3)
+conv_in_im = (10, 10)
+conv_batch = 2
+conv_out_im = (8, 8)
 
-conv_inpt_shape = (conv_batch, conv_chan_in, *conv_in_im)
-conv_outpt_shape = (conv_batch, conv_chan_in, *conv_out_im, 3 * 3)
+conv_in_shape = (conv_batch, conv_chan_in, *conv_in_im)
+conv_out_shape = (
+    conv_batch,
+    conv_chan_in,
+    *conv_out_im,
+    conv_kernel[0] * conv_kernel[1],
+)
 conv_wgt_shape = (conv_chan_out, conv_chan_in, *conv_kernel)
 
 
 @pytest.fixture(
     scope="function",
     params=[
-        (
-            conv_chan_in,
-            conv_chan_out,
-            conv_kernel,
-            conv_in_im,
-            conv_batch,
-            1,
-            0,
-            1,
-            1,
-            0.5,
-        )  # Last item is weight init
+        # in_channels, out_channels, kernel_size, im_dims, batch_size, dt, delay, weight
+        (conv_chan_in, conv_chan_out, conv_kernel, conv_in_im, conv_batch, 1.0, 0, 0.5)
     ],
 )
 def conv2d_connection(request):
-    from pysnn.connection import Conv2dExponential
+    from pysnn.connection import Conv2d
 
     params = request.param
-    connection = Conv2dExponential(*params[:-1])
-    connection.init_connection()
-    connection.weight.fill_(params[-1])
+    connection = Conv2d(*params[:-1])
+    connection.reset_weights("constant", params[-1])
     return connection
 
 
 @pytest.mark.parametrize(
-    "spikes_in,weights,potential_out",
+    "spikes_in, weights, potential_out",
     [
         (
-            torch.ones(conv_batch, conv_chan_in, 3 * 3, 8 * 8),
-            torch.ones(*conv_wgt_shape) * 0.5,
-            torch.ones(*conv_outpt_shape) * 0.5,
+            torch.ones(
+                conv_batch,
+                conv_chan_in,
+                conv_kernel[0] * conv_kernel[1],
+                conv_out_im[0] * conv_out_im[1],
+                dtype=torch.float,
+            ),
+            torch.ones(*conv_wgt_shape, dtype=torch.float) * 0.5,
+            torch.ones(*conv_out_shape, dtype=torch.float) * 0.5,
         )
     ],
 )
@@ -241,16 +245,19 @@ def test_conv2d_activation_potential(
 
 
 @pytest.mark.parametrize(
-    "spikes_in,activation_out,trace_out",
+    "spikes_in, trace_in, activation_out, trace_out",
     [
         (
-            torch.ones(*conv_inpt_shape, dtype=torch.uint8),
-            torch.ones(*conv_outpt_shape) * 0.5,
-            torch.ones(*conv_outpt_shape),
+            torch.ones(*conv_in_shape, dtype=torch.bool),
+            torch.ones(*conv_in_shape, dtype=torch.float),
+            torch.ones(*conv_out_shape, dtype=torch.float) * 0.5,
+            torch.ones(*conv_out_shape, dtype=torch.float),
         )
     ],
 )
-def test_conv2d_forward(spikes_in, activation_out, trace_out, conv2d_connection):
-    activation, trace = conv2d_connection.forward(spikes_in)
+def test_conv2d_forward(
+    spikes_in, trace_in, activation_out, trace_out, conv2d_connection
+):
+    activation, trace = conv2d_connection.forward(spikes_in, trace_in)
     assert (activation == activation_out).all()
     assert (trace == trace_out).all()

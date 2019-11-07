@@ -2,7 +2,7 @@ import torch
 
 
 ########################################################
-# Trace updates, both neurons and layers
+# Trace updates 
 ########################################################
 def _exponential_trace_update(trace, x, alpha_t, tau_t, dt):
     r"""Calculate change in cell's trace based on current trace and incoming spikes x."""
@@ -40,9 +40,9 @@ def _linear_thresh_update(thresh, x, alpha_thresh, thresh_decay, dt):
 ########################################################
 # Neuron voltage updates
 ########################################################
-def _if_voltage_update(v_cur, v_in, alpha, refrac_counts):
+def _if_voltage_update(v_cur, v_in, alpha_v, refrac_counts):
     r"""Calculate change in cell's voltage based on current and incoming voltage."""
-    v_delta = alpha * v_in
+    v_delta = alpha_v * v_in
     non_refrac = refrac_counts == 0
     v_cur += v_delta * non_refrac.to(v_delta.dtype)
     # TODO: Check for possible inplace instead of copying operation, should be inplace for best performance

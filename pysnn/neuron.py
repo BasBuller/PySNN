@@ -50,6 +50,9 @@ class Input(BaseInput):
 
         # Type of updates
         if update_type == "linear":
+            assert (
+                tau_t >= 0.0 and tau_t <= 1.0
+            ), "Decays for linear updates should be in the interval [0, 1]."
             self.trace_update = sf._linear_trace_update
         elif update_type == "exponential":
             self.trace_update = sf._exponential_trace_update
@@ -98,8 +101,8 @@ class BaseNeuron(nn.Module):
         # Check compatibility of dt and refrac counting
         assert (
             duration_refrac % dt == 0
-        ), "dt does not fit an integer amount of times in duration_refrac"
-        assert duration_refrac >= 0, "duration_refrac should be non-negative"
+        ), "dt does not fit an integer amount of times in duration_refrac."
+        assert duration_refrac >= 0, "duration_refrac should be non-negative."
 
         # Fixed parameters
         self.register_buffer("v_rest", torch.tensor(v_rest, dtype=torch.float))
@@ -175,7 +178,7 @@ class BaseNeuron(nn.Module):
         if self.complete_trace is not None:
             self.complete_trace = torch.zeros(
                 *self.v_cell.shape, 1, device=self.v_cell.device
-            ).to(torch.bool)
+            ).bool()
 
     def reset_thresh(self):
         r"""Reset threshold to initialization values, allows for different standard thresholds per neuron."""
@@ -233,6 +236,9 @@ class IFNeuron(BaseNeuron):
 
         # Type of updates
         if update_type == "linear":
+            assert (
+                tau_t >= 0.0 and tau_t <= 1.0
+            ), "Decays for linear updates should be in the interval [0, 1]."
             self.trace_update = sf._linear_trace_update
         elif update_type == "exponential":
             self.trace_update = sf._exponential_trace_update
@@ -298,6 +304,9 @@ class LIFNeuron(BaseNeuron):
 
         # Type of updates
         if update_type == "linear":
+            assert all(
+                [tau_v >= 0.0, tau_v <= 1.0, tau_t >= 0.0, tau_t <= 1.0]
+            ), "Decays for linear updates should be in the interval [0, 1]."
             self.voltage_update = sf._lif_linear_voltage_update
             self.trace_update = sf._linear_trace_update
         elif update_type == "exponential":
@@ -374,6 +383,16 @@ class AdaptiveLIFNeuron(BaseNeuron):
 
         # Type of updates
         if update_type == "linear":
+            assert all(
+                [
+                    tau_v >= 0.0,
+                    tau_v <= 1.0,
+                    tau_t >= 0.0,
+                    tau_t <= 1.0,
+                    tau_thresh >= 0.0,
+                    tau_thresh <= 1.0,
+                ]
+            ), "Decays for linear updates should be in the interval [0, 1]."
             self.voltage_update = sf._lif_linear_voltage_update
             self.trace_update = sf._linear_trace_update
             self.thresh_update = sf._linear_thresh_update
