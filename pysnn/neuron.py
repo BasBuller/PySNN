@@ -37,9 +37,8 @@ class BaseInput(nn.Module):
         self.spikes.fill_(False)
         if self.complete_trace is not None:
             # TODO: Quite sure this replacement of the tensor also drops the pointer..., not sure how to solve
-            self.complete_trace = torch.zeros(
-                *self.trace.shape, 1, dtype=torch.bool, device=self.trace.device
-            )
+            self.complete_trace.resize_(*self.trace.shape, 1)
+            self.complete_trace.fill_(False)
 
     def no_grad(self):
         r"""Turn off gradient storing."""
