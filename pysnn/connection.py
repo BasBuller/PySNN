@@ -90,7 +90,7 @@ class Connection(nn.Module):
             self.weight += a
         elif distribution == "xavier_uniform":
             nn.init.xavier_uniform_(self.weight, gain=gain)
-            # self.weight += (self.weight.abs() * a)
+            self.weight += (self.weight.abs() * a)
         elif distribution == "kaiming_normal":
             nn.init.kaiming_normal_(self.weight)
         elif distribution == "kaiming_uniform":
