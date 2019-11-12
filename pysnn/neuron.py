@@ -619,6 +619,10 @@ class AdaptiveLIFNeuron(BaseNeuron):
 #########################################################
 # Stochastic Neuron
 #########################################################
+def exponential_prob_update(v):
+    return 1 - torch.exp(-v)
+
+
 class StochasticNeuron(BaseNeuron):
     r"""Stochastic neuron."""
 
@@ -635,6 +639,7 @@ class StochasticNeuron(BaseNeuron):
         tau_t,
         update_type="linear",
         store_trace=False,
+        spike_prob="exp",
     ):
         super(StochasticNeuron, self).__init__(
             cells_shape,
@@ -656,6 +661,14 @@ class StochasticNeuron(BaseNeuron):
             self.trace_update = sf._exponential_trace_update
         else:
             raise ValueError(f"Unsupported update type {update_type}")
+
+        # Spiking threshold generator
+        if spike_prob == "exp":
+            self.prob_update = exponential_prob_update
+        elif callable(spike_prob):
+            self.prob_update = spike_prob
+        else:
+            raise TypeError("spike_prob has to be either a selected string or a callable, currently is {}".format(type(spike_prob)))
 
         # Fixed parameters
         self.register_buffer("tau_v", torch.tensor(tau_v, dtype=torch.float))
@@ -686,7 +699,7 @@ class StochasticNeuron(BaseNeuron):
 
     def spiking(self):
         thresh = torch.rand_like(self.v_cell)
-        self.spike_prob.copy_(1 - torch.exp(self.v_cell))
+        self.spike_prob.copy_(self.prob_update(self.v_cell))
         self.spikes.copy_(self.spike_prob >= thresh)
         return self.spikes.clone()
 
