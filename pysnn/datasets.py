@@ -134,10 +134,11 @@ class NeuromorphicDataset(Dataset):
         input_spikes = read_2d_spikes(im_name)
         sample = input_spikes.to_spike_tensor(
             self.im_template, sampling_time=self.sampling_time
-        )
+        ).bool()
 
         # Label
-        label = self.data.iloc[idx, 1]
+        label = torch.tensor(self.data.iloc[idx, 1])
+        class_idx = torch.tensor(self.data.iloc[idx, 1])
 
         # Apply transforms
         if self.im_transform:
@@ -145,7 +146,7 @@ class NeuromorphicDataset(Dataset):
         if self.lbl_transform:
             label = self.lbl_transform(label)
 
-        return (sample, label)
+        return sample, label, class_idx
 
 
 #########################################################
@@ -195,6 +196,8 @@ def ncaltech_train_test(
 #########################################################
 def nmnist_train_test(
     root,
+    train_samples=None,
+    test_samples=None,
     sampling_time=1,
     sample_length=300,
     height=34,
@@ -210,8 +213,11 @@ def nmnist_train_test(
 
     :return: :class:`NeuromorphicDataset` for both and training and test data.
     """
-    train_content = _list_dir_content(os.path.join(root, "Train"))
-    train, _ = _concat_dir_content(train_content)
+    if not train_samples:
+        train_content = _list_dir_content(os.path.join(root, "Train"))
+        train, _ = _concat_dir_content(train_content)
+    else:
+        train, _ = train_test(os.path.join(root, "Train"), train_size=(train_samples/60000))
     train_dataset = NeuromorphicDataset(
         train,
         sampling_time,
@@ -222,8 +228,11 @@ def nmnist_train_test(
         lbl_transform=lbl_transform,
     )
 
-    test_content = _list_dir_content(os.path.join(root, "Test"))
-    test, _ = _concat_dir_content(test_content)
+    if not test_samples:
+        test_content = _list_dir_content(os.path.join(root, "Test"))
+        test, _ = _concat_dir_content(test_content)
+    else:
+        test = train_test(os.path.join(root, "Test"), train_size=(test_samples/10000))
     test_dataset = NeuromorphicDataset(
         test,
         sampling_time,
