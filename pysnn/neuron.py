@@ -622,6 +622,91 @@ class AdaptiveLIFNeuron(BaseNeuron):
 
 
 #########################################################
+# Stochastic Neuron
+#########################################################
+class StochasticNeuron(BaseNeuron):
+    r"""Stochastic neuron."""
+
+    def __init__(
+        self,
+        cells_shape,
+        thresh,
+        v_rest,
+        alpha_v,
+        alpha_t,
+        dt,
+        duration_refrac,  # From here on class specific params
+        tau_v,
+        tau_t,
+        update_type="linear",
+        store_trace=False,
+    ):
+        super(StochasticNeuron, self).__init__(
+            cells_shape,
+            thresh,
+            v_rest,
+            alpha_v,
+            alpha_t,
+            dt,
+            duration_refrac,
+            store_trace=store_trace,
+        )
+
+        # Type of updates
+        if update_type == "linear":
+            self.voltage_update = sf._lif_linear_voltage_update
+            self.trace_update = sf._linear_trace_update
+        elif update_type == "exponential":
+            self.voltage_update = sf._lif_exponential_voltage_update
+            self.trace_update = sf._exponential_trace_update
+        else:
+            raise ValueError(f"Unsupported update type {update_type}")
+
+        # Fixed parameters
+        self.register_buffer("tau_v", torch.tensor(tau_v, dtype=torch.float))
+        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
+        self.init_neuron()
+
+    def update_trace(self, x):
+        spikes = self.convert_spikes(x)
+        self.trace = self.trace_update(
+            self.trace, spikes, self.alpha_t, self.tau_t, self.dt
+        )
+
+    def update_voltage(self, x):
+        self.v_cell = self.voltage_update(
+            self.v_cell,
+            self.v_rest,
+            x,
+            self.alpha_v,
+            self.tau_v,
+            self.dt,
+            self.refrac_counts,
+        )
+
+    def spiking(self):
+        thresh = torch.rand_like(self.v_cell)
+        spike_prob = 1 - torch.exp(self.v_cell)
+        self.spikes.copy_(spike_prob >= thresh)
+        return self.spikes.clone()
+
+    def forward(self, x):
+        x = self.fold(x)
+        self.update_voltage(x)
+        spikes = self.spiking()
+        self.update_trace(spikes)
+        self.refrac(spikes)
+        if self.complete_trace is not None:
+            self.concat_trace(spikes)
+        return spikes, self.trace
+
+
+#########################################################
+# Izhikevich Neuron
+#########################################################
+
+
+#########################################################
 # Fede Neuron
 #########################################################
 class FedeNeuron(BaseNeuron):

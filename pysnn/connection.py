@@ -74,11 +74,15 @@ class Connection(nn.Module):
         """
         if distribution == "uniform":
             nn.init.uniform_(self.weight, a=a, b=b)
-        if distribution == "neuron_scaled_uniform":
+        elif distribution == "neuron_scaled_uniform":
             scaling = np.sqrt(self.weight.shape[1])
             a = a / scaling
             b = b / scaling
             nn.init.uniform_(self.weight, a=a, b=b)
+        elif distribution == "normalized":
+            nn.init.uniform_(self.weight, a=a, b=b)
+            self.weight /= self.weight.sum()
+            self.weight *= gain
         elif distribution == "normal":
             nn.init.normal_(self.weight)
         elif distribution == "xavier_normal":
@@ -246,9 +250,7 @@ class _ConvNd(Connection):
             assert isinstance(i, int), "Variables in im_dims should be int."
 
         # Convolution parameters
-        self.batch_size = (
-            batch_size
-        )  # Cannot infer, needed to reserve memory for storing trace and delay timing
+        self.batch_size = batch_size  # Cannot infer, needed to reserve memory for storing trace and delay timing
         self.out_channels = out_channels
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)
