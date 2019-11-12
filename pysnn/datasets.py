@@ -310,6 +310,7 @@ class Boolean(Dataset):
         self.lbl_encoder = lbl_encoder
         self.data_transform = data_transform
         self.lbl_transform = lbl_transform
+        self.n_samples = 4
 
         # Generate data and labels
         self.data = torch.tensor([[0, 0], [1, 0], [0, 1], [1, 1]], dtype=torch.float)
