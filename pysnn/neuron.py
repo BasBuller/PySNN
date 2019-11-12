@@ -665,7 +665,12 @@ class StochasticNeuron(BaseNeuron):
         # Fixed parameters
         self.register_buffer("tau_v", torch.tensor(tau_v, dtype=torch.float))
         self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
+        self.register_buffer("spike_prob", torch.zeros(*cells_shape))
         self.init_neuron()
+
+    def reset_state(self):
+        super(StochasticNeuron, self).reset_state()
+        self.spike_prob.fill_(0)
 
     def update_trace(self, x):
         spikes = self.convert_spikes(x)
@@ -686,8 +691,8 @@ class StochasticNeuron(BaseNeuron):
 
     def spiking(self):
         thresh = torch.rand_like(self.v_cell)
-        spike_prob = 1 - torch.exp(self.v_cell)
-        self.spikes.copy_(spike_prob >= thresh)
+        self.spike_prob.copy_(1 - torch.exp(self.v_cell))
+        self.spikes.copy_(self.spike_prob >= thresh)
         return self.spikes.clone()
 
     def forward(self, x):
@@ -704,6 +709,85 @@ class StochasticNeuron(BaseNeuron):
 #########################################################
 # Izhikevich Neuron
 #########################################################
+class IzhikevichNeuron(BaseNeuron):
+    r"""Copy from the neuron model published in: https://www.izhikevich.org/publications/spikes.htm"""
+
+    def __init__(
+        self,
+        cells_shape,
+        a,
+        b,
+        c,
+        d,
+        thresh,
+        dt,
+        alpha_t,
+        tau_t,
+        update_type="linear",
+        store_trace=False,
+    ):
+        super(IzhikevichNeuron, self).__init__(
+            cells_shape,
+            thresh,
+            0,
+            0,
+            alpha_t,
+            dt,
+            0,
+            store_trace=store_trace,
+        )
+
+        # Type of updates
+        if update_type == "linear":
+            self.voltage_update = sf._lif_linear_voltage_update
+            self.trace_update = sf._linear_trace_update
+        elif update_type == "exponential":
+            self.voltage_update = sf._lif_exponential_voltage_update
+            self.trace_update = sf._exponential_trace_update
+        else:
+            raise ValueError(f"Unsupported update type {update_type}")
+
+        # Fixed parameters
+        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
+
+        # Fixed parameters
+        self.register_buffer("a", torch.tensor(a, dtype=torch.float))
+        self.register_buffer("b", torch.tensor(b, dtype=torch.float))
+        self.register_buffer("c", torch.tensor(c, dtype=torch.float))
+        self.register_buffer("d", torch.tensor(d, dtype=torch.float))
+        self.register_buffer("u", torch.zeros(*cells_shape))
+        self.init_neuron()
+
+    def update_trace(self, x):
+        spikes = self.convert_spikes(x)
+        self.trace = self.trace_update(
+            self.trace, spikes, self.alpha_t, self.tau_t, self.dt
+        )
+
+    def update_voltage(self, x):
+        dv = 0.04 * self.v_cell**2 + 5 * self.v_cell + 140 - self.u + x
+        self.v_cell += dv
+
+    def update_u(self):
+        du = self.a * (self.b * self.v_cell - self.u)
+        self.u += du
+
+    def spiking(self):
+        # Determine which neurons spiked and reset their v and u values
+        self.spikes.copy_(self.v_cell >= self.thresh)
+        self.v_cell[self.spikes] = self.c[self.spikes]
+        self.u[self.spikes] += self.d[self.spikes]
+
+        return self.spikes.clone()
+
+    def forward(self, x):
+        x = self.fold(x)
+        self.update_voltage(x)
+        spikes = self.spiking()
+        self.update_trace(spikes)
+        if self.complete_trace is not None:
+            self.concat_trace(spikes)
+        return spikes, self.trace
 
 
 #########################################################
