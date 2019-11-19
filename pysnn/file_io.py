@@ -215,7 +215,7 @@ def encode_1d_spikes(filename, TD):
 
     >>> file_io.write1Dspikes(file_path, TD)
     """
-    assert TD.dim != 1, "Expected Td dimension to be 1. It was: {}".format(TD.dim)
+    assert TD.dim != 1, f"Expected TD dimension to be 1. It was: {TD.dim}"
     x_events = np.round(TD.x).astype(int)
     p_events = np.round(TD.p).astype(int)
     t_events = np.round(TD.t * 1000).astype(int)  # encode spike time in us
@@ -287,7 +287,7 @@ def encode_2d_spikes(filename, TD):
 
     >>> file_io.write2Dspikes(file_path, TD)
     """
-    assert TD.dim != 2, "Expected Td dimension to be 2. It was: {}".format(TD.dim)
+    assert TD.dim != 2, f"Expected TD dimension to be 2. It was: {TD.dim}"
     x_events = np.round(TD.x).astype(int)
     y_events = np.round(TD.y).astype(int)
     p_events = np.round(TD.p).astype(int)
@@ -358,7 +358,7 @@ def encode_3d_spikes(filename, TD):
 
     >>> file_io.write3Dspikes(file_path, TD)
     """
-    assert TD.dim != 2, "Expected Td dimension to be 2. It was: {}".format(TD.dim)
+    assert TD.dim != 2, f"Expected TD dimension to be 2. It was: {TD.dim}"
     x_events = np.round(TD.x).astype(int)
     y_events = np.round(TD.y).astype(int)
     p_events = np.round(TD.p).astype(int)
@@ -463,7 +463,7 @@ def encode_1d_num_spikes(filename, n_id, t_start, t_end, n_spikes):
 # Visualize spikes
 #########################################################
 def _show_td_1d(TD, frame_rate=24, pre_compute_frames=True, repeat=False):
-    assert TD.dim != 1, "Expected Td dimension to be 1. It was: {}".format(TD.dim)
+    assert TD.dim != 1, f"Expected TD dimension to be 1. It was: {TD.dim}"
     fig = plt.figure()
     interval = 1e3 / frame_rate  # in ms
     x_dim = TD.x.max() + 1
@@ -495,7 +495,7 @@ def _show_td_1d(TD, frame_rate=24, pre_compute_frames=True, repeat=False):
 
 
 def _show_td_2d(TD, frame_rate=24, pre_compute_frames=True, repeat=False):
-    assert TD.dim != 2, "Expected Td dimension to be 2. It was: {}".format(TD.dim)
+    assert TD.dim != 2, f"Expected TD dimension to be 2. It was: {TD.dim}"
     fig = plt.figure()
     interval = 1e3 / frame_rate  # in ms
     x_dim = TD.x.max() + 1

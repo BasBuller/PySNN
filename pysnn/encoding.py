@@ -11,8 +11,8 @@ def poisson_encoding(intensities, duration, dt):
         https://github.com/Hananel-Hazan/bindsnet/blob/master/bindsnet/encoding/encodings.py
     """
 
-    assert (intensities >= 0).all(), "Inputs must be non-negative"
-    assert intensities.dtype == torch.float, "Intensities must be floats"
+    assert (intensities >= 0).all(), "Inputs must be non-negative."
+    assert intensities.dtype == torch.float, "Intensities must be of type Float."
 
     # Get shape and size of data.
     shape, size = intensities.shape, intensities.numel()

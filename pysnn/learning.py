@@ -125,9 +125,7 @@ class MSTDPET(LearningRule):
     Update rule can be applied at any desired time step.
     """
 
-    def __init__(
-        self, layers, a_pre=1, a_post=1, lr=0.0001, e_trace_decay=float(np.exp(-1 / 20))
-    ):
+    def __init__(self, layers, a_pre, a_post, lr, e_trace_decay):
         self.check_layers(layers)
 
         # Collect desired tensors from state dict in a layer object
@@ -167,10 +165,10 @@ class MSTDPET(LearningRule):
         for layer in self.layers.values():
             # Update eligibility trace
             layer["e_trace"] *= self.e_trace_decay
-            layer["e_trace"] += self.pre_mult_post(
+            layer["e_trace"] += self.a_pre * self.pre_mult_post(
                 layer["pre_trace"], layer["post_spikes"], layer["type"]
             )
-            layer["e_trace"] -= self.pre_mult_post(
+            layer["e_trace"] -= self.a_post * self.pre_mult_post(
                 layer["pre_spikes"], layer["post_trace"], layer["type"]
             )
 

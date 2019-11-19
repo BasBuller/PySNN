@@ -23,6 +23,8 @@ class Connection(nn.Module):
         super(Connection, self).__init__()
         self.synapse_shape = shape
 
+        # TODO: Should there be a check for dt fitting integer number of times in delay duration?
+
         # Delay values are initiated with +1, reason for this is that a spike is 'generated' once the counter reaches 1
         # A counter at 0 means the cell is not in refractory or spiking state
         if isinstance(delay, int):
@@ -89,14 +91,12 @@ class Connection(nn.Module):
         
         Assumes weights are implemented by the class that inherits from this base class.
         """
-        assert hasattr(self, "weight"), "Weight attribute is missing for {}.".format(
-            self.__class__.__name__
-        )
+        assert hasattr(
+            self, "weight"
+        ), f"Weight attribute is missing for {self.__class__.__name__}."
         assert isinstance(
             self.weight, Parameter
-        ), "Weight attribute is not a PyTorch Parameter for {}.".format(
-            self.__class__.__name__
-        )
+        ), f"Weight attribute is not a PyTorch Parameter for {self.__class__.__name__}."
         self.no_grad()
         self.reset_state()
         self.reset_weights()
@@ -195,9 +195,9 @@ class _ConvNd(Connection):
         # Assertions
         assert isinstance(
             im_dims, (tuple, list)
-        ), "Parameter im_dims should be a tuple or list of ints"
+        ), "Parameter im_dims should be a tuple or list of ints."
         for i in im_dims:
-            assert isinstance(i, int), "Variables in im_dims should be int"
+            assert isinstance(i, int), "Variables in im_dims should be int."
 
         # Convolution parameters
         self.batch_size = (
@@ -227,7 +227,7 @@ class _ConvNd(Connection):
                 self.kernel_size,
                 stride=self.stride,
                 padding=self.padding,
-                dilation=self.dilation
+                dilation=self.dilation,
             )
         elif len(im_dims) == 3:
             self.image_out_shape = (0, 0, 0)
@@ -270,8 +270,6 @@ class Conv2d(_ConvNd):
         batch_size,
         dt,
         delay,
-        tau_t,
-        alpha_t,
         stride=1,
         padding=0,
         dilation=1,
@@ -288,10 +286,6 @@ class Conv2d(_ConvNd):
             padding,
             dilation,
         )
-
-        # Fixed parameters
-        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
-        self.register_buffer("alpha_t", torch.tensor(alpha_t, dtype=torch.float))
 
         # Intialize layer
         self.init_connection()
