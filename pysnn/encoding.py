@@ -9,6 +9,16 @@ def poisson_encoding(intensities, duration, dt):
     
     Adapted from:
         https://github.com/Hananel-Hazan/bindsnet/blob/master/bindsnet/encoding/encodings.py
+
+    Generates Poisson-distributed spike trains based on input intensity. Inputs must be
+    non-negative, and give the firing rate in Hz. Inter-spike intervals (ISIs) for
+    non-negative data incremented by one to avoid zero intervals while maintaining ISI
+    distributions.
+
+    :param datum: Tensor of shape ``[n_1, ..., n_k]``.
+    :param time: Length of Poisson spike train per input variable.
+    :param dt: Simulation time step.
+    :return: Tensor of shape ``[time, n_1, ..., n_k]`` of Poisson-distributed spikes.
     """
 
     assert (intensities >= 0).all(), "Inputs must be non-negative."
@@ -49,6 +59,11 @@ class PoissonEncoder:
     
     Adapted from:
         https://github.com/Hananel-Hazan/bindsnet/blob/master/bindsnet/encoding/encodings.py
+
+    Creates a callable PoissonEncoder which encodes as defined in ``bindsnet.encoding.poisson``
+
+    :param time: Length of Poisson spike train per input variable.
+    :param dt: Simulation time step.
     """
 
     def __init__(self, duration, dt):

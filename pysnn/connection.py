@@ -62,7 +62,15 @@ class Connection(nn.Module):
         self.delay.fill_(0)
 
     def reset_weights(self, distribution="uniform", gain=1.0, a=0.0, b=1.0):
-        r"""Reinnitialize learnable network Parameters (e.g. weights)."""
+        r"""Reinnitialize network weights.
+
+        Note: Not all parameters apply to every distribution.
+        
+        :param distribution: Distribution used for initialization
+        :param gain: Scalar increase of the weight values.
+        :param a: Lower bound.
+        :param b: Upper bound.
+        """
         if distribution == "uniform":
             nn.init.uniform_(self.weight, a=a, b=b)
         if distribution == "neuron_scaled_uniform":
@@ -82,9 +90,6 @@ class Connection(nn.Module):
             nn.init.kaiming_uniform_(self.weight)
         elif distribution == "constant":
             nn.init.constant_(self.weight, gain)
-
-    def reset_thresholds(self, distributions="uniform", gain=1.0, a=-1.0, b=1.0):
-        pass
 
     def init_connection(self):
         r"""Collection of all intialization methods.
@@ -142,19 +147,34 @@ class _Linear(Connection):
         return x
 
     def fold(self, x):
-        r"""Simply folds incoming trace or activation potentials to output format."""
+        r"""Fold incoming spike, trace, or activation potentials to output format.
+        
+        :param x: Tensor containing spikes, traces, or activations.
+
+        :return: Folder input tensor.
+        """
         return x.view(
             self.batch_size, -1, self.out_features, self.in_features
         )  # TODO: Add posibility for a channel dim at dim 2
 
     def update_trace(self, t_in):
-        r"""Propagate traces incoming from pre-synaptic neuron through all its outgoing connections."""
+        r"""Propagate traces incoming from pre-synaptic neuron through all its outgoing connections.
+        
+        :param t_in: Current values of the trace to be stored.
+        """
         # TODO: Unsure if this clone is needed or not. Might even have to use repeat()
         self.trace.copy_(t_in.expand(-1, self.out_features, -1).contiguous())
 
 
 class Linear(_Linear):
-    r"""SNN linear (fully connected) layer with interface comparable to torch.nn.Linear."""
+    r"""SNN linear (fully connected) layer with interface comparable to torch.nn.Linear.
+    
+    :param in_features: Size of each input sample.
+    :param out_features: Size of each output sample.
+    :param batch_size: Number of samples in a batch.
+    :param dt: Duration of each timestep.
+    :param delay: Time it takes for a spike to propagate through the connection. Should be an integer multiple of dt.
+    """
 
     def __init__(self, in_features, out_features, batch_size, dt, delay):
         super(Linear, self).__init__(in_features, out_features, batch_size, dt, delay)
@@ -163,11 +183,23 @@ class Linear(_Linear):
         self.init_connection()
 
     def activation_potential(self, x):
-        r"""Determine activation potentials from each synapse for current time step."""
+        r"""Determine activation potentials from each synapse for current time step.
+        
+        :param x: Presynaptic spikes.
+
+        :return: Activation potentials.
+        """
         out = x * self.weight
         return self.fold(out)
 
     def forward(self, x, trace_in):
+        r"""Calculate postsynaptic activation potentials and trace.
+        
+        :param x: Presynaptic spikes.
+        :param trace_in: Presynaptic trace.
+
+        :return: (Activation potentials, Postsynaptic trace)
+        """
         self.update_trace(trace_in)
         x = self.convert_spikes(x)
         x = self.propagate_spike(x)
@@ -259,7 +291,19 @@ class _ConvNd(Connection):
 
 
 class Conv2d(_ConvNd):
-    r"""Convolutional SNN layer interface comparable to torch.nn.Conv2d."""
+    r"""Convolutional SNN layer interface comparable to torch.nn.Conv2d.
+    
+    :param: Number of channels in the input image.
+    :param out_channels: Number of channels produced by the convolution
+    :param kernel_size: Size of the convolving kernel
+    :param im_dims: (Height, Width) of the input image.
+    :param batch_size: Number of samples in a batch.
+    :param dt: Duration of each timestep.
+    :param delay: Time it takes for a spike to propagate through the connection. Should be an integer multiple of dt.
+    :param stride: Stride of the convolution. Default: 1
+    :param padding: Zero-padding added to both sides of the input. Default: 0
+    :param dilation: Spacing between kernel elements. Default: 1
+    """
 
     def __init__(
         self,
@@ -291,11 +335,23 @@ class Conv2d(_ConvNd):
         self.init_connection()
 
     def activation_potential(self, x):
-        r"""Determine activation potentials from each synapse for current time step."""
+        r"""Determine activation potentials from each synapse for current time step.
+        
+        :param x: Presynaptic spikes.
+
+        :return: Activation potentials.
+        """
         x = x * self.weight.view(self.weight.shape[0], -1).unsqueeze(2)
         return self.fold(x)
 
     def forward(self, x, trace_in):
+        r"""Calculate postsynaptic activation potentials and trace.
+        
+        :param x: Presynaptic spikes.
+        :param trace_in: Presynaptic trace.
+
+        :return: (Activation potentials, Postsynaptic trace)
+        """
         trace_in = self.unfold(trace_in)
         self.update_trace(trace_in)
         x = self.convert_spikes(x)

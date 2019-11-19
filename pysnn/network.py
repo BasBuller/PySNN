@@ -10,8 +10,7 @@ from pysnn.neuron import BaseNeuron
 # SNN Network
 #########################################################
 class SNNNetwork(nn.Module):
-    r"""Simple base clase for defining SNN network, contains some convenience operators
-    for e.g. clearing network state after simulating a sample.
+    r"""Base clase for defining SNN network, contains several convenience operators for network simulations.
     """
 
     def __init__(self):
@@ -19,11 +18,18 @@ class SNNNetwork(nn.Module):
         self._layers = OrderedDict()
 
     def reset_state(self):
+        r"""Resets state parameters of all submodules, requires each submodule to have a reset_state function."""
         for module in self.modules():
             if not isinstance(module, SNNNetwork):
                 module.reset_state()
 
     def add_layer(self, name, connection, neuron):
+        r"""Adds which :class:`Neuron` and :class:`Connection` objects together form a layer, as well as the layer type.
+        
+        :param name: Name of the layer
+        :param connection: :class:`Connection` object
+        :param neuron: :class:`Neuron` object
+        """
         # Check connection object
         if not isinstance(connection, Connection):
             raise TypeError("Connection input needs to be a Connection object.")
@@ -52,9 +58,10 @@ class SNNNetwork(nn.Module):
         self._layers[name] = {"connection": connection, "neuron": neuron, "type": ctype}
 
     def layer_state_dict(self):
-        r"""Return state dicts grouped per layer, so a single Connection and a single Neuron state dict per layer."""
-        dict_names = ["connection", "neuron"]
-
+        r"""Return state dicts grouped per layer, so a single Connection and a single Neuron state dict per layer.
+        
+        :return: State Dicts for the :class:`Connection` and :class:`Neuron` of the layer, as well as the layer type.
+        """
         state_dicts = OrderedDict()
         for name, layer in self._layers.items():
             states = {}

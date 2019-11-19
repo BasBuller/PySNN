@@ -77,6 +77,10 @@ def train_test(root_dir, train_size=0.8, seed=42):
     r"""Split dataset into train and test sets.
     
     Takes in a directory where it looks for sub-directories. Content of each directory is split into train and test subsets.
+
+    :param root_dir: Directory containing data.
+    :param train_size: Percentage of the data to be assigned to training set, 1 - train_size is assigned as test set.
+    :param seed: Seed for random number generator.
     """
     content = _list_dir_content(root_dir)
     data, _ = _concat_dir_content(content)
@@ -89,8 +93,15 @@ def train_test(root_dir, train_size=0.8, seed=42):
 class NeuromorphicDataset(Dataset):
     r"""Class that wraps around several neuromorphic datasets.
 
-
     The class adheres to regular PyTorch dataset conventions.
+
+    :param data: Data for dataset formatted in a pd.DataFrame.
+    :param sampling_time: Duration of interval between samples.
+    :param sample_length: Total duration of a single sample.
+    :param height: Number of pixels in height direction.
+    :param width: Number of pixels in width direction.
+    :param im_transform: Image transforms, same convention as for PyTorch datasets.
+    :param lbl_transform: Lable transforms, same convention as for PyTorch datasets.
     """
 
     def __init__(
@@ -154,6 +165,8 @@ def ncaltech_train_test(
         https://www.garrickorchard.com/datasets/n-caltech101
     
     'Converting Static Image Datasets to Spiking Neuromorphic Datasets Using Saccades' by G. Orchard et al.
+
+    :return: :class:`NeuromorphicDataset` for both and training and test data.
     """
     train, test = train_test(root)
     train_dataset = NeuromorphicDataset(
@@ -194,6 +207,8 @@ def nmnist_train_test(
         https://www.garrickorchard.com/datasets/n-mnist
     
     'Converting Static Image Datasets to Spiking Neuromorphic Datasets Using Saccades' by G. Orchard et al.
+
+    :return: :class:`NeuromorphicDataset` for both and training and test data.
     """
     train_content = _list_dir_content(os.path.join(root, "Train"))
     train, _ = _concat_dir_content(train_content)
@@ -239,6 +254,8 @@ def ncars_train_test(
         https://www.prophesee.ai/dataset-n-cars/
     
     This is a two class problem.
+    
+    :return: :class:`NeuromorphicDataset` for both and training and test data.
     """
     train_content = _list_dir_content(os.path.join(root, "train"))
     train, _ = _concat_dir_content(train_content)
@@ -270,8 +287,14 @@ def ncars_train_test(
 ############################
 # Boolean
 ############################
-class _Boolean(Dataset):
-    r"""Dataset for generating event-based, boolean data samples. Can be used to construct AND, OR, XOR datasets."""
+class Boolean(Dataset):
+    r"""Dataset for generating event-based, boolean data samples. Can be used to construct AND, OR, XOR datasets.
+    
+    :param data_encoder: ``Encoder`` to convert scalar data values to spiketrains.
+    :param data_transform: Image transforms, same convention as for PyTorch datasets.
+    :param lbl_transform: Label transforms, same convention as for PyTorch datasets.
+    :repeats: Number of times to repeat the 4 samples within a single iteration of the dataset, total is 4 * repeats.
+    """
 
     def __init__(
         self, data_encoder=None, data_transform=None, lbl_transform=None, repeats=1
@@ -302,7 +325,9 @@ class _Boolean(Dataset):
         return sample, label
 
 
-class XOR(_Boolean):
+class XOR(Boolean):
+    r"""XOR dataset, inherits directly from :class:`Boolean`."""
+
     def __init__(
         self, data_encoder=None, data_transform=None, lbl_transform=None, repeats=1
     ):
@@ -310,7 +335,9 @@ class XOR(_Boolean):
         self.labels = torch.tensor([[0], [1], [1], [0]])
 
 
-class AND(_Boolean):
+class AND(Boolean):
+    r"""AND dataset, inherits directly from :class:`Boolean`."""
+
     def __init__(
         self, data_encoder=None, data_transform=None, lbl_transform=None, repeats=1
     ):
@@ -318,7 +345,9 @@ class AND(_Boolean):
         self.labels = torch.tensor([[0], [0], [0], [1]])
 
 
-class OR(_Boolean):
+class OR(Boolean):
+    r"""OR dataset, inherits directly from :class:`Boolean`."""
+
     def __init__(
         self, data_encoder=None, data_transform=None, lbl_transform=None, repeats=1
     ):
@@ -330,12 +359,20 @@ class OR(_Boolean):
 # transforms
 ############################
 class DiscretizeFloat:
+    r"""Discretize float to nearest integer values, returns a torch.Float."""
+
     def __call__(self, tensor):
         tensor = tensor.int()
         return tensor.float()
 
 
 class BooleanNoise:
+    r"""Add noise to the integer boolean values, e.g. 1 -> 0.8 and 0 -> 0.2
+    
+    :param low_thresh: Upper boundary for the negative values.
+    :param high_thresh: Lower boundary for the positive values.
+    """
+
     def __init__(self, low_thresh, high_thresh):
         self.low_distr = torch.distributions.Uniform(0.0, low_thresh)
         self.high_distr = torch.distributions.Uniform(high_thresh, 1.0)
@@ -351,6 +388,8 @@ class BooleanNoise:
 
 
 class Intensity:
+    r"""Multiplication with a fixed scalar value."""
+
     def __init__(self, intensity):
         self.intensity = intensity
 

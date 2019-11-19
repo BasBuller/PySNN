@@ -30,6 +30,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
 
@@ -64,6 +65,15 @@
 <code class="sig-prename descclassname">pysnn.datasets.</code><code class="sig-name descname">train_test</code><span class="sig-paren">(</span><em class="sig-param">root_dir</em>, <em class="sig-param">train_size=0.8</em>, <em class="sig-param">seed=42</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.datasets.train_test" title="Permalink to this definition">¶</a></dt>
 <dd><p>Split dataset into train and test sets.</p>
 <p>Takes in a directory where it looks for sub-directories. Content of each directory is split into train and test subsets.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>root_dir</strong> – Directory containing data.</p></li>
+<li><p><strong>train_size</strong> – Percentage of the data to be assigned to training set, 1 - train_size is assigned as test set.</p></li>
+<li><p><strong>seed</strong> – Seed for random number generator.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="class">
@@ -71,6 +81,19 @@
 <em class="property">class </em><code class="sig-prename descclassname">pysnn.datasets.</code><code class="sig-name descname">NeuromorphicDataset</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">sampling_time</em>, <em class="sig-param">sample_length</em>, <em class="sig-param">height</em>, <em class="sig-param">width</em>, <em class="sig-param">im_transform=None</em>, <em class="sig-param">lbl_transform=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.datasets.NeuromorphicDataset" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class that wraps around several neuromorphic datasets.</p>
 <p>The class adheres to regular PyTorch dataset conventions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> – Data for dataset formatted in a pd.DataFrame.</p></li>
+<li><p><strong>sampling_time</strong> – Duration of interval between samples.</p></li>
+<li><p><strong>sample_length</strong> – Total duration of a single sample.</p></li>
+<li><p><strong>height</strong> – Number of pixels in height direction.</p></li>
+<li><p><strong>width</strong> – Number of pixels in width direction.</p></li>
+<li><p><strong>im_transform</strong> – Image transforms, same convention as for PyTorch datasets.</p></li>
+<li><p><strong>lbl_transform</strong> – Lable transforms, same convention as for PyTorch datasets.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="function">
@@ -81,6 +104,11 @@
 <div><p><a class="reference external" href="https://www.garrickorchard.com/datasets/n-caltech101">https://www.garrickorchard.com/datasets/n-caltech101</a></p>
 </div></blockquote>
 <p>‘Converting Static Image Datasets to Spiking Neuromorphic Datasets Using Saccades’ by G. Orchard et al.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pysnn.datasets.NeuromorphicDataset" title="pysnn.datasets.NeuromorphicDataset"><code class="xref py py-class docutils literal notranslate"><span class="pre">NeuromorphicDataset</span></code></a> for both and training and test data.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="function">
@@ -91,6 +119,11 @@
 <div><p><a class="reference external" href="https://www.garrickorchard.com/datasets/n-mnist">https://www.garrickorchard.com/datasets/n-mnist</a></p>
 </div></blockquote>
 <p>‘Converting Static Image Datasets to Spiking Neuromorphic Datasets Using Saccades’ by G. Orchard et al.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pysnn.datasets.NeuromorphicDataset" title="pysnn.datasets.NeuromorphicDataset"><code class="xref py py-class docutils literal notranslate"><span class="pre">NeuromorphicDataset</span></code></a> for both and training and test data.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="function">
@@ -101,37 +134,74 @@
 <div><p><a class="reference external" href="https://www.prophesee.ai/dataset-n-cars/">https://www.prophesee.ai/dataset-n-cars/</a></p>
 </div></blockquote>
 <p>This is a two class problem.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#pysnn.datasets.NeuromorphicDataset" title="pysnn.datasets.NeuromorphicDataset"><code class="xref py py-class docutils literal notranslate"><span class="pre">NeuromorphicDataset</span></code></a> for both and training and test data.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="pysnn.datasets.Boolean">
+<em class="property">class </em><code class="sig-prename descclassname">pysnn.datasets.</code><code class="sig-name descname">Boolean</code><span class="sig-paren">(</span><em class="sig-param">data_encoder=None</em>, <em class="sig-param">data_transform=None</em>, <em class="sig-param">lbl_transform=None</em>, <em class="sig-param">repeats=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.datasets.Boolean" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dataset for generating event-based, boolean data samples. Can be used to construct AND, OR, XOR datasets.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_encoder</strong> – <code class="docutils literal notranslate"><span class="pre">Encoder</span></code> to convert scalar data values to spiketrains.</p></li>
+<li><p><strong>data_transform</strong> – Image transforms, same convention as for PyTorch datasets.</p></li>
+<li><p><strong>lbl_transform</strong> – Label transforms, same convention as for PyTorch datasets.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Repeats</dt>
+<dd class="field-even"><p>Number of times to repeat the 4 samples within a single iteration of the dataset, total is 4 * repeats.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="class">
 <dt id="pysnn.datasets.XOR">
 <em class="property">class </em><code class="sig-prename descclassname">pysnn.datasets.</code><code class="sig-name descname">XOR</code><span class="sig-paren">(</span><em class="sig-param">data_encoder=None</em>, <em class="sig-param">data_transform=None</em>, <em class="sig-param">lbl_transform=None</em>, <em class="sig-param">repeats=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.datasets.XOR" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>XOR dataset, inherits directly from <a class="reference internal" href="#pysnn.datasets.Boolean" title="pysnn.datasets.Boolean"><code class="xref py py-class docutils literal notranslate"><span class="pre">Boolean</span></code></a>.</p>
+</dd></dl>
 
 <dl class="class">
 <dt id="pysnn.datasets.AND">
 <em class="property">class </em><code class="sig-prename descclassname">pysnn.datasets.</code><code class="sig-name descname">AND</code><span class="sig-paren">(</span><em class="sig-param">data_encoder=None</em>, <em class="sig-param">data_transform=None</em>, <em class="sig-param">lbl_transform=None</em>, <em class="sig-param">repeats=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.datasets.AND" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>AND dataset, inherits directly from <a class="reference internal" href="#pysnn.datasets.Boolean" title="pysnn.datasets.Boolean"><code class="xref py py-class docutils literal notranslate"><span class="pre">Boolean</span></code></a>.</p>
+</dd></dl>
 
 <dl class="class">
 <dt id="pysnn.datasets.OR">
 <em class="property">class </em><code class="sig-prename descclassname">pysnn.datasets.</code><code class="sig-name descname">OR</code><span class="sig-paren">(</span><em class="sig-param">data_encoder=None</em>, <em class="sig-param">data_transform=None</em>, <em class="sig-param">lbl_transform=None</em>, <em class="sig-param">repeats=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.datasets.OR" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>OR dataset, inherits directly from <a class="reference internal" href="#pysnn.datasets.Boolean" title="pysnn.datasets.Boolean"><code class="xref py py-class docutils literal notranslate"><span class="pre">Boolean</span></code></a>.</p>
+</dd></dl>
 
 <dl class="class">
 <dt id="pysnn.datasets.DiscretizeFloat">
 <em class="property">class </em><code class="sig-prename descclassname">pysnn.datasets.</code><code class="sig-name descname">DiscretizeFloat</code><a class="headerlink" href="#pysnn.datasets.DiscretizeFloat" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Discretize float to nearest integer values, returns a torch.Float.</p>
+</dd></dl>
 
 <dl class="class">
 <dt id="pysnn.datasets.BooleanNoise">
 <em class="property">class </em><code class="sig-prename descclassname">pysnn.datasets.</code><code class="sig-name descname">BooleanNoise</code><span class="sig-paren">(</span><em class="sig-param">low_thresh</em>, <em class="sig-param">high_thresh</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.datasets.BooleanNoise" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Add noise to the integer boolean values, e.g. 1 -&gt; 0.8 and 0 -&gt; 0.2</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>low_thresh</strong> – Upper boundary for the negative values.</p></li>
+<li><p><strong>high_thresh</strong> – Lower boundary for the positive values.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="class">
 <dt id="pysnn.datasets.Intensity">
 <em class="property">class </em><code class="sig-prename descclassname">pysnn.datasets.</code><code class="sig-name descname">Intensity</code><span class="sig-paren">(</span><em class="sig-param">intensity</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.datasets.Intensity" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Multiplication with a fixed scalar value.</p>
+</dd></dl>
 
 </div>
 

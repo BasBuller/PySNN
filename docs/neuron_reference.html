@@ -30,6 +30,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
 
@@ -70,7 +71,15 @@ design should inherit from the <code class="xref py py-class docutils literal no
 <span class="target" id="module-pysnn.neuron"></span><dl class="class">
 <dt id="pysnn.neuron.BaseInput">
 <em class="property">class </em><code class="sig-prename descclassname">pysnn.neuron.</code><code class="sig-name descname">BaseInput</code><span class="sig-paren">(</span><em class="sig-param">cells_shape</em>, <em class="sig-param">dt</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseInput" title="Permalink to this definition">¶</a></dt>
-<dd><p>Simple feed-through layer of neurons used for storing a trace.</p>
+<dd><p>Simple feed-through layer of neurons used for generating a trace.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cells_shape</strong> – a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.</p></li>
+<li><p><strong>dt</strong> – duration of a single timestep.</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="method">
 <dt id="pysnn.neuron.BaseInput.reset_state">
 <code class="sig-name descname">reset_state</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseInput.reset_state" title="Permalink to this definition">¶</a></dt>
@@ -80,19 +89,25 @@ design should inherit from the <code class="xref py py-class docutils literal no
 <dl class="method">
 <dt id="pysnn.neuron.BaseInput.no_grad">
 <code class="sig-name descname">no_grad</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseInput.no_grad" title="Permalink to this definition">¶</a></dt>
-<dd><p>Turn off learning and gradient storing.</p>
+<dd><p>Turn off gradient storing.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pysnn.neuron.BaseInput.init_neuron">
 <code class="sig-name descname">init_neuron</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseInput.init_neuron" title="Permalink to this definition">¶</a></dt>
-<dd><p>Initialize state, parameters and turn off gradients.</p>
+<dd><p>Initialize state, and turn off gradients.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pysnn.neuron.BaseInput.convert_input">
 <code class="sig-name descname">convert_input</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseInput.convert_input" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Convert torch.bool input to the datatype set for arithmetics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Input Tensor of torch.bool type.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="method">
 <dt id="pysnn.neuron.BaseInput.forward">
@@ -111,30 +126,46 @@ registered hooks while the latter silently ignores them.</p>
 <dl class="method">
 <dt id="pysnn.neuron.BaseInput.update_trace">
 <code class="sig-name descname">update_trace</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseInput.update_trace" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Placeholder for trace update function.</p>
+</dd></dl>
 
 </dd></dl>
 
 <dl class="class">
 <dt id="pysnn.neuron.Input">
 <em class="property">class </em><code class="sig-prename descclassname">pysnn.neuron.</code><code class="sig-name descname">Input</code><span class="sig-paren">(</span><em class="sig-param">cells_shape</em>, <em class="sig-param">dt</em>, <em class="sig-param">alpha_t</em>, <em class="sig-param">tau_t</em>, <em class="sig-param">update_type='linear'</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.Input" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="method">
+<dd><p>Standard input neuron, used to propagate input traces to the following <code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code> object, and calculates a trace.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cells_shape</strong> – a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.</p></li>
+<li><p><strong>dt</strong> – duration of a single timestep.</p></li>
+<li><p><strong>alpha_t</strong> – scaling constant for the increase of the trace by a single spike.</p></li>
+<li><p><strong>tau_t</strong> – decay parameter for the trace.</p></li>
+<li><p><strong>update_type</strong> – string, either <code class="docutils literal notranslate"><span class="pre">'linear'</span></code> or <code class="docutils literal notranslate"><span class="pre">'exponential'</span></code>, default is <code class="docutils literal notranslate"><span class="pre">'linear'</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
 <dt id="pysnn.neuron.Input.update_trace">
 <code class="sig-name descname">update_trace</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.Input.update_trace" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Converts input spikes and updates the trace.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Tensor with the input spikes.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="method">
 <dt id="pysnn.neuron.Input.forward">
 <code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.Input.forward" title="Permalink to this definition">¶</a></dt>
-<dd><p>Defines the computation performed at every call.</p>
-<p>Should be overridden by all subclasses.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Although the recipe for forward pass needs to be defined within
-this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
-instead of this since the former takes care of running the
-registered hooks while the latter silently ignores them.</p>
-</div>
+<dd><p>Propagate spikes through input neurons and compute trace.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Input spikes</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -147,6 +178,21 @@ registered hooks while the latter silently ignores them.</p>
 adhere to the API functionalities to integrate within Connection modules.</p>
 <p>Make sure the Neuron class receives input voltage for each neuron and
 returns a Tensor indicating which neurons have spiked.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cells_shape</strong> – a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.</p></li>
+<li><p><strong>thresh</strong> – spiking threshold, when the cells’ voltage surpasses this value it generates a spike.</p></li>
+<li><p><strong>v_rest</strong> – voltage resting value, the <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> will default back to this over time or after spiking.</p></li>
+<li><p><strong>alpha_v</strong> – scaling constant for the increase of the voltage by a single spike.</p></li>
+<li><p><strong>alpha_t</strong> – scaling constant for the increase of the trace by a single spike.</p></li>
+<li><p><strong>dt</strong> – duration of a single timestep.</p></li>
+<li><p><strong>duration_refrac</strong> – Number of timesteps the <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> is dormant after spiking. Make sure <code class="docutils literal notranslate"><span class="pre">dt</span></code> fits an integer number of times in <code class="docutils literal notranslate"><span class="pre">duration</span> <span class="pre">refrac</span></code>.</p></li>
+<li><p><strong>update_type</strong> – string, either <code class="docutils literal notranslate"><span class="pre">'linear'</span></code> or <code class="docutils literal notranslate"><span class="pre">'exponential'</span></code>, default is <code class="docutils literal notranslate"><span class="pre">'linear'</span></code>.</p></li>
+<li><p><strong>store_trace</strong> – <code class="docutils literal notranslate"><span class="pre">Boolean</span></code> flag to store the complete spiking history, defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="method">
 <dt id="pysnn.neuron.BaseNeuron.spiking">
 <code class="sig-name descname">spiking</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.spiking" title="Permalink to this definition">¶</a></dt>
@@ -182,7 +228,7 @@ returns a Tensor indicating which neurons have spiked.</p>
 <dl class="method">
 <dt id="pysnn.neuron.BaseNeuron.convert_spikes">
 <code class="sig-name descname">convert_spikes</code><span class="sig-paren">(</span><em class="sig-param">spikes</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.convert_spikes" title="Permalink to this definition">¶</a></dt>
-<dd><p>Cast uint8 spikes to datatype that is used for voltage and weights</p>
+<dd><p>Cast <code class="docutils literal notranslate"><span class="pre">torch.bool</span></code> spikes to datatype that is used for voltage and weights</p>
 </dd></dl>
 
 <dl class="method">
@@ -206,7 +252,7 @@ returns a Tensor indicating which neurons have spiked.</p>
 <dl class="method">
 <dt id="pysnn.neuron.BaseNeuron.init_neuron">
 <code class="sig-name descname">init_neuron</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.init_neuron" title="Permalink to this definition">¶</a></dt>
-<dd><p>Initialize state, parameters and turn off gradients.</p>
+<dd><p>Initialize state, parameters, and turn off gradients.</p>
 </dd></dl>
 
 <dl class="method">
@@ -226,41 +272,68 @@ registered hooks while the latter silently ignores them.</p>
 <dl class="method">
 <dt id="pysnn.neuron.BaseNeuron.update_trace">
 <code class="sig-name descname">update_trace</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.update_trace" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Placeholder for trace update function.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pysnn.neuron.BaseNeuron.update_voltage">
 <code class="sig-name descname">update_voltage</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.BaseNeuron.update_voltage" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Placeholder for voltage update function.</p>
+</dd></dl>
 
 </dd></dl>
 
 <dl class="class">
 <dt id="pysnn.neuron.IFNeuron">
 <em class="property">class </em><code class="sig-prename descclassname">pysnn.neuron.</code><code class="sig-name descname">IFNeuron</code><span class="sig-paren">(</span><em class="sig-param">cells_shape</em>, <em class="sig-param">thresh</em>, <em class="sig-param">v_rest</em>, <em class="sig-param">alpha_v</em>, <em class="sig-param">alpha_t</em>, <em class="sig-param">dt</em>, <em class="sig-param">duration_refrac</em>, <em class="sig-param">tau_t</em>, <em class="sig-param">update_type='linear'</em>, <em class="sig-param">store_trace=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.IFNeuron" title="Permalink to this definition">¶</a></dt>
-<dd><p>Integrate and Fire neuron.</p>
+<dd><p>Basic integrate and fire neuron, cell voltage does not decay over time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cells_shape</strong> – a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.</p></li>
+<li><p><strong>thresh</strong> – spiking threshold, when the cells’ voltage surpasses this value it generates a spike.</p></li>
+<li><p><strong>v_rest</strong> – voltage resting value, the <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> will default back to this over time or after spiking.</p></li>
+<li><p><strong>alpha_v</strong> – scaling constant for the increase of the voltage by a single spike.</p></li>
+<li><p><strong>alpha_t</strong> – scaling constant for the increase of the trace by a single spike.</p></li>
+<li><p><strong>dt</strong> – duration of a single timestep.</p></li>
+<li><p><strong>duration_refrac</strong> – Number of timesteps the <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> is dormant after spiking. Make sure <code class="docutils literal notranslate"><span class="pre">dt</span></code> fits an integer number of times in <code class="docutils literal notranslate"><span class="pre">duration</span> <span class="pre">refrac</span></code>.</p></li>
+<li><p><strong>tau_t</strong> – decay parameter for the trace.</p></li>
+<li><p><strong>update_type</strong> – string, either <code class="docutils literal notranslate"><span class="pre">'linear'</span></code> or <code class="docutils literal notranslate"><span class="pre">'exponential'</span></code>, default is <code class="docutils literal notranslate"><span class="pre">'linear'</span></code>.</p></li>
+<li><p><strong>store_trace</strong> – <code class="docutils literal notranslate"><span class="pre">Boolean</span></code> flag to store the complete spiking history, defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="method">
 <dt id="pysnn.neuron.IFNeuron.update_trace">
 <code class="sig-name descname">update_trace</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.IFNeuron.update_trace" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Incoming/presynaptic spikes</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="method">
 <dt id="pysnn.neuron.IFNeuron.update_voltage">
 <code class="sig-name descname">update_voltage</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.IFNeuron.update_voltage" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Incoming/presynaptic spikes</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="method">
 <dt id="pysnn.neuron.IFNeuron.forward">
 <code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.IFNeuron.forward" title="Permalink to this definition">¶</a></dt>
-<dd><p>Defines the computation performed at every call.</p>
-<p>Should be overridden by all subclasses.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Although the recipe for forward pass needs to be defined within
-this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
-instead of this since the former takes care of running the
-registered hooks while the latter silently ignores them.</p>
-</div>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Incoming/presynaptic spikes</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Neuron output spikes and trace</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -268,29 +341,55 @@ registered hooks while the latter silently ignores them.</p>
 <dl class="class">
 <dt id="pysnn.neuron.LIFNeuron">
 <em class="property">class </em><code class="sig-prename descclassname">pysnn.neuron.</code><code class="sig-name descname">LIFNeuron</code><span class="sig-paren">(</span><em class="sig-param">cells_shape</em>, <em class="sig-param">thresh</em>, <em class="sig-param">v_rest</em>, <em class="sig-param">alpha_v</em>, <em class="sig-param">alpha_t</em>, <em class="sig-param">dt</em>, <em class="sig-param">duration_refrac</em>, <em class="sig-param">tau_v</em>, <em class="sig-param">tau_t</em>, <em class="sig-param">update_type='linear'</em>, <em class="sig-param">store_trace=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.LIFNeuron" title="Permalink to this definition">¶</a></dt>
-<dd><p>Leaky Integrate and Fire neuron.</p>
+<dd><p>Leaky integrate and fire neuron, cell voltage decays over time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cells_shape</strong> – a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.</p></li>
+<li><p><strong>thresh</strong> – spiking threshold, when the cells’ voltage surpasses this value it generates a spike.</p></li>
+<li><p><strong>v_rest</strong> – voltage resting value, the <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> will default back to this over time or after spiking.</p></li>
+<li><p><strong>alpha_v</strong> – scaling constant for the increase of the voltage by a single spike.</p></li>
+<li><p><strong>alpha_t</strong> – scaling constant for the increase of the trace by a single spike.</p></li>
+<li><p><strong>dt</strong> – duration of a single timestep.</p></li>
+<li><p><strong>duration_refrac</strong> – Number of timesteps the <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> is dormant after spiking. Make sure <code class="docutils literal notranslate"><span class="pre">dt</span></code> fits an integer number of times in <code class="docutils literal notranslate"><span class="pre">duration</span> <span class="pre">refrac</span></code>.</p></li>
+<li><p><strong>tau_v</strong> – decay parameter for the voltage.</p></li>
+<li><p><strong>tau_t</strong> – decay parameter for the trace.</p></li>
+<li><p><strong>update_type</strong> – string, either <code class="docutils literal notranslate"><span class="pre">'linear'</span></code> or <code class="docutils literal notranslate"><span class="pre">'exponential'</span></code>, default is <code class="docutils literal notranslate"><span class="pre">'linear'</span></code>.</p></li>
+<li><p><strong>store_trace</strong> – <code class="docutils literal notranslate"><span class="pre">Boolean</span></code> flag to store the complete spiking history, defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="method">
 <dt id="pysnn.neuron.LIFNeuron.update_trace">
 <code class="sig-name descname">update_trace</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.LIFNeuron.update_trace" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Incoming/presynaptic spikes</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="method">
 <dt id="pysnn.neuron.LIFNeuron.update_voltage">
 <code class="sig-name descname">update_voltage</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.LIFNeuron.update_voltage" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Incoming/presynaptic spikes</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="method">
 <dt id="pysnn.neuron.LIFNeuron.forward">
 <code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.LIFNeuron.forward" title="Permalink to this definition">¶</a></dt>
-<dd><p>Defines the computation performed at every call.</p>
-<p>Should be overridden by all subclasses.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Although the recipe for forward pass needs to be defined within
-this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
-instead of this since the former takes care of running the
-registered hooks while the latter silently ignores them.</p>
-</div>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Incoming/presynaptic spikes</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Neuron output spikes and trace</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -298,35 +397,74 @@ registered hooks while the latter silently ignores them.</p>
 <dl class="class">
 <dt id="pysnn.neuron.AdaptiveLIFNeuron">
 <em class="property">class </em><code class="sig-prename descclassname">pysnn.neuron.</code><code class="sig-name descname">AdaptiveLIFNeuron</code><span class="sig-paren">(</span><em class="sig-param">cells_shape</em>, <em class="sig-param">thresh</em>, <em class="sig-param">v_rest</em>, <em class="sig-param">alpha_v</em>, <em class="sig-param">alpha_t</em>, <em class="sig-param">dt</em>, <em class="sig-param">duration_refrac</em>, <em class="sig-param">tau_v</em>, <em class="sig-param">tau_t</em>, <em class="sig-param">alpha_thresh</em>, <em class="sig-param">tau_thresh</em>, <em class="sig-param">update_type='linear'</em>, <em class="sig-param">store_trace=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.AdaptiveLIFNeuron" title="Permalink to this definition">¶</a></dt>
-<dd><p>Adaptive Leaky Integrate and Fire neuron.</p>
+<dd><p>Adaptive leaky integrate and fire neuron.</p>
+<p>The cell voltage decays over time, the spiking threshold adapts based on the recent spiking activity of the <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cells_shape</strong> – a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.</p></li>
+<li><p><strong>thresh</strong> – spiking threshold, when the cells’ voltage surpasses this value it generates a spike.</p></li>
+<li><p><strong>v_rest</strong> – voltage resting value, the <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> will default back to this over time or after spiking.</p></li>
+<li><p><strong>alpha_v</strong> – scaling constant for the increase of the voltage by a single spike.</p></li>
+<li><p><strong>alpha_t</strong> – scaling constant for the increase of the trace by a single spike.</p></li>
+<li><p><strong>dt</strong> – duration of a single timestep.</p></li>
+<li><p><strong>duration_refrac</strong> – Number of timesteps the <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> is dormant after spiking. Make sure <code class="docutils literal notranslate"><span class="pre">dt</span></code> fits an integer number of times in <code class="docutils literal notranslate"><span class="pre">duration</span> <span class="pre">refrac</span></code>.</p></li>
+<li><p><strong>tau_v</strong> – decay parameter for the voltage.</p></li>
+<li><p><strong>tau_t</strong> – decay parameter for the trace.</p></li>
+<li><p><strong>alpha_thresh</strong> – scaling constant for the increase of the threshold by a single spike.</p></li>
+<li><p><strong>tau_thresh</strong> – decay parameter for the threshold.</p></li>
+<li><p><strong>update_type</strong> – string, either <code class="docutils literal notranslate"><span class="pre">'linear'</span></code> or <code class="docutils literal notranslate"><span class="pre">'exponential'</span></code>, default is <code class="docutils literal notranslate"><span class="pre">'linear'</span></code>.</p></li>
+<li><p><strong>store_trace</strong> – <code class="docutils literal notranslate"><span class="pre">Boolean</span></code> flag to store the complete spiking history, defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="method">
 <dt id="pysnn.neuron.AdaptiveLIFNeuron.update_trace">
 <code class="sig-name descname">update_trace</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.AdaptiveLIFNeuron.update_trace" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Incoming/presynaptic spikes</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="method">
 <dt id="pysnn.neuron.AdaptiveLIFNeuron.update_thresh">
 <code class="sig-name descname">update_thresh</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.AdaptiveLIFNeuron.update_thresh" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return cells that are in spiking state and adjust threshold accordingly.</p>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Incoming/presynaptic spikes</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="pysnn.neuron.AdaptiveLIFNeuron.update_voltage">
 <code class="sig-name descname">update_voltage</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.AdaptiveLIFNeuron.update_voltage" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Incoming/presynaptic spikes</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="method">
 <dt id="pysnn.neuron.AdaptiveLIFNeuron.forward">
 <code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.AdaptiveLIFNeuron.forward" title="Permalink to this definition">¶</a></dt>
-<dd><p>Defines the computation performed at every call.</p>
-<p>Should be overridden by all subclasses.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Although the recipe for forward pass needs to be defined within
-this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
-instead of this since the former takes care of running the
-registered hooks while the latter silently ignores them.</p>
-</div>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Incoming/presynaptic spikes</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Neuron output spikes and trace</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pysnn.neuron.AdaptiveLIFNeuron.reset_state">
+<code class="sig-name descname">reset_state</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.AdaptiveLIFNeuron.reset_state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reset cell states that accumulate over time during simulation.</p>
 </dd></dl>
 
 </dd></dl>
@@ -335,31 +473,60 @@ registered hooks while the latter silently ignores them.</p>
 <dt id="pysnn.neuron.FedeNeuron">
 <em class="property">class </em><code class="sig-prename descclassname">pysnn.neuron.</code><code class="sig-name descname">FedeNeuron</code><span class="sig-paren">(</span><em class="sig-param">cells_shape</em>, <em class="sig-param">thresh</em>, <em class="sig-param">v_rest</em>, <em class="sig-param">alpha_v</em>, <em class="sig-param">alpha_t</em>, <em class="sig-param">dt</em>, <em class="sig-param">duration_refrac</em>, <em class="sig-param">tau_v</em>, <em class="sig-param">tau_t</em>, <em class="sig-param">store_trace=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.FedeNeuron" title="Permalink to this definition">¶</a></dt>
 <dd><p>Leaky Integrate and Fire neuron.</p>
-<p>Defined in “Unsupervised Learning of a Hierarchical Spiking
-Neural Network for Optical Flow Estimation: From Events to
-Global Motion Perception - F.P. Valles, et al.”</p>
+<p>Defined in “Unsupervised Learning of a Hierarchical Spiking Neural Network for Optical Flow Estimation: From Events to Global Motion Perception - F.P. Valles, et al.”</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cells_shape</strong> – a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.</p></li>
+<li><p><strong>thresh</strong> – spiking threshold, when the cells’ voltage surpasses this value it generates a spike.</p></li>
+<li><p><strong>v_rest</strong> – voltage resting value, the <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> will default back to this over time or after spiking.</p></li>
+<li><p><strong>alpha_v</strong> – scaling constant for the increase of the voltage by a single spike.</p></li>
+<li><p><strong>alpha_t</strong> – scaling constant for the increase of the trace by a single spike.</p></li>
+<li><p><strong>dt</strong> – duration of a single timestep.</p></li>
+<li><p><strong>duration_refrac</strong> – Number of timesteps the <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> is dormant after spiking. Make sure <code class="docutils literal notranslate"><span class="pre">dt</span></code> fits an integer number of times in <code class="docutils literal notranslate"><span class="pre">duration</span> <span class="pre">refrac</span></code>.</p></li>
+<li><p><strong>tau_v</strong> – decay parameter for the voltage.</p></li>
+<li><p><strong>tau_t</strong> – decay parameter for the trace.</p></li>
+<li><p><strong>store_trace</strong> – <code class="docutils literal notranslate"><span class="pre">Boolean</span></code> flag to store the complete spiking history, defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="method">
 <dt id="pysnn.neuron.FedeNeuron.update_trace">
 <code class="sig-name descname">update_trace</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.FedeNeuron.update_trace" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Incoming/presynaptic spikes</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="method">
 <dt id="pysnn.neuron.FedeNeuron.update_voltage">
 <code class="sig-name descname">update_voltage</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">pre_trace</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.FedeNeuron.update_voltage" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – Incoming/presynaptic spikes</p></li>
+<li><p><strong>pre_trace</strong> – Incoming/presynaptic trace</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="method">
 <dt id="pysnn.neuron.FedeNeuron.forward">
 <code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">pre_trace</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.neuron.FedeNeuron.forward" title="Permalink to this definition">¶</a></dt>
-<dd><p>Defines the computation performed at every call.</p>
-<p>Should be overridden by all subclasses.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Although the recipe for forward pass needs to be defined within
-this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
-instead of this since the former takes care of running the
-registered hooks while the latter silently ignores them.</p>
-</div>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – Incoming/presynaptic spikes</p></li>
+<li><p><strong>pre_trace</strong> – Incoming/presynaptic trace</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Neuron output spikes and trace</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>

@@ -30,6 +30,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
 
@@ -67,6 +68,22 @@
 <dt>Adapted from:</dt><dd><p><a class="reference external" href="https://github.com/Hananel-Hazan/bindsnet/blob/master/bindsnet/encoding/encodings.py">https://github.com/Hananel-Hazan/bindsnet/blob/master/bindsnet/encoding/encodings.py</a></p>
 </dd>
 </dl>
+<p>Generates Poisson-distributed spike trains based on input intensity. Inputs must be
+non-negative, and give the firing rate in Hz. Inter-spike intervals (ISIs) for
+non-negative data incremented by one to avoid zero intervals while maintaining ISI
+distributions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>datum</strong> – Tensor of shape <code class="docutils literal notranslate"><span class="pre">[n_1,</span> <span class="pre">...,</span> <span class="pre">n_k]</span></code>.</p></li>
+<li><p><strong>time</strong> – Length of Poisson spike train per input variable.</p></li>
+<li><p><strong>dt</strong> – Simulation time step.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Tensor of shape <code class="docutils literal notranslate"><span class="pre">[time,</span> <span class="pre">n_1,</span> <span class="pre">...,</span> <span class="pre">n_k]</span></code> of Poisson-distributed spikes.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="class">
@@ -75,6 +92,15 @@
 <dd><p>Encode a set of spiking intensities to spike trains using a Poisson distribution.</p>
 <dl class="simple">
 <dt>Adapted from:</dt><dd><p><a class="reference external" href="https://github.com/Hananel-Hazan/bindsnet/blob/master/bindsnet/encoding/encodings.py">https://github.com/Hananel-Hazan/bindsnet/blob/master/bindsnet/encoding/encodings.py</a></p>
+</dd>
+</dl>
+<p>Creates a callable PoissonEncoder which encodes as defined in <code class="docutils literal notranslate"><span class="pre">bindsnet.encoding.poisson</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>time</strong> – Length of Poisson spike train per input variable.</p></li>
+<li><p><strong>dt</strong> – Simulation time step.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>

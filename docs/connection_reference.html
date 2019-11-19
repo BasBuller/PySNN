@@ -30,6 +30,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
 
@@ -67,7 +68,7 @@ class that should be inherited by each custom connection. Each <code class="xref
 <li><p><strong>Delay</strong> in the transmission of incoming signals from its presynaptic <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> to its postsynaptic <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code>.</p></li>
 <li><p><strong>Weights</strong>, which are the relative weights that are assigned from spikes originating from each presynaptic <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code>.</p></li>
 <li><dl class="simple">
-<dt><strong>Signals</strong> from the presynaptic <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> that are passed on by the <code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code>, which are the following:</dt><dd><ul>
+<dt><strong>Signals</strong> from the presynaptic <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> that are passed on by the <code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code>, which are the following</dt><dd><ul>
 <li><p>Traces</p></li>
 <li><p>Spikes</p></li>
 <li><p>Activation potential, this is not actually an input but a result of multiplying incoming spikes with the connection weight.</p></li>
@@ -102,13 +103,19 @@ class that should be inherited by each custom connection. Each <code class="xref
 <dl class="method">
 <dt id="pysnn.connection.Connection.reset_weights">
 <code class="sig-name descname">reset_weights</code><span class="sig-paren">(</span><em class="sig-param">distribution='uniform'</em>, <em class="sig-param">gain=1.0</em>, <em class="sig-param">a=0.0</em>, <em class="sig-param">b=1.0</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Connection.reset_weights" title="Permalink to this definition">¶</a></dt>
-<dd><p>Reinnitialize learnable network Parameters (e.g. weights).</p>
+<dd><p>Reinnitialize network weights.</p>
+<p>Note: Not all parameters apply to every distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>distribution</strong> – Distribution used for initialization</p></li>
+<li><p><strong>gain</strong> – Scalar increase of the weight values.</p></li>
+<li><p><strong>a</strong> – Lower bound.</p></li>
+<li><p><strong>b</strong> – Upper bound.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
-
-<dl class="method">
-<dt id="pysnn.connection.Connection.reset_thresholds">
-<code class="sig-name descname">reset_thresholds</code><span class="sig-paren">(</span><em class="sig-param">distributions='uniform'</em>, <em class="sig-param">gain=1.0</em>, <em class="sig-param">a=-1.0</em>, <em class="sig-param">b=1.0</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Connection.reset_thresholds" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
 
 <dl class="method">
 <dt id="pysnn.connection.Connection.init_connection">
@@ -129,50 +136,101 @@ class that should be inherited by each custom connection. Each <code class="xref
 <dt id="pysnn.connection.Linear">
 <em class="property">class </em><code class="sig-prename descclassname">pysnn.connection.</code><code class="sig-name descname">Linear</code><span class="sig-paren">(</span><em class="sig-param">in_features</em>, <em class="sig-param">out_features</em>, <em class="sig-param">batch_size</em>, <em class="sig-param">dt</em>, <em class="sig-param">delay</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Linear" title="Permalink to this definition">¶</a></dt>
 <dd><p>SNN linear (fully connected) layer with interface comparable to torch.nn.Linear.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>in_features</strong> – Size of each input sample.</p></li>
+<li><p><strong>out_features</strong> – Size of each output sample.</p></li>
+<li><p><strong>batch_size</strong> – Number of samples in a batch.</p></li>
+<li><p><strong>dt</strong> – Duration of each timestep.</p></li>
+<li><p><strong>delay</strong> – Time it takes for a spike to propagate through the connection. Should be an integer multiple of dt.</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="method">
 <dt id="pysnn.connection.Linear.activation_potential">
 <code class="sig-name descname">activation_potential</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Linear.activation_potential" title="Permalink to this definition">¶</a></dt>
 <dd><p>Determine activation potentials from each synapse for current time step.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Presynaptic spikes.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Activation potentials.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="pysnn.connection.Linear.forward">
 <code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">trace_in</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Linear.forward" title="Permalink to this definition">¶</a></dt>
-<dd><p>Defines the computation performed at every call.</p>
-<p>Should be overridden by all subclasses.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Although the recipe for forward pass needs to be defined within
-this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
-instead of this since the former takes care of running the
-registered hooks while the latter silently ignores them.</p>
-</div>
+<dd><p>Calculate postsynaptic activation potentials and trace.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – Presynaptic spikes.</p></li>
+<li><p><strong>trace_in</strong> – Presynaptic trace.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>(Activation potentials, Postsynaptic trace)</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="class">
 <dt id="pysnn.connection.Conv2d">
-<em class="property">class </em><code class="sig-prename descclassname">pysnn.connection.</code><code class="sig-name descname">Conv2d</code><span class="sig-paren">(</span><em class="sig-param">in_channels</em>, <em class="sig-param">out_channels</em>, <em class="sig-param">kernel_size</em>, <em class="sig-param">im_dims</em>, <em class="sig-param">batch_size</em>, <em class="sig-param">dt</em>, <em class="sig-param">delay</em>, <em class="sig-param">tau_t</em>, <em class="sig-param">alpha_t</em>, <em class="sig-param">stride=1</em>, <em class="sig-param">padding=0</em>, <em class="sig-param">dilation=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Conv2d" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">pysnn.connection.</code><code class="sig-name descname">Conv2d</code><span class="sig-paren">(</span><em class="sig-param">in_channels</em>, <em class="sig-param">out_channels</em>, <em class="sig-param">kernel_size</em>, <em class="sig-param">im_dims</em>, <em class="sig-param">batch_size</em>, <em class="sig-param">dt</em>, <em class="sig-param">delay</em>, <em class="sig-param">stride=1</em>, <em class="sig-param">padding=0</em>, <em class="sig-param">dilation=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Conv2d" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convolutional SNN layer interface comparable to torch.nn.Conv2d.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>Number of channels in the input image.</p>
+</dd>
+<dt class="field-even">Parameters</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>out_channels</strong> – Number of channels produced by the convolution</p></li>
+<li><p><strong>kernel_size</strong> – Size of the convolving kernel</p></li>
+<li><p><strong>im_dims</strong> – (Height, Width) of the input image.</p></li>
+<li><p><strong>batch_size</strong> – Number of samples in a batch.</p></li>
+<li><p><strong>dt</strong> – Duration of each timestep.</p></li>
+<li><p><strong>delay</strong> – Time it takes for a spike to propagate through the connection. Should be an integer multiple of dt.</p></li>
+<li><p><strong>stride</strong> – Stride of the convolution. Default: 1</p></li>
+<li><p><strong>padding</strong> – Zero-padding added to both sides of the input. Default: 0</p></li>
+<li><p><strong>dilation</strong> – Spacing between kernel elements. Default: 1</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="method">
 <dt id="pysnn.connection.Conv2d.activation_potential">
 <code class="sig-name descname">activation_potential</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Conv2d.activation_potential" title="Permalink to this definition">¶</a></dt>
 <dd><p>Determine activation potentials from each synapse for current time step.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> – Presynaptic spikes.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Activation potentials.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="pysnn.connection.Conv2d.forward">
-<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Conv2d.forward" title="Permalink to this definition">¶</a></dt>
-<dd><p>Defines the computation performed at every call.</p>
-<p>Should be overridden by all subclasses.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Although the recipe for forward pass needs to be defined within
-this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
-instead of this since the former takes care of running the
-registered hooks while the latter silently ignores them.</p>
-</div>
+<code class="sig-name descname">forward</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">trace_in</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.connection.Conv2d.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate postsynaptic activation potentials and trace.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – Presynaptic spikes.</p></li>
+<li><p><strong>trace_in</strong> – Presynaptic trace.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>(Activation potentials, Postsynaptic trace)</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>

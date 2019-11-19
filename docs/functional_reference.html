@@ -30,6 +30,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
 
@@ -59,6 +60,193 @@
           
   <div class="section" id="module-pysnn.functional">
 <span id="pysnn-functional"></span><h1>pysnn.functional<a class="headerlink" href="#module-pysnn.functional" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="pysnn.functional.exponential_trace_update">
+<code class="sig-prename descclassname">pysnn.functional.</code><code class="sig-name descname">exponential_trace_update</code><span class="sig-paren">(</span><em class="sig-param">trace</em>, <em class="sig-param">x</em>, <em class="sig-param">alpha_t</em>, <em class="sig-param">tau_t</em>, <em class="sig-param">dt</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.functional.exponential_trace_update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exponential change in cell’s trace based on current trace and incoming spikes x.</p>
+<p>Trace updates are performed according to the following formula:</p>
+<div class="math notranslate nohighlight">
+\[trace_{t+1} = trace_{t} + \frac{(-trace + alpha_{t} * x) dt}{tau_{t}}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>trace</strong> – Current trace</p></li>
+<li><p><strong>x</strong> – Incoming/presynaptic spikes</p></li>
+<li><p><strong>alpha_t</strong> – Scaling factor for spike influence on trace</p></li>
+<li><p><strong>tau_t</strong> – Trace decay time constant</p></li>
+<li><p><strong>dt</strong> – Duration of single timestep</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>New trace values</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="pysnn.functional.linear_trace_update">
+<code class="sig-prename descclassname">pysnn.functional.</code><code class="sig-name descname">linear_trace_update</code><span class="sig-paren">(</span><em class="sig-param">trace</em>, <em class="sig-param">x</em>, <em class="sig-param">alpha_t</em>, <em class="sig-param">trace_decay</em>, <em class="sig-param">dt</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.functional.linear_trace_update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate change in cell’s trace based on a fixed decay factor and incoming spikes x.</p>
+<p>Trace updates are performed according to the following formula:</p>
+<div class="math notranslate nohighlight">
+\[trace_{t+1} = trace_{t} * tracedecay + alpha_{t} * x\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>trace</strong> – Current trace</p></li>
+<li><p><strong>x</strong> – Incoming/presynaptic spikes</p></li>
+<li><p><strong>alpha_t</strong> – Scaling factor for spike influence on trace</p></li>
+<li><p><strong>trace_decay</strong> – Trace decay factor, should be &lt; 1</p></li>
+<li><p><strong>dt</strong> – Duration of single timestep</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>New trace values</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="pysnn.functional.exponential_thresh_update">
+<code class="sig-prename descclassname">pysnn.functional.</code><code class="sig-name descname">exponential_thresh_update</code><span class="sig-paren">(</span><em class="sig-param">thresh</em>, <em class="sig-param">x</em>, <em class="sig-param">alpha_thresh</em>, <em class="sig-param">tau_thresh</em>, <em class="sig-param">dt</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.functional.exponential_thresh_update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate change in cell’s threshold based on current threshold and incoming spikes x.</p>
+<p>Threshold updates are performed according to the following formula:</p>
+<div class="math notranslate nohighlight">
+\[trace_{t+1} = trace_{t} + \frac{(-trace + alpha_{t} * x) dt}{tau_{t}}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>trace</strong> – Current trace</p></li>
+<li><p><strong>x</strong> – Incoming/presynaptic spikes</p></li>
+<li><p><strong>alpha_t</strong> – Scaling factor for spike influence on trace</p></li>
+<li><p><strong>tau_t</strong> – Trace decay time constant</p></li>
+<li><p><strong>dt</strong> – Duration of single timestep</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>New threshold values</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="pysnn.functional.linear_thresh_update">
+<code class="sig-prename descclassname">pysnn.functional.</code><code class="sig-name descname">linear_thresh_update</code><span class="sig-paren">(</span><em class="sig-param">thresh</em>, <em class="sig-param">x</em>, <em class="sig-param">alpha_thresh</em>, <em class="sig-param">thresh_decay</em>, <em class="sig-param">dt</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.functional.linear_thresh_update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate change in cell’s threshold based on a fixed decay factor and incoming spikes x.</p>
+<p>Threshold updates are performed according to the following formula:</p>
+<div class="math notranslate nohighlight">
+\[trace_{t+1} = trace_{t} * tracedecay + alpha_{t} * x\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>trace</strong> – Current trace</p></li>
+<li><p><strong>x</strong> – Incoming/presynaptic spikes</p></li>
+<li><p><strong>alpha_t</strong> – Scaling factor for spike influence on trace</p></li>
+<li><p><strong>trace_decay</strong> – Trace decay factor, should be &lt; 1</p></li>
+<li><p><strong>dt</strong> – Duration of single timestep</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>New threshold values</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="pysnn.functional.if_voltage_update">
+<code class="sig-prename descclassname">pysnn.functional.</code><code class="sig-name descname">if_voltage_update</code><span class="sig-paren">(</span><em class="sig-param">v_cur</em>, <em class="sig-param">v_in</em>, <em class="sig-param">alpha</em>, <em class="sig-param">refrac_counts</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.functional.if_voltage_update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate change in cell’s voltage based on current and incoming voltage, no decay.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>v_cur</strong> – Current voltages</p></li>
+<li><p><strong>v_in</strong> – Incoming voltages</p></li>
+<li><p><strong>alpha</strong> – Incoming voltage scaling factor</p></li>
+<li><p><strong>refrac_counts</strong> – Number of timesteps left in refractory state for each <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>New voltages</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="pysnn.functional.lif_linear_voltage_update">
+<code class="sig-prename descclassname">pysnn.functional.</code><code class="sig-name descname">lif_linear_voltage_update</code><span class="sig-paren">(</span><em class="sig-param">v_cur</em>, <em class="sig-param">v_rest</em>, <em class="sig-param">v_in</em>, <em class="sig-param">alpha_v</em>, <em class="sig-param">v_decay</em>, <em class="sig-param">dt</em>, <em class="sig-param">refrac_counts</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.functional.lif_linear_voltage_update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate change in cell’s voltage based on a linear relation between current and incoming voltage, with decay.</p>
+<p>Voltage updates are performed according to the following formula:</p>
+<div class="math notranslate nohighlight">
+\[trace_{t+1} = trace_{t} * tracedecay + alpha_{t} * x\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>v_cur</strong> – Current voltages</p></li>
+<li><p><strong>v_rest</strong> – Resting voltages</p></li>
+<li><p><strong>v_in</strong> – Incoming voltages</p></li>
+<li><p><strong>alpha_v</strong> – Incoming voltage scaling factor</p></li>
+<li><p><strong>v_decay</strong> – Voltage decay factor, should be &lt; 1</p></li>
+<li><p><strong>dt</strong> – Duration of single timestep</p></li>
+<li><p><strong>refrac_counts</strong> – Number of timesteps left in refractory state for each <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>New voltages</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="pysnn.functional.lif_exponential_voltage_update">
+<code class="sig-prename descclassname">pysnn.functional.</code><code class="sig-name descname">lif_exponential_voltage_update</code><span class="sig-paren">(</span><em class="sig-param">v_cur</em>, <em class="sig-param">v_rest</em>, <em class="sig-param">v_in</em>, <em class="sig-param">alpha_v</em>, <em class="sig-param">tau_v</em>, <em class="sig-param">dt</em>, <em class="sig-param">refrac_counts</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.functional.lif_exponential_voltage_update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate change in cell’s voltage based on current and incoming voltage.</p>
+<p>Voltage updates are performed according to the following formula:</p>
+<div class="math notranslate nohighlight">
+\[trace_{t+1} = trace_{t} + \frac{(-trace + alpha_{t} * x) dt}{tau_{t}}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>v_cur</strong> – Current voltages</p></li>
+<li><p><strong>v_rest</strong> – Resting voltages</p></li>
+<li><p><strong>v_in</strong> – Incoming voltages</p></li>
+<li><p><strong>alpha_v</strong> – Incoming voltage scaling factor</p></li>
+<li><p><strong>tau_v</strong> – Voltage decay time constant</p></li>
+<li><p><strong>dt</strong> – Duration of single timestep</p></li>
+<li><p><strong>refrac_counts</strong> – Number of timesteps left in refractory state for each <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>New voltages</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="pysnn.functional.fede_voltage_update">
+<code class="sig-prename descclassname">pysnn.functional.</code><code class="sig-name descname">fede_voltage_update</code><span class="sig-paren">(</span><em class="sig-param">v_cur</em>, <em class="sig-param">v_rest</em>, <em class="sig-param">v_in</em>, <em class="sig-param">alpha_v</em>, <em class="sig-param">tau_v</em>, <em class="sig-param">dt</em>, <em class="sig-param">refrac_counts</em>, <em class="sig-param">pre_trace</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.functional.fede_voltage_update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate change in cell’s voltage based on current voltage and input trace.</p>
+<p>Defined in “Unsupervised Learning of a Hierarchical Spiking Neural Network for Optical Flow Estimation: From Events to Global Motion Perception - F.P. Valles, et al.”</p>
+<p>Voltage updates are performed according to the following formula:</p>
+<div class="math notranslate nohighlight">
+\[trace_{t+1} = trace_{t} + \frac{(-trace + alpha_{t} * (v_{in} - pretrace)) dt}{tau_{t}}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>v_cur</strong> – Current voltages</p></li>
+<li><p><strong>v_rest</strong> – Resting voltages</p></li>
+<li><p><strong>v_in</strong> – Incoming voltages</p></li>
+<li><p><strong>alpha_v</strong> – Incoming voltage scaling factor</p></li>
+<li><p><strong>tau_v</strong> – Voltage decay time constant</p></li>
+<li><p><strong>dt</strong> – Duration of single timestep</p></li>
+<li><p><strong>refrac_counts</strong> – Number of timesteps left in refractory state for each <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>New voltages</p>
+</dd>
+</dl>
+</dd></dl>
+
 </div>
 
 

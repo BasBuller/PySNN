@@ -30,6 +30,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
 
@@ -62,22 +63,37 @@
 <dl class="class">
 <dt id="pysnn.network.SNNNetwork">
 <em class="property">class </em><code class="sig-prename descclassname">pysnn.network.</code><code class="sig-name descname">SNNNetwork</code><a class="headerlink" href="#pysnn.network.SNNNetwork" title="Permalink to this definition">¶</a></dt>
-<dd><p>Simple base clase for defining SNN network, contains some convenience operators
-for e.g. clearing network state after simulating a sample.</p>
+<dd><p>Base clase for defining SNN network, contains several convenience operators for network simulations.</p>
 <dl class="method">
 <dt id="pysnn.network.SNNNetwork.reset_state">
 <code class="sig-name descname">reset_state</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.network.SNNNetwork.reset_state" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Resets state parameters of all submodules, requires each submodule to have a reset_state function.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pysnn.network.SNNNetwork.add_layer">
 <code class="sig-name descname">add_layer</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">connection</em>, <em class="sig-param">neuron</em><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.network.SNNNetwork.add_layer" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Adds which <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> and <code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code> objects together form a layer, as well as the layer type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> – Name of the layer</p></li>
+<li><p><strong>connection</strong> – <code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code> object</p></li>
+<li><p><strong>neuron</strong> – <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> object</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="method">
 <dt id="pysnn.network.SNNNetwork.layer_state_dict">
 <code class="sig-name descname">layer_state_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysnn.network.SNNNetwork.layer_state_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return state dicts grouped per layer, so a single Connection and a single Neuron state dict per layer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>State Dicts for the <code class="xref py py-class docutils literal notranslate"><span class="pre">Connection</span></code> and <code class="xref py py-class docutils literal notranslate"><span class="pre">Neuron</span></code> of the layer, as well as the layer type.</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
