@@ -62,6 +62,7 @@ class SNNNetwork(nn.Module):
         
         :return: State Dicts for the :class:`Connection` and :class:`Neuron` of the layer, as well as the layer type.
         """
+        dict_names = ["connection", "neuron"]
         state_dicts = OrderedDict()
         for name, layer in self._layers.items():
             states = {}
