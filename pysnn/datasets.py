@@ -217,7 +217,9 @@ def nmnist_train_test(
         train_content = _list_dir_content(os.path.join(root, "Train"))
         train, _ = _concat_dir_content(train_content)
     else:
-        train, _ = train_test(os.path.join(root, "Train"), train_size=(train_samples/60000))
+        train, _ = train_test(
+            os.path.join(root, "Train"), train_size=(train_samples / 60000)
+        )
     train_dataset = NeuromorphicDataset(
         train,
         sampling_time,
@@ -232,7 +234,7 @@ def nmnist_train_test(
         test_content = _list_dir_content(os.path.join(root, "Test"))
         test, _ = _concat_dir_content(test_content)
     else:
-        test = train_test(os.path.join(root, "Test"), train_size=(test_samples/10000))
+        test = train_test(os.path.join(root, "Test"), train_size=(test_samples / 10000))
     test_dataset = NeuromorphicDataset(
         test,
         sampling_time,
@@ -339,10 +341,12 @@ class Boolean(Dataset):
         sample = self.data[idx].unsqueeze(0)
         label = self.labels[idx]
         sample_class = self.classes[idx]
+        transformed_sample = None
 
         # Sample transforms
         if self.data_transform:
             sample = self.data_transform(sample)
+            transformed_sample = sample.clone()
         if self.data_encoder:
             sample = self.data_encoder(sample)
 
@@ -352,7 +356,7 @@ class Boolean(Dataset):
         if self.lbl_encoder:
             label = self.lbl_encoder(label)
 
-        return sample, label, sample_class
+        return sample, label, sample_class, transformed_sample
 
 
 class XOR(Boolean):
