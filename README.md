@@ -8,6 +8,8 @@ PySNN is designed to mostly provide low level objects to its user that can be co
 
 Documentation can be found at: [https://basbuller.github.io/PySNN/](https://basbuller.github.io/PySNN/)
 
+[![CircleCI](https://circleci.com/gh/BasBuller/PySNN/tree/master.svg?style=svg)](https://circleci.com/gh/BasBuller/PySNN/tree/master) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+  [![HitCount](http://hits.dwyl.io/BasBuller/PySNN.svg)](http://hits.dwyl.io/BasBuller/PySNN)
 <!-- Inspiration taken from [cuSNN](https://github.com/tudelft/cuSNN) and [bindsnet](https://github.com/Hananel-Hazan/bindsnet). -->
 
 ## __Installation__
