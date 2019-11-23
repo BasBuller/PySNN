@@ -88,7 +88,7 @@ Traces are stored in a tensor in each Connection, as well as the delay for each 
 Make sure each module has a self.reset_state() method! It is called from the SNNNetwork class and is needed for proper simulation of multiple
 inputs.
 
-## __To do__
+<!-- ## __To do__
 
 - Determine performance of the functions in pysnn.functional, they return the difference and using inplace operations in the Module that is
   calling the functional might provide better performance.
@@ -103,4 +103,4 @@ inputs.
 
 ### __Connection classes__
 
-- For connection class, make sure it can handle the transmission of multiple spike within the same synapse?
+- For connection class, make sure it can handle the transmission of multiple spike within the same synapse? -->
