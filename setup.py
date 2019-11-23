@@ -29,6 +29,7 @@ setup(
     version="0.1",
     description="Framework for engineering and simulating spiking neural networks, built on top of PyTorch.",
     long_description=readme,
+    long_description_content_type="text/markdown",
     author="Bas Buller",
     author_email="bas.buller@gmail.com",
     packages=find_packages(exclude=("tests", "examples")),
