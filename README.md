@@ -46,7 +46,7 @@ Intention is to mirror most of the structure of PyTorch framework. Several core 
 
 ## Contributing
 
-Any help, suggestions, or additions to PySNN are greatly appreciated! Feel free to make pull request or start a chat about the library.
+Any help, suggestions, or additions to PySNN are greatly appreciated! Feel free to make pull request or start a chat about the library. In case of making a pull request, please do have a look at the contribution guidelines.
 
 ## __Network Definition__
 
