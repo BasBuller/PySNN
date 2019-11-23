@@ -44,6 +44,10 @@ Installing PySNN requires a Python version of 3.6 or higher, Python 2 is not sup
 
 Intention is to mirror most of the structure of PyTorch framework. Several core functions are defined in the functional module. 
 
+## Contributing
+
+Any help, suggestions, or additions to PySNN are greatly appreciated! Feel free to make pull request or start a chat about the library.
+
 ## __Network Definition__
 
 The overall structure of a network definition is the same as in PyTorch where possible. All newly defined object inherit from the nn.Module class. The biggest differences are as follows:
