@@ -1,0 +1,15 @@
+language: python
+dist: bionic  # Ubuntu 18.04 LTS
+python:
+  - 3.6  # current default Python on Travis CI
+  - 3.7
+before_install:
+  - pip install -U pip  # most updated pip version
+  - pip install -U pytest  # and pytest version
+  - pip install codecov  # to show code coverage
+install:
+  - pip install ".[tests]" . # install package + test dependencies
+script:
+  - pytest tests --cov=pysnn  # run tests and produce coverage
+after_success:
+  - codecov  # submit code coverage
