@@ -1,7 +1,7 @@
 # __PySNN__
 
-[![Build Status](https://travis-ci.com/Huizerd/PySNN.svg?branch=master)](https://travis-ci.com/Huizerd/PySNN)
-[![codecov.io](https://codecov.io/gh/Huizerd/PySNN/coverage.svg?branch=master)](https://codecov.io/gh/Huizerd/PySNN)
+[![Build Status](https://travis-ci.com/BasBuller/PySNN.svg?branch=master)](https://travis-ci.com/BasBuller/PySNN)
+[![codecov.io](https://codecov.io/gh/BasBuller/PySNN/coverage.svg?branch=master)](https://codecov.io/gh/BasBuller/PySNN)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
