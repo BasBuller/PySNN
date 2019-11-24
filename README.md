@@ -60,12 +60,12 @@ class Network(SNNNetwork):
 
         # Layer 1
         self.mlp1_c = Linear(n_in, n_hidden, *connection_dynamics)
-        self.neuron1 = FedeNeuron((batch_size, 1, n_hidden), *neuron_dynamics)
+        self.neuron1 = LIFNeuron((batch_size, 1, n_hidden), *neuron_dynamics)
         self.add_layer("fc1", self.mlp1_c, self.neuron1)
 
         # Layer 2
         self.mlp2_c = Linear(n_hidden, n_out, *connection_dynamics)
-        self.neuron2 = FedeNeuron((batch_size, 1, n_out), *neuron_dynamics)
+        self.neuron2 = LIFNeuron((batch_size, 1, n_out), *neuron_dynamics)
         self.add_layer("fc2", self.mlp2_c, self.neuron2)
 
     def forward(self, input):
