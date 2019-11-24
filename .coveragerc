@@ -1,0 +1,9 @@
+[run]
+branch = True
+omit =
+    tests/*
+    */__init__.py
+    venv/*
+[report]
+exclude_lines =
+    raise NotImplementedError
