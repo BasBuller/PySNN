@@ -1,8 +1,11 @@
-# Python CircleCI 2.0 configuration file
+# Python CircleCI 2.1 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-python/ for more details
+# Version changed to 2.1 for orb support
 #
-version: 2
+version: 2.1
+orbs:
+  codecov: codecov/codecov@1.0.5
 jobs:
   build:
     docker:
@@ -49,3 +52,8 @@ jobs:
       - store_artifacts:
           path: test-reports
           destination: test-reports
+
+      # upload code coverage
+      - codecov/upload:
+          file: coverage/*.json
+
