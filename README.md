@@ -20,17 +20,19 @@ Documentation can be found at: [https://basbuller.github.io/PySNN/](https://basb
 Installation can be done with pip:
 
 ```bash
-$ git clone https://github.com/BasBuller/PySNN.git
-$ cd PySNN/
-$ pip install .  # or pip install pysnn
+$ pip install pysnn
 ```
 
 If you want to make updates to the library without having to reinstall it, use the following install command instead:
+
 ```bash
+$ git clone https://github.com/BasBuller/PySNN.git
+$ cd PySNN/
 $ pip install -e .
 ```
 
 Some examples need additional libraries. To install these, run:
+
 ```bash
 $ pip install pysnn[examples]
 ```
@@ -46,7 +48,39 @@ Installing PySNN requires a Python version of 3.6 or higher, Python 2 is not sup
 
 ## __Repository Structure__
 
-Intention is to mirror most of the structure of PyTorch framework. Several core functions are defined in the functional module. 
+Intention is to mirror most of the structure of PyTorch framework. Several core functions are defined in the functional module. As an example, the followig piece of code shows how much a Spiking Neural Network definition in PySNN looks like a network definition in PyTorch:
+
+```python
+class Network(SNNNetwork):
+    def __init__(self):
+        super(Network, self).__init__()
+
+        # Input
+        self.input = Input((batch_size, 1, n_in), *input_dynamics)
+
+        # Layer 1
+        self.mlp1_c = Linear(n_in, n_hidden, *connection_dynamics)
+        self.neuron1 = FedeNeuron((batch_size, 1, n_hidden), *neuron_dynamics)
+        self.add_layer("fc1", self.mlp1_c, self.neuron1)
+
+        # Layer 2
+        self.mlp2_c = Linear(n_hidden, n_out, *connection_dynamics)
+        self.neuron2 = FedeNeuron((batch_size, 1, n_out), *neuron_dynamics)
+        self.add_layer("fc2", self.mlp2_c, self.neuron2)
+
+    def forward(self, input):
+        spikes, trace = self.input(input)
+
+        # Layer 1
+        spikes, trace = self.mlp1_c(spikes, trace)
+        spikes, trace = self.neuron1(spikes, trace)
+
+        # Layer out
+        spikes, trace = self.mlp2_c(spikes, trace)
+        spikes, trace = self.neuron2(spikes, trace)
+
+        return x
+```
 
 ## Contributing
 
