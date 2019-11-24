@@ -46,9 +46,9 @@ $ pre-commit install
 ### Requirements
 Installing PySNN requires a Python version of 3.6 or higher, Python 2 is not supported. It also requires PyTorch to be of version 1.2 or higher.
 
-## __Repository Structure__
+## __Network Structure__
 
-Intention is to mirror most of the structure of PyTorch framework. Several core functions are defined in the functional module. As an example, the followig piece of code shows how much a Spiking Neural Network definition in PySNN looks like a network definition in PyTorch:
+Intention is to mirror most of the structure of PyTorch framework. As an example, the followig piece of code shows how much a Spiking Neural Network definition in PySNN looks like a network definition in PyTorch:
 
 ```python
 class Network(SNNNetwork):
