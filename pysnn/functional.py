@@ -2,7 +2,7 @@ import torch
 
 
 ########################################################
-# Trace updates 
+# Trace updates
 ########################################################
 def exponential_trace_update(trace, x, alpha_t, tau_t, dt):
     r"""Exponential change in cell's trace based on current trace and incoming spikes x.
@@ -117,9 +117,7 @@ def if_voltage_update(v_cur, v_in, alpha, refrac_counts):
     return v_cur
 
 
-def lif_linear_voltage_update(
-    v_cur, v_rest, v_in, alpha_v, v_decay, dt, refrac_counts
-):
+def lif_linear_voltage_update(v_cur, v_rest, v_in, alpha_v, v_decay, dt, refrac_counts):
     r"""Calculate change in cell's voltage based on a linear relation between current and incoming voltage, with decay.
 
     Voltage updates are performed according to the following formula:

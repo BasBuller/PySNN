@@ -394,7 +394,7 @@ class LIFNeuron(BaseNeuron):
     :param duration_refrac: Number of timesteps the :class:`Neuron` is dormant after spiking. Make sure ``dt`` fits an integer number of times in ``duration refrac``.
     :param tau_v: decay parameter for the voltage.
     :param tau_t: decay parameter for the trace.
-    :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``.
+    :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``. Also support custom functions, should be added as elements in the following dict: update_types = {"voltage_update": ..., "trace_update": ...}
     :param store_trace: ``Boolean`` flag to store the complete spiking history, defaults to ``False``.
     """
 
@@ -433,6 +433,13 @@ class LIFNeuron(BaseNeuron):
         elif update_type == "exponential":
             self.voltage_update = sf.lif_exponential_voltage_update
             self.trace_update = sf.exponential_trace_update
+        elif (  # Check if dict contains actual functions
+            isinstance(update_type, dict)
+            and callable(update_type["voltage_update"])
+            and callable(update_type["trace_update"])
+        ):
+            self.voltage_update = update_type["voltage_update"]
+            self.trace_update = update_type["trace_update"]
         else:
             raise ValueError(f"Unsupported update type {update_type}")
 
@@ -668,7 +675,11 @@ class StochasticNeuron(BaseNeuron):
         elif callable(spike_prob):
             self.prob_update = spike_prob
         else:
-            raise TypeError("spike_prob has to be either a selected string or a callable, currently is {}".format(type(spike_prob)))
+            raise TypeError(
+                "spike_prob has to be either a selected string or a callable, currently is {}".format(
+                    type(spike_prob)
+                )
+            )
 
         # Fixed parameters
         self.register_buffer("tau_v", torch.tensor(tau_v, dtype=torch.float))
@@ -735,14 +746,7 @@ class IzhikevichNeuron(BaseNeuron):
         store_trace=False,
     ):
         super(IzhikevichNeuron, self).__init__(
-            cells_shape,
-            thresh,
-            0,
-            0,
-            alpha_t,
-            dt,
-            0,
-            store_trace=store_trace,
+            cells_shape, thresh, 0, 0, alpha_t, dt, 0, store_trace=store_trace
         )
 
         # Type of updates
@@ -773,7 +777,7 @@ class IzhikevichNeuron(BaseNeuron):
         )
 
     def update_voltage(self, x):
-        dv = 0.04 * self.v_cell**2 + 5 * self.v_cell + 140 - self.u + x
+        dv = 0.04 * self.v_cell ** 2 + 5 * self.v_cell + 140 - self.u + x
         self.v_cell += dv
 
     def update_u(self):
