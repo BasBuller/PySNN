@@ -14,7 +14,7 @@ PySNN is designed to mostly provide low level objects to its user that can be co
 Documentation can be found at: [https://basbuller.github.io/PySNN/](https://basbuller.github.io/PySNN/)
 
 Design of the PySNN framework took inspiration from the following two libraries:
-* [bindsnet](https://github.com/Hananel-Hazan/bindsnet)
+* [BindsNET](https://github.com/Hananel-Hazan/bindsnet)
 * [cuSNN](https://github.com/tudelft/cuSNN) 
 
 ## __Installation__
