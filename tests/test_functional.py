@@ -97,9 +97,7 @@ def test_linear_thresh_update(thresh, spikes_in, thresh_out):
     from pysnn.functional import linear_thresh_update
 
     for th_out in thresh_out:
-        thresh = linear_thresh_update(
-            thresh, spikes_in, alpha_thresh, thresh_decay, dt
-        )
+        thresh = linear_thresh_update(thresh, spikes_in, alpha_thresh, thresh_decay, dt)
         assert thresh.allclose(th_out)
 
 

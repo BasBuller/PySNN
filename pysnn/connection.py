@@ -252,7 +252,9 @@ class _ConvNd(Connection):
             assert isinstance(i, int), "Variables in im_dims should be int."
 
         # Convolution parameters
-        self.batch_size = batch_size  # Cannot infer, needed to reserve memory for storing trace and delay timing
+        self.batch_size = (
+            batch_size
+        )  # Cannot infer, needed to reserve memory for storing trace and delay timing
         self.out_channels = out_channels
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)
