@@ -90,6 +90,7 @@ class Connection(nn.Module):
             self.weight += a
         elif distribution == "xavier_uniform":
             nn.init.xavier_uniform_(self.weight, gain=gain)
+            self.weight += self.weight.max() * a
             # self.weight += (self.weight.abs() * a)
         elif distribution == "kaiming_normal":
             nn.init.kaiming_normal_(self.weight)
@@ -249,9 +250,7 @@ class _ConvNd(Connection):
             assert isinstance(i, int), "Variables in im_dims should be int."
 
         # Convolution parameters
-        self.batch_size = (
-            batch_size
-        )  # Cannot infer, needed to reserve memory for storing trace and delay timing
+        self.batch_size = batch_size  # Cannot infer, needed to reserve memory for storing trace and delay timing
         self.out_channels = out_channels
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)

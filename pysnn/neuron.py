@@ -223,6 +223,8 @@ class BaseNeuron(nn.Module):
 
     def fold(self, x):
         r"""Fold incoming spike train by summing last dimension."""
+        if isinstance(x, (list, tuple)):
+            x = torch.cat(x, dim=-1)
         return x.sum(-1)
 
     def unfold(self, x):
