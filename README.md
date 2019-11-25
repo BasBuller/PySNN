@@ -5,7 +5,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Spiking neural network (SNN) framework written on top of PyTorch for efficient simulation of SNNs both on _**CPU**_ and _**GPU**_. The framework is intended for with correlation based learning methods. The library adheres to the highly modular and dynamic design of PyTorch, and does not require its user to learn a new framework like when using BindsNET. 
+Spiking neural network (SNN) framework written on top of PyTorch for efficient simulation of SNNs both on _**CPU**_ and _**GPU**_. The framework is intended for with correlation based learning methods. The library adheres to the highly modular and dynamic design of PyTorch, and does not require its user to learn a new framework. 
 
 *This framework's power lies in the ease of defining and mixing new Neuron and Connection objects that seamlessly work together, even different versions, in a single network.*
 
@@ -13,7 +13,9 @@ PySNN is designed to mostly provide low level objects to its user that can be co
 
 Documentation can be found at: [https://basbuller.github.io/PySNN/](https://basbuller.github.io/PySNN/)
 
-<!-- Inspiration taken from [cuSNN](https://github.com/tudelft/cuSNN) and [bindsnet](https://github.com/Hananel-Hazan/bindsnet). -->
+Design of the PySNN framework took inspiration from the following two libraries:
+* [bindsnet](https://github.com/Hananel-Hazan/bindsnet)
+* [cuSNN](https://github.com/tudelft/cuSNN) 
 
 ## __Installation__
 
