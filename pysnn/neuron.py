@@ -435,7 +435,7 @@ class LIFNeuron(BaseNeuron):
         elif update_type == "exponential":
             self.voltage_update = sf.lif_exponential_voltage_update
             self.trace_update = sf.exponential_trace_update
-        elif (  # Check if dict contains actual functions
+        elif (  # check if dict contains actual functions
             isinstance(update_type, dict)
             and callable(update_type["voltage_update"])
             and callable(update_type["trace_update"])
@@ -663,11 +663,18 @@ class StochasticNeuron(BaseNeuron):
 
         # Type of updates
         if update_type == "linear":
-            self.voltage_update = sf._lif_linear_voltage_update
-            self.trace_update = sf._linear_trace_update
+            self.voltage_update = sf.lif_linear_voltage_update
+            self.trace_update = sf.linear_trace_update
         elif update_type == "exponential":
-            self.voltage_update = sf._lif_exponential_voltage_update
-            self.trace_update = sf._exponential_trace_update
+            self.voltage_update = sf.lif_exponential_voltage_update
+            self.trace_update = sf.exponential_trace_update
+        elif (  # check if dict contains actual functions
+            isinstance(update_type, dict)
+            and callable(update_type["voltage_update"])
+            and callable(update_type["trace_update"])
+        ):
+            self.voltage_update = update_type["voltage_update"]
+            self.trace_update = update_type["trace_update"]
         else:
             raise ValueError(f"Unsupported update type {update_type}")
 
