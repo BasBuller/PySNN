@@ -191,6 +191,8 @@ class BaseNeuron(nn.Module):
 
     def fold(self, x):
         r"""Fold incoming spike train by summing last dimension."""
+        if isinstance(x, (list, tuple)):
+            x = torch.cat(x, dim=-1)
         return x.sum(-1)
 
     def unfold(self, x):
@@ -618,6 +620,12 @@ class FedeNeuron(BaseNeuron):
         self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
         self.init_neuron()
 
+    def fold(self, x, t):
+        if isinstance(x, (list, tuple)):
+            x = torch.cat(x, dim=-1)
+            t = torch.cat(t, dim=-1)
+        return x, t
+
     def update_trace(self, x):
         r"""
         :param x: Incoming/presynaptic spikes
@@ -649,6 +657,7 @@ class FedeNeuron(BaseNeuron):
 
         :return: Neuron output spikes and trace
         """
+        x, pre_trace = self.fold(x, pre_trace)
         self.update_voltage(x, pre_trace)
         spikes = self.spiking()
         self.update_trace(self.convert_spikes(spikes))
