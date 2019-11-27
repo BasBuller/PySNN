@@ -2,15 +2,12 @@ import os
 from tqdm import tqdm
 
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
-from torchvision import transforms
 
 from pysnn.network import SNNNetwork
-from pysnn.connection import Conv2d, AdaptiveMaxPool2d
+from pysnn.connection import Conv2d
 from pysnn.neuron import FedeNeuron, Input
 from pysnn.learning import FedeSTDP
-from pysnn.utils import conv2d_output_shape
 from pysnn.datasets import nmnist_train_test
 
 

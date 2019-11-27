@@ -44,9 +44,9 @@ class Connection(nn.Module):
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
 
         # State parameters
-        self.register_buffer("trace", torch.Tensor(*shape))
-        self.register_buffer("delay", torch.Tensor(*shape))
-        self.register_buffer("spikes", torch.Tensor(*shape).bool())
+        self.register_buffer("trace", torch.empty(*shape, dtype=torch.float))
+        self.register_buffer("delay", torch.empty(*shape, dtype=torch.float))
+        self.register_buffer("spikes", torch.empty(*shape, dtype=torch.bool))
 
     def convert_spikes(self, x):
         r"""Convert input from Byte Tensor to same data type as the weights."""
@@ -139,7 +139,10 @@ class _Linear(Connection):
         super(_Linear, self).__init__(self.synapse_shape, dt, delay)
 
         # Learnable parameters
-        self.weight = Parameter(torch.Tensor(out_features, in_features))
+        self.weight = Parameter(
+            torch.empty(out_features, in_features, dtype=torch.float),
+            requires_grad=False,
+        )
 
     # Support function
     def unfold(self, x):
@@ -268,7 +271,10 @@ class _ConvNd(Connection):
 
         # Weight parameter
         self.weight = Parameter(
-            torch.Tensor(out_channels, in_channels, *self.kernel_size)
+            torch.empty(
+                out_channels, in_channels, *self.kernel_size, dtype=torch.float
+            ),
+            requires_grad=False,
         )
 
     # Support functions
