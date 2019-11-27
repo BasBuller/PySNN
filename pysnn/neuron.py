@@ -63,14 +63,20 @@ class Input(BaseInput):
 
     def __init__(self, cells_shape, dt, alpha_t, tau_t, update_type="linear"):
         super(Input, self).__init__(cells_shape, dt)
-        self.register_buffer("alpha_t", torch.tensor(alpha_t, dtype=torch.float))
-        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
+
+        # Fixed parameters
+        self.register_buffer(
+            "alpha_t", alpha_t * torch.ones(cells_shape, dtype=torch.float)
+        )
+        self.register_buffer(
+            "tau_t", tau_t * torch.ones(cells_shape, dtype=torch.float)
+        )
 
         # Type of updates
         if update_type == "linear":
             assert (
-                tau_t >= 0.0 and tau_t <= 1.0
-            ), "Decays for linear updates should be in the interval [0, 1]."
+                (self.tau_t >= 0.0) & (self.tau_t <= 1.0)
+            ).all(), "Decays for linear updates should be in the interval [0, 1]."
             self.trace_update = sf.linear_trace_update
         elif update_type == "exponential":
             self.trace_update = sf.exponential_trace_update
@@ -112,8 +118,6 @@ class BaseNeuron(nn.Module):
     :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
     :param thresh: spiking threshold, when the cells' voltage surpasses this value it generates a spike.
     :param v_rest: voltage resting value, the :class:`Neuron` will default back to this over time or after spiking.
-    :param alpha_v: scaling constant for the increase of the voltage by a single spike.
-    :param alpha_t: scaling constant for the increase of the trace by a single spike.
     :param dt: duration of a single timestep.
     :param duration_refrac: Number of timesteps the :class:`Neuron` is dormant after spiking. Make sure ``dt`` fits an integer number of times in ``duration refrac``.
     :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``.
@@ -121,18 +125,9 @@ class BaseNeuron(nn.Module):
     """
 
     def __init__(
-        self,
-        cells_shape,
-        thresh,
-        v_rest,
-        alpha_v,
-        alpha_t,
-        dt,
-        duration_refrac,
-        store_trace=False,
+        self, cells_shape, thresh, v_rest, dt, duration_refrac, store_trace=False
     ):
         super(BaseNeuron, self).__init__()
-        self.cells_shape = torch.tensor(cells_shape)
 
         # Check compatibility of dt and refrac counting
         assert (
@@ -142,12 +137,6 @@ class BaseNeuron(nn.Module):
 
         # Fixed parameters
         self.register_buffer("v_rest", torch.tensor(v_rest, dtype=torch.float))
-        self.register_buffer(
-            "alpha_v", torch.tensor(alpha_v, dtype=torch.float)
-        )  # TODO: Might want to move this out of base class
-        self.register_buffer(
-            "alpha_t", torch.tensor(alpha_t, dtype=torch.float)
-        )  # TODO: Might want to move this out of base class
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
         self.register_buffer(
             "duration_refrac", torch.tensor(duration_refrac, dtype=torch.float)
@@ -155,13 +144,17 @@ class BaseNeuron(nn.Module):
         self.register_buffer("thresh_center", torch.tensor(thresh, dtype=torch.float))
 
         # Define dynamic parameters
-        self.register_buffer("spikes", torch.Tensor(*cells_shape).bool())
-        self.register_buffer("v_cell", torch.Tensor(*cells_shape))
-        self.register_buffer("trace", torch.Tensor(*cells_shape))
-        self.register_buffer("refrac_counts", torch.Tensor(*cells_shape))
+        self.register_buffer("spikes", torch.empty(*cells_shape, dtype=torch.bool))
+        self.register_buffer("v_cell", torch.empty(*cells_shape, dtype=torch.float))
+        self.register_buffer("trace", torch.empty(*cells_shape, dtype=torch.float))
+        self.register_buffer(
+            "refrac_counts", torch.empty(*cells_shape, dtype=torch.float)
+        )
 
         # Define learnable parameters
-        self.thresh = Parameter(torch.Tensor(*cells_shape))
+        self.thresh = Parameter(
+            torch.empty(*cells_shape, dtype=torch.float), requires_grad=False
+        )
 
         # In case of storing a complete, local copy of the activity of a neuron
         if store_trace:
@@ -276,29 +269,31 @@ class IFNeuron(BaseNeuron):
         store_trace=False,
     ):
         super(IFNeuron, self).__init__(
-            cells_shape,
-            thresh,
-            v_rest,
-            alpha_v,
-            alpha_t,
-            dt,
-            duration_refrac,
-            store_trace=store_trace,
+            cells_shape, thresh, v_rest, dt, duration_refrac, store_trace=store_trace
+        )
+
+        # Fixed parameters
+        self.register_buffer(
+            "alpha_v", alpha_v * torch.ones(cells_shape, dtype=torch.float)
+        )
+        self.register_buffer(
+            "alpha_t", alpha_t * torch.ones(cells_shape, dtype=torch.float)
+        )
+        self.register_buffer(
+            "tau_t", tau_t * torch.ones(cells_shape, dtype=torch.float)
         )
 
         # Type of updates
         if update_type == "linear":
             assert (
-                tau_t >= 0.0 and tau_t <= 1.0
-            ), "Decays for linear updates should be in the interval [0, 1]."
+                (self.tau_t >= 0.0) & (self.tau_t <= 1.0)
+            ).all(), "Decays for linear updates should be in the interval [0, 1]."
             self.trace_update = sf.linear_trace_update
         elif update_type == "exponential":
             self.trace_update = sf.exponential_trace_update
         else:
             raise ValueError(f"Unsupported trace type {update_type}")
 
-        # Fixed parameters
-        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
         self.init_neuron()
 
     def update_trace(self, x):
@@ -368,21 +363,31 @@ class LIFNeuron(BaseNeuron):
         store_trace=False,
     ):
         super(LIFNeuron, self).__init__(
-            cells_shape,
-            thresh,
-            v_rest,
-            alpha_v,
-            alpha_t,
-            dt,
-            duration_refrac,
-            store_trace=store_trace,
+            cells_shape, thresh, v_rest, dt, duration_refrac, store_trace=store_trace
+        )
+
+        # Fixed parameters
+        self.register_buffer(
+            "alpha_v", alpha_v * torch.ones(cells_shape, dtype=torch.float)
+        )
+        self.register_buffer(
+            "alpha_t", alpha_t * torch.ones(cells_shape, dtype=torch.float)
+        )
+        self.register_buffer(
+            "tau_v", tau_v * torch.ones(cells_shape, dtype=torch.float)
+        )
+        self.register_buffer(
+            "tau_t", tau_t * torch.ones(cells_shape, dtype=torch.float)
         )
 
         # Type of updates
         if update_type == "linear":
-            assert all(
-                [tau_v >= 0.0, tau_v <= 1.0, tau_t >= 0.0, tau_t <= 1.0]
-            ), "Decays for linear updates should be in the interval [0, 1]."
+            assert (
+                (self.tau_v >= 0.0)
+                & (self.tau_v <= 1.0)
+                & (self.tau_t >= 0.0)
+                & (self.tau_t <= 1.0)
+            ).all(), "Decays for linear updates should be in the interval [0, 1]."
             self.voltage_update = sf.lif_linear_voltage_update
             self.trace_update = sf.linear_trace_update
         elif update_type == "exponential":
@@ -391,9 +396,6 @@ class LIFNeuron(BaseNeuron):
         else:
             raise ValueError(f"Unsupported update type {update_type}")
 
-        # Fixed parameters
-        self.register_buffer("tau_v", torch.tensor(tau_v, dtype=torch.float))
-        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
         self.init_neuron()
 
     def update_trace(self, x):
@@ -475,28 +477,39 @@ class AdaptiveLIFNeuron(BaseNeuron):
         store_trace=False,
     ):
         super(AdaptiveLIFNeuron, self).__init__(
-            cells_shape,
-            thresh,
-            v_rest,
-            alpha_v,
-            alpha_t,
-            dt,
-            duration_refrac,
-            store_trace=store_trace,
+            cells_shape, thresh, v_rest, dt, duration_refrac, store_trace=store_trace
+        )
+
+        # Fixed parameters
+        self.register_buffer(
+            "alpha_v", alpha_v * torch.ones(cells_shape, dtype=torch.float)
+        )
+        self.register_buffer(
+            "alpha_t", alpha_t * torch.ones(cells_shape, dtype=torch.float)
+        )
+        self.register_buffer(
+            "alpha_thresh", alpha_thresh * torch.ones(cells_shape, dtype=torch.float)
+        )
+        self.register_buffer(
+            "tau_v", tau_v * torch.ones(cells_shape, dtype=torch.float)
+        )
+        self.register_buffer(
+            "tau_t", tau_t * torch.ones(cells_shape, dtype=torch.float)
+        )
+        self.register_buffer(
+            "tau_thresh", tau_thresh * torch.ones(cells_shape, dtype=torch.float)
         )
 
         # Type of updates
         if update_type == "linear":
-            assert all(
-                [
-                    tau_v >= 0.0,
-                    tau_v <= 1.0,
-                    tau_t >= 0.0,
-                    tau_t <= 1.0,
-                    tau_thresh >= 0.0,
-                    tau_thresh <= 1.0,
-                ]
-            ), "Decays for linear updates should be in the interval [0, 1]."
+            assert (
+                (self.tau_v >= 0.0)
+                & (self.tau_v <= 1.0)
+                & (self.tau_t >= 0.0)
+                & (self.tau_t <= 1.0)
+                & (self.tau_thresh >= 0.0)
+                & (self.tau_thresh <= 1.0)
+            ).all(), "Decays for linear updates should be in the interval [0, 1]."
             self.voltage_update = sf.lif_linear_voltage_update
             self.trace_update = sf.linear_trace_update
             self.thresh_update = sf.linear_thresh_update
@@ -507,13 +520,6 @@ class AdaptiveLIFNeuron(BaseNeuron):
         else:
             raise ValueError(f"Unsupported update type {update_type}")
 
-        # Fixed parameters
-        self.register_buffer("tau_v", torch.tensor(tau_v, dtype=torch.float))
-        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
-        self.register_buffer(
-            "alpha_thresh", torch.tensor(alpha_thresh, dtype=torch.float)
-        )
-        self.register_buffer("tau_thresh", torch.tensor(tau_thresh, dtype=torch.float))
         self.init_neuron()
 
     def update_trace(self, x):
@@ -529,7 +535,6 @@ class AdaptiveLIFNeuron(BaseNeuron):
         r"""
         :param x: Incoming/presynaptic spikes
         """
-        r"""Return cells that are in spiking state and adjust threshold accordingly."""
         spikes = self.convert_spikes(x)
         self.thresh = self.thresh_update(
             self.thresh, spikes, self.alpha_thresh, self.tau_thresh, self.dt
@@ -605,19 +610,23 @@ class FedeNeuron(BaseNeuron):
         store_trace=False,
     ):
         super(FedeNeuron, self).__init__(
-            cells_shape,
-            thresh,
-            v_rest,
-            alpha_v,
-            alpha_t,
-            dt,
-            duration_refrac,
-            store_trace=store_trace,
+            cells_shape, thresh, v_rest, dt, duration_refrac, store_trace=store_trace
         )
 
         # Fixed parameters
-        self.register_buffer("tau_v", torch.tensor(tau_v, dtype=torch.float))
-        self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
+        self.register_buffer(
+            "alpha_v", alpha_v * torch.ones(cells_shape, dtype=torch.float)
+        )
+        self.register_buffer(
+            "alpha_t", alpha_t * torch.ones(cells_shape, dtype=torch.float)
+        )
+        self.register_buffer(
+            "tau_v", tau_v * torch.ones(cells_shape, dtype=torch.float)
+        )
+        self.register_buffer(
+            "tau_t", tau_t * torch.ones(cells_shape, dtype=torch.float)
+        )
+
         self.init_neuron()
 
     def fold(self, x, t):

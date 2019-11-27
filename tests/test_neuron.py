@@ -45,8 +45,8 @@ def test_input_forward(inputs, expected, input_neuron):
 @pytest.fixture(
     scope="function",
     params=[
-        # cell_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac
-        ((1, 2, 2), 1.0, 0.0, 1.0, 1.0, 1.0, 3.0)
+        # cell_shape, thresh, v_rest, dt, duration_refrac
+        ((1, 2, 2), 1.0, 0.0, 1.0, 3.0)
     ],
 )
 def neuron(request):
