@@ -50,7 +50,7 @@ Installing PySNN requires a Python version of 3.6 or higher, Python 2 is not sup
 
 ## __Network Structure__
 
-Intention is to mirror most of the structure of PyTorch framework. As an example, the followig piece of code shows how much a Spiking Neural Network definition in PySNN looks like a network definition in PyTorch:
+Intention is to mirror most of the structure of PyTorch framework. As an example, the followig piece of code shows how much a Spiking Neural Network definition in PySNN looks like a network definition in PyTorch. The network's graph is cyclical, due to the feedback connection from the output neurons to the hidden neurons.
 
 ```python
 class Network(SNNNetwork):
@@ -70,12 +70,17 @@ class Network(SNNNetwork):
         self.neuron2 = LIFNeuron((batch_size, 1, n_out), *neuron_dynamics)
         self.add_layer("fc2", self.mlp2_c, self.neuron2)
 
+        # Feedback connection from neuron 2 to neuron 1
+        self.mlp2_prev = Linear(n_out, n_hidden, *c_dynamics)
+        self.add_layer("fc2_back", self.mlp2_prev, self.neuron1)
+
     def forward(self, input):
         spikes, trace = self.input(input)
 
         # Layer 1
-        spikes, trace = self.mlp1_c(spikes, trace)
-        spikes, trace = self.neuron1(spikes, trace)
+        x_prev, _ = self.mlp2_prev(self.neuron2.spikes, self.neuron2.trace)
+        x_forw, _ = self.mlp1_c(x, t)
+        x, t = self.neuron1([x_forw, x_rec, x_prev])
 
         # Layer out
         spikes, trace = self.mlp2_c(spikes, trace)

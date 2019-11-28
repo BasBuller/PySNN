@@ -27,7 +27,7 @@ extras = {
 
 setup(
     name="pysnn",
-    version="0.1",
+    version="0.1.1",
     description="Framework for engineering and simulating spiking neural networks, built on top of PyTorch.",
     long_description=readme,
     long_description_content_type="text/markdown",
