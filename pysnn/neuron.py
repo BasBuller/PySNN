@@ -89,8 +89,10 @@ class Input(BaseInput):
     :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``.
     """
 
-    def __init__(self, cells_shape, dt, alpha_t, tau_t, update_type="linear"):
-        super(Input, self).__init__(cells_shape, dt)
+    def __init__(
+        self, cells_shape, dt, alpha_t, tau_t, update_type="linear", store_trace=False
+    ):
+        super(Input, self).__init__(cells_shape, dt, store_trace=store_trace)
 
         # Fixed parameters
         self.register_buffer(
