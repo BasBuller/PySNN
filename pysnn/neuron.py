@@ -104,6 +104,8 @@ class Input(BaseInput):
             self.trace_update = sf.linear_trace_update
         elif update_type == "exponential":
             self.trace_update = sf.exponential_trace_update
+        elif callable(update_type):
+            self.trace_update = update_type
         else:
             raise ValueError(f"Unsupported trace type {update_type}")
 
@@ -160,6 +162,9 @@ class BaseNeuron(nn.Module):
             duration_refrac % dt == 0
         ), "dt does not fit an integer amount of times in duration_refrac."
         assert duration_refrac >= 0, "duration_refrac should be non-negative."
+
+        # Store shape for easy use
+        self.cells_shape = torch.tensor(cells_shape)
 
         # Fixed parameters
         self.register_buffer("v_rest", torch.tensor(v_rest, dtype=torch.float))

@@ -23,55 +23,69 @@ class SNNNetwork(nn.Module):
             if not isinstance(module, SNNNetwork):
                 module.reset_state()
 
-    def add_layer(self, name, connection, neuron):
+    def add_layer(self, name, connection, neuron, presyn_neuron=None):
         r"""Adds which :class:`Neuron` and :class:`Connection` objects together form a layer, as well as the layer type.
         
         :param name: Name of the layer
         :param connection: :class:`Connection` object
-        :param neuron: :class:`Neuron` object
+        :param neuron: postsynaptic :class:`Neuron` object, required
+        :param presyn_neuron: Optional, presynaptic :class:`Neuron` object
         """
         # Check connection object
-        if not isinstance(connection, Connection):
+        if not isinstance(connection, (Connection, str)):
             raise TypeError("Connection input needs to be a Connection object.")
 
         # Check neuron object
-        if not isinstance(neuron, BaseNeuron):
+        if not isinstance(neuron, (BaseNeuron, str)):
             raise TypeError("Neuron input needs to be a BaseNeuron object.")
+
+        # Check presynaptic neuron, if supplied:
+        if presyn_neuron is not None:
+            if not isinstance(neuron, (BaseNeuron, BaseInput, str)):
+                raise TypeError("Presynaptic neuron needs to be a BaseNeuron or BaseInput object.")
 
         # Check name
         if name in self._layers:
             raise KeyError("Layer name already exists, please use a different one.")
         elif "." in name:
-            raise KeyError("Name cannot contain  a '.'.")
+            raise KeyError("Name cannot contain  a '.'")
         elif name == "":
             raise KeyError("Name cannot be an empty string.")
 
         # Check specific connection type
-        if isinstance(connection, Linear):
+        if isinstance(self._modules[connection] if isinstance(connection, str) else connection, Linear):
             ctype = "linear"
-        elif isinstance(connection, Conv2d):
+        elif isinstance(self._modules[connection] if isinstance(connection, str) else connection, Conv2d):
             ctype = "conv2d"
         else:
             raise TypeError("Connection is of an unkown type.")
 
         # Add layer
         self._layers[name] = {"connection": connection, "neuron": neuron, "type": ctype}
+        if presyn_neuron:
+            self._layers[name]["presyn_neuron"] = presyn_neuron
 
     def layer_state_dict(self):
         r"""Return state dicts grouped per layer, so a single Connection and a single Neuron state dict per layer.
         
         :return: State Dicts for the :class:`Connection` and :class:`Neuron` of the layer, as well as the layer type.
         """
-        dict_names = ["connection", "neuron"]
+        dict_names = ["connection", "neuron", "presyn_neuron"]
         state_dicts = OrderedDict()
-        for name, layer in self._layers.items():
+        for layer_name, layer in self._layers.items():
             states = {}
             for k, v in layer.items():
                 if k in dict_names:
+                    obj_name = None
+                    if isinstance(v, str):
+                        obj_name = v
+                        v = self._modules[v]
                     states[k] = v.state_dict()
+                    if obj_name:
+                        states[k]["name"] = obj_name
                 elif k == "type":
                     states[k] = v
-            state_dicts[name] = states
+            state_dicts[layer_name] = states
         return state_dicts
 
     def change_batch_size(self, batch_size):
