@@ -87,7 +87,7 @@ class Connection(nn.Module):
             nn.init.normal_(self.weight)
         elif distribution == "xavier_normal":
             nn.init.xavier_normal_(self.weight, gain=gain)
-            self.weight += a
+            self.weight += self.weight.max() * a
         elif distribution == "xavier_uniform":
             nn.init.xavier_uniform_(self.weight, gain=gain)
             self.weight += self.weight.max() * a
