@@ -2,7 +2,7 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 
-from pysnn.connection import Connection, Linear, Conv2d
+from pysnn.connection import Connection, _Linear, _ConvNd, _Recurrent
 from pysnn.neuron import BaseNeuron, BaseInput
 
 
@@ -53,10 +53,12 @@ class SNNNetwork(nn.Module):
             raise KeyError("Name cannot be an empty string.")
 
         # Check specific connection type
-        if isinstance(self._modules[connection] if isinstance(connection, str) else connection, Linear):
+        if isinstance(self._modules[connection] if isinstance(connection, str) else connection, _Linear):
             ctype = "linear"
-        elif isinstance(self._modules[connection] if isinstance(connection, str) else connection, Conv2d):
-            ctype = "conv2d"
+        elif isinstance(self._modules[connection] if isinstance(connection, str) else connection, _ConvNd):
+            ctype = "convolutional"
+        elif isinstance(self._modules[connection] if isinstance(connection, str) else connection, _Recurrent):
+            ctype = "recurrent"
         else:
             raise TypeError("Connection is of an unkown type.")
 

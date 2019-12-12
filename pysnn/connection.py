@@ -383,6 +383,110 @@ class Conv2d(_ConvNd):
 
 
 #########################################################
+# Recurrent
+#########################################################
+class _Recurrent(Connection):
+    r"""SNN linear base class, comparable to torch.nn.Linear in format.
+    
+    This class implements basic methods and parameters that are shared among all versions of Recurrent layers.
+    By inhereting from this class one can easily change voltage update, trace update and forward functionalities. 
+    """
+
+    def __init__(self, in_features, out_features, batch_size, dt, delay):
+        # Dimensions
+        self.in_features = in_features
+        self.out_features = out_features
+        self.batch_size = batch_size
+
+        self.synapse_shape = (batch_size, out_features, in_features)
+        super(_Recurrent, self).__init__(self.synapse_shape, dt, delay)
+
+        # Learnable parameters
+        self.weight = Parameter(
+            torch.empty(out_features, in_features, dtype=torch.float),
+            requires_grad=False,
+        )
+
+    # Support function
+    def unfold(self, x):
+        r"""Placeholder for possible folding functionality."""
+        return x
+
+    def fold(self, x):
+        r"""Fold incoming spike, trace, or activation potentials to output format.
+        
+        :param x: Tensor containing spikes, traces, or activations.
+
+        :return: Folder input tensor.
+        """
+        return x.view(
+            self.synapse_shape[0], -1, self.out_features, self.in_features
+        )  # TODO: Add posibility for a channel dim at dim 2
+
+    def update_trace(self, t_in):
+        r"""Propagate traces incoming from pre-synaptic neuron through all its outgoing connections.
+        
+        :param t_in: Current values of the trace to be stored.
+        """
+        # TODO: Unsure if this clone is needed or not. Might even have to use repeat()
+        self.trace.copy_(t_in.expand(-1, self.out_features, -1).contiguous())
+
+
+class LateralInhib(_Recurrent):
+    r"""SNN lateral inhibitory layer, factually this is a specialzed recurrent layer.
+    
+    :param in_features: Size of each input sample.
+    :param batch_size: Number of samples in a batch.
+    :param dt: Duration of each timestep.
+    :param delay: Time it takes for a spike to propagate through the connection. Should be an integer multiple of dt.
+    """
+
+    def __init__(self, in_features, batch_size, dt, delay):
+        super(LateralInhib, self).__init__(
+            in_features, in_features, batch_size, dt, delay
+        )
+
+        # Initialize connection
+        self.init_connection()
+
+    def set_diag_weights_zero(self):
+        ones = torch.ones_like(self.weight)
+
+        # eye matrix
+        rows = self.weight.shape[0]
+        cols = self.weight.shape[1]
+        dtype = self.weight.dtype
+        device = self.weight.device
+        diag = torch.eye(rows, cols, dtype=dtype, device=device)
+
+        # mutliply weights with ones - eye to set diagonal to zeros
+        self.weight *= ones - diag
+
+    def activation_potential(self, x):
+        r"""Determine activation potentials from each synapse for current time step.
+        
+        :param x: Presynaptic spikes.
+
+        :return: Activation potentials.
+        """
+        out = x * self.weight
+        return self.fold(out)
+
+    def forward(self, x, trace_in):
+        r"""Calculate postsynaptic activation potentials and trace.
+        
+        :param x: Presynaptic spikes.
+        :param trace_in: Presynaptic trace.
+
+        :return: (Activation potentials, Postsynaptic trace)
+        """
+        self.update_trace(trace_in)
+        x = self.convert_spikes(x)
+        x = self.propagate_spike(x)
+        return self.activation_potential(x), self.fold(self.trace)
+
+
+#########################################################
 # Max Pooling
 #########################################################
 class _SpikeMaxPoolNd(nn.Module):
