@@ -164,10 +164,12 @@ class BaseNeuron(nn.Module):
         super(BaseNeuron, self).__init__()
 
         # Check compatibility of dt and refrac counting
+        if not isinstance(duration_refrac, torch.Tensor):
+            duration_refrac = torch.tensor(duration_refrac)
         assert (
-            duration_refrac % dt == 0
+            (duration_refrac % dt == 0).all()
         ), "dt does not fit an integer amount of times in duration_refrac."
-        assert duration_refrac >= 0, "duration_refrac should be non-negative."
+        assert (duration_refrac >= 0).all(), "duration_refrac should be non-negative."
 
         # Store shape for easy use
         self.cells_shape = torch.tensor(cells_shape)
@@ -176,9 +178,9 @@ class BaseNeuron(nn.Module):
         self.register_buffer("v_rest", torch.tensor(v_rest, dtype=torch.float))
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
         self.register_buffer(
-            "duration_refrac", torch.tensor(duration_refrac, dtype=torch.float)
+            "duration_refrac", duration_refrac * torch.ones(cells_shape, dtype=torch.float)
         )
-        self.register_buffer("thresh_center", torch.tensor(thresh, dtype=torch.float))
+        self.register_buffer("thresh_center", thresh * torch.ones(cells_shape, dtype=torch.float))
 
         # Define dynamic parameters
         self.register_buffer("spikes", torch.empty(*cells_shape, dtype=torch.bool))
@@ -210,7 +212,7 @@ class BaseNeuron(nn.Module):
 
         Can be overwritten in case of the need of more refined functionality.
         """
-        if self.duration_refrac > 0:
+        if (self.duration_refrac > 0).any():
             self.refrac_counts[self.refrac_counts > 0] -= self.dt
             self.refrac_counts += self.duration_refrac * self.convert_spikes(spikes)
         self.v_cell.masked_fill_(spikes, self.v_rest)
