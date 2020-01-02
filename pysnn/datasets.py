@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 
 import torch
 from torch.utils.data import Dataset
+import torchvision
 
 from pysnn.file_io import Events, read_2d_spikes
 
@@ -70,6 +71,7 @@ def _concat_dir_content(content):
         labels += [idx for _ in range(len(data))]
         names += [name for _ in range(len(data))]
     df = pd.DataFrame({"sample": ims, "label": labels})
+    df = df[["sample", "label"]]
     return df, names
 
 
@@ -113,10 +115,12 @@ class NeuromorphicDataset(Dataset):
         width,
         im_transform=None,
         lbl_transform=None,
+        lbl_encoder=None,
     ):
         self.data = data
         self.im_transform = im_transform
         self.lbl_transform = lbl_transform
+        self.lbl_encoder = lbl_encoder
 
         self.sampling_time = sampling_time
         self.sample_length = sample_length
@@ -145,6 +149,8 @@ class NeuromorphicDataset(Dataset):
             sample = self.im_transform(sample)
         if self.lbl_transform:
             label = self.lbl_transform(label)
+        if self.lbl_encoder:
+            label = self.lbl_encoder(label)
 
         return sample, label, class_idx
 
@@ -192,6 +198,83 @@ def ncaltech_train_test(
 
 
 #########################################################
+# Regular MNIST in spiking format
+#########################################################
+def create_torchvision_dataset_wrapper(ds_type):
+    # language=rst
+    """
+    Adapted from BindsNET https://github.com/BindsNET/bindsnet
+
+    Creates wrapper classes for datasets that output ``(image, label)`` from
+    ``__getitem__``. This applies to all of the datasets inside of ``torchvision``.
+    """
+    if type(ds_type) == str:
+        ds_type = getattr(torchvision.datasets, ds_type)
+
+    class TorchvisionDatasetWrapper(ds_type):
+        __doc__ = (
+            """BindsNET torchvision dataset wrapper for:
+        The core difference is the output of __getitem__ is no longer
+        (image, label) rather a dictionary containing the image, label,
+        and their encoded versions if encoders were provided.
+            \n\n"""
+            + str(ds_type)
+            if ds_type.__doc__ is None
+            else ds_type.__doc__
+        )
+
+        def __init__(
+            self,
+            image_encoder=None,
+            label_encoder=None,
+            *args,
+            **kwargs
+        ):
+            # language=rst
+            """
+            Constructor for the BindsNET torchvision dataset wrapper.
+            For details on the dataset you're interested in visit
+            https://pytorch.org/docs/stable/torchvision/datasets.html
+            :param image_encoder: Spike encoder for use on the image
+            :param label_encoder: Spike encoder for use on the label
+            :param *args: Arguments for the original dataset
+            :param **kwargs: Keyword arguments for the original dataset
+            """
+            super().__init__(*args, **kwargs)
+
+            self.args = args
+            self.kwargs = kwargs
+
+            self.image_encoder = image_encoder
+            self.label_encoder = label_encoder
+
+        def __getitem__(self, idx):
+            # language=rst
+            """
+            Utilizes the ``torchvision.dataset`` parent class to grab the data, then
+            encodes using the supplied encoders.
+            :param int idx: Index to grab data at.
+            :return: The relevant data and encoded data from the requested index.
+            """
+            image, label = super().__getitem__(idx)
+            label_int = label.clone()
+
+            if self.image_encoder:
+                image = self.image_encoder(image)
+            if self.label_encoder:
+                label = self.label_encoder(label)
+
+            return image, label, label_int
+
+        def __len__(self):
+            return super().__len__()
+
+    return TorchvisionDatasetWrapper
+
+mnist_wrapper = create_torchvision_dataset_wrapper("MNIST")
+
+
+#########################################################
 # Neuromorphic MNIST
 #########################################################
 def nmnist_train_test(
@@ -204,6 +287,7 @@ def nmnist_train_test(
     width=34,
     im_transform=None,
     lbl_transform=None,
+    lbl_encoder=None,
 ):
     r"""Neurmorphic version of the MNIST dataset, obtained from:
 
@@ -228,13 +312,14 @@ def nmnist_train_test(
         width,
         im_transform=im_transform,
         lbl_transform=lbl_transform,
+        lbl_encoder=lbl_encoder,
     )
 
     if not test_samples:
         test_content = _list_dir_content(os.path.join(root, "Test"))
         test, _ = _concat_dir_content(test_content)
     else:
-        test = train_test(os.path.join(root, "Test"), train_size=(test_samples / 10000))
+        _, test = train_test(os.path.join(root, "Test"), train_size=((10000 - test_samples) / 10000))
     test_dataset = NeuromorphicDataset(
         test,
         sampling_time,
@@ -243,6 +328,7 @@ def nmnist_train_test(
         width,
         im_transform=im_transform,
         lbl_transform=lbl_transform,
+        lbl_encoder=lbl_encoder,
     )
 
     return train_dataset, test_dataset
@@ -471,3 +557,8 @@ class Intensity:
 
     def __call__(self, x):
         return x * self.intensity
+
+
+if __name__ == "__main__":
+    train, test = nmnist_train_test(os.path.expanduser("~/thesis_final/code/data/nmnist"))
+    print(len(test[0]))
