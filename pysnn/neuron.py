@@ -161,8 +161,8 @@ class BaseNeuron(nn.Module):
         if not isinstance(duration_refrac, torch.Tensor):
             duration_refrac = torch.tensor(duration_refrac)
         assert (
-            (duration_refrac % dt == 0).all()
-        ), "dt does not fit an integer amount of times in duration_refrac."
+            duration_refrac % dt == 0
+        ).all(), "dt does not fit an integer amount of times in duration_refrac."
         assert (duration_refrac >= 0).all(), "duration_refrac should be non-negative."
 
         # Store shape for easy use
@@ -172,9 +172,11 @@ class BaseNeuron(nn.Module):
         self.register_buffer("v_rest", torch.tensor(v_rest, dtype=torch.float))
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
         self.register_buffer(
-            "duration_refrac", duration_refrac * torch.ones(cells_shape, dtype=torch.float)
+            "duration_refrac", torch.tensor(duration_refrac, dtype=torch.float)
         )
-        self.register_buffer("thresh_center", thresh * torch.ones(cells_shape, dtype=torch.float))
+        self.register_buffer(
+            "thresh_center", thresh * torch.ones(cells_shape, dtype=torch.float)
+        )
 
         # Define dynamic parameters
         self.register_buffer("spikes", torch.empty(*cells_shape, dtype=torch.bool))
