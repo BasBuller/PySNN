@@ -56,7 +56,7 @@ class SNNNetwork(nn.Module):
         if isinstance(self._modules[connection] if isinstance(connection, str) else connection, _Linear):
             ctype = "linear"
         elif isinstance(self._modules[connection] if isinstance(connection, str) else connection, _ConvNd):
-            ctype = "convolutional"
+            ctype = "conv2d"
         elif isinstance(self._modules[connection] if isinstance(connection, str) else connection, _Recurrent):
             ctype = "recurrent"
         else:
