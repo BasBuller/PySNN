@@ -79,6 +79,11 @@ class Connection(nn.Module):
             a = a / scaling
             b = b / scaling
             nn.init.uniform_(self.weight, a=a, b=b)
+        elif distribution == "neuron_scaled_normal":
+            scaling = np.sqrt(self.weight.shape[1])
+            nn.init.normal_(self.weight)
+            self.weight /= scaling
+            self.weight *= gain
         elif distribution == "normalized":
             nn.init.uniform_(self.weight, a=a, b=b)
             self.weight /= self.weight.sum()

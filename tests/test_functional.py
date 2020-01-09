@@ -64,40 +64,44 @@ def test_linear_trace_update(trace, spikes_in, trace_out):
 # Test threshold updates for adaptive neurons
 ##########################################################
 @pytest.mark.parametrize(
-    "thresh, spikes_in, thresh_out",
+    "thresh, thresh_ref, spikes_in, thresh_out",
     [
         (
             torch.ones(*cells_shape),
+            torch.zeros(*cells_shape),
             torch.ones(*cells_shape),
             [torch.ones(*cells_shape) * 0.95, torch.ones(*cells_shape) * 0.925],
         )
     ],
 )
-def test_exponential_thresh_update(thresh, spikes_in, thresh_out):
+def test_exponential_thresh_update(thresh, thresh_ref, spikes_in, thresh_out):
     from pysnn.functional import exponential_thresh_update
 
     for th_out in thresh_out:
         thresh = exponential_thresh_update(
-            thresh, spikes_in, alpha_thresh, tau_thresh, dt
+            thresh, thresh_ref, spikes_in, alpha_thresh, tau_thresh, dt
         )
         assert thresh.allclose(th_out)
 
 
 @pytest.mark.parametrize(
-    "thresh, spikes_in, thresh_out",
+    "thresh, thresh_ref, spikes_in, thresh_out",
     [
         (
             torch.ones(*cells_shape),
+            torch.zeros(*cells_shape),
             torch.ones(*cells_shape),
             [torch.ones(*cells_shape) * 1.4, torch.ones(*cells_shape) * 1.6],
         )
     ],
 )
-def test_linear_thresh_update(thresh, spikes_in, thresh_out):
+def test_linear_thresh_update(thresh, thresh_ref, spikes_in, thresh_out):
     from pysnn.functional import linear_thresh_update
 
     for th_out in thresh_out:
-        thresh = linear_thresh_update(thresh, spikes_in, alpha_thresh, thresh_decay, dt)
+        thresh = linear_thresh_update(
+            thresh, thresh_ref, spikes_in, alpha_thresh, thresh_decay, dt
+        )
         assert thresh.allclose(th_out)
 
 
