@@ -52,7 +52,7 @@ def linear_trace_update(trace, x, alpha_t, trace_decay, dt):
 ########################################################
 # Neuron threshold updates
 ########################################################
-def exponential_thresh_update(thresh, x, alpha_thresh, tau_thresh, dt):
+def exponential_thresh_update(thresh, thresh_rest, x, alpha_thresh, tau_thresh, dt):
     r"""Calculate change in cell's threshold based on current threshold and incoming spikes x.
 
     Threshold updates are performed according to the following formula:
@@ -69,12 +69,12 @@ def exponential_thresh_update(thresh, x, alpha_thresh, tau_thresh, dt):
 
     :return: New threshold values
     """
-    thresh += (dt / tau_thresh) * (-thresh + alpha_thresh * x)
+    thresh += (dt / tau_thresh) * (-(thresh - thresh_rest) + alpha_thresh * x)
     # TODO: Check for possible inplace instead of copying operation, should be inplace for best performance
     return thresh
 
 
-def linear_thresh_update(thresh, x, alpha_thresh, thresh_decay, dt):
+def linear_thresh_update(thresh, thresh_rest, x, alpha_thresh, thresh_decay, dt):
     r"""Calculate change in cell's threshold based on a fixed decay factor and incoming spikes x.
 
     Threshold updates are performed according to the following formula:

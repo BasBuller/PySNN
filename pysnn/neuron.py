@@ -580,6 +580,14 @@ class AdaptiveLIFNeuron(BaseNeuron):
             self.voltage_update = sf.lif_exponential_voltage_update
             self.trace_update = sf.exponential_trace_update
             self.thresh_update = sf.exponential_thresh_update
+        elif (  # check if dict contains actual functions
+            isinstance(update_type, dict)
+            and callable(update_type["voltage_update"])
+            and callable(update_type["trace_update"])
+        ):
+            self.voltage_update = update_type["voltage_update"]
+            self.trace_update = update_type["trace_update"]
+            self.thresh_update = update_type["thresh_update"]
         else:
             raise ValueError(f"Unsupported update type {update_type}")
 
@@ -600,7 +608,7 @@ class AdaptiveLIFNeuron(BaseNeuron):
         """
         spikes = self.convert_spikes(x)
         self.thresh = self.thresh_update(
-            self.thresh, spikes, self.alpha_thresh, self.tau_thresh, self.dt
+            self.thresh, self.thresh_center, spikes, self.alpha_thresh, self.tau_thresh, self.dt
         )
         # No clamping needed since multiplication!
 
