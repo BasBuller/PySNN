@@ -198,9 +198,17 @@ class BaseNeuron(nn.Module):
             complete_trace = None
         self.register_buffer("complete_trace", complete_trace)
 
-    def spiking(self):
-        r"""Return cells that are in spiking state."""
-        self.spikes.copy_(self.v_cell >= self.thresh)
+    def spiking(self, force_spike=False):
+        r"""Return cells that are in spiking state.
+        
+        Can trigger a forced spike in the entire layer.
+
+        :param force_spike: Boolean, if True force the entire layer to spike on this timestep.
+        """
+        if not force_spike:
+            self.spikes.copy_(self.v_cell >= self.thresh)
+        else:
+            self.spikes.fill_(True)
         return self.spikes.clone()
 
     def refrac(self, spikes):
@@ -478,7 +486,7 @@ class LIFNeuron(BaseNeuron):
             self.refrac_counts,
         )
 
-    def forward(self, x):
+    def forward(self, x, force_spike=False):
         r"""
         :param x: Incoming/presynaptic spikes
 
@@ -486,7 +494,7 @@ class LIFNeuron(BaseNeuron):
         """
         x = self.fold(x)
         self.update_voltage(x)
-        spikes = self.spiking()
+        spikes = self.spiking(force_spike=force_spike)
         self.update_trace(spikes)
         self.refrac(spikes)
         if self.complete_trace is not None:
@@ -602,7 +610,12 @@ class AdaptiveLIFNeuron(BaseNeuron):
         """
         spikes = self.convert_spikes(x)
         self.thresh = self.thresh_update(
-            self.thresh, self.thresh_center, spikes, self.alpha_thresh, self.tau_thresh, self.dt
+            self.thresh,
+            self.thresh_center,
+            spikes,
+            self.alpha_thresh,
+            self.tau_thresh,
+            self.dt,
         )
         # No clamping needed since multiplication!
 
@@ -667,14 +680,7 @@ class StochasticNeuron(BaseNeuron):
         spike_prob="exp",
     ):
         super(StochasticNeuron, self).__init__(
-            cells_shape,
-            thresh,
-            v_rest,
-            alpha_v,
-            alpha_t,
-            dt,
-            duration_refrac,
-            store_trace=store_trace,
+            cells_shape, thresh, v_rest, dt, duration_refrac, store_trace=store_trace
         )
 
         # Type of updates
@@ -707,6 +713,12 @@ class StochasticNeuron(BaseNeuron):
             )
 
         # Fixed parameters
+        self.register_buffer(
+            "alpha_v", alpha_v * torch.ones(cells_shape, dtype=torch.float)
+        )
+        self.register_buffer(
+            "alpha_t", alpha_t * torch.ones(cells_shape, dtype=torch.float)
+        )
         self.register_buffer("tau_v", torch.tensor(tau_v, dtype=torch.float))
         self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
         self.register_buffer("spike_prob", torch.zeros(*cells_shape))
@@ -743,6 +755,14 @@ class StochasticNeuron(BaseNeuron):
         x = self.fold(x)
         self.update_voltage(x)
         spikes = self.spiking()
+        self.update_trace(spikes)
+        self.refrac(spikes)
+        if self.complete_trace is not None:
+            self.concat_trace(spikes)
+        return spikes, self.trace
+
+    def forced_spike(self, x):
+        spikes = super().force_spike()
         self.update_trace(spikes)
         self.refrac(spikes)
         if self.complete_trace is not None:
