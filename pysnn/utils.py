@@ -6,9 +6,12 @@ from torch.nn.modules.utils import _pair
 #########################################################
 # Class initialization
 #########################################################
-def _set_no_grad(module):
+def _set_no_grad(module, init_grad_tensor=False):
     for param in module.parameters():
         param.requires_grad = False
+
+        if init_grad_tensor:
+            param.grad = torch.zeros_like(param)
 
 
 #########################################################

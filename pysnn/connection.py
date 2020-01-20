@@ -7,7 +7,7 @@ from torch.nn.modules.utils import _pair
 from torch.nn.modules.pooling import _MaxPoolNd, _AdaptiveMaxPoolNd
 
 from pysnn.utils import _set_no_grad, conv2d_output_shape
-import pysnn.functional as sF
+import pysnn.functional as sf
 
 
 #########################################################
@@ -52,9 +52,9 @@ class Connection(nn.Module):
         r"""Convert input from Byte Tensor to same data type as the weights."""
         return x.type(self.weight.dtype)
 
-    def no_grad(self):
+    def no_grad(self, init_grad_tensor=False):
         r"""Set require_gradients to False and turn off training mode."""
-        _set_no_grad(self)
+        _set_no_grad(self, init_grad_tensor=init_grad_tensor)
 
     def reset_state(self):
         r"""Set state Parameters (e.g. trace) to their resting state."""
@@ -104,7 +104,7 @@ class Connection(nn.Module):
         elif distribution == "constant":
             nn.init.constant_(self.weight, gain)
 
-    def init_connection(self):
+    def init_connection(self, init_grad_tensor=False):
         r"""Collection of all intialization methods.
         
         Assumes weights are implemented by the class that inherits from this base class.
@@ -115,7 +115,7 @@ class Connection(nn.Module):
         assert isinstance(
             self.weight, Parameter
         ), f"Weight attribute is not a PyTorch Parameter for {self.__class__.__name__}."
-        self.no_grad()
+        self.no_grad(init_grad_tensor=init_grad_tensor)
         self.reset_state()
         self.reset_weights()
 
