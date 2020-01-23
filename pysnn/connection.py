@@ -54,7 +54,7 @@ class Connection(nn.Module):
 
     def no_grad(self, init_grad_tensor=False):
         r"""Set require_gradients to False and turn off training mode."""
-        _set_no_grad(self, init_grad_tensor=False)
+        _set_no_grad(self, init_grad_tensor=init_grad_tensor)
 
     def reset_state(self):
         r"""Set state Parameters (e.g. trace) to their resting state."""

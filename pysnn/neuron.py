@@ -279,13 +279,13 @@ class BaseNeuron(nn.Module):
         if self.complete_trace is not None:
             self.complete_trace.resize_(*n_shape, 1)
 
-    def no_grad(self):
+    def no_grad(self, init_grad_tensor=False):
         r"""Turn off learning and gradient storing."""
-        _set_no_grad(self)
+        _set_no_grad(self, init_grad_tensor=init_grad_tensor)
 
-    def init_neuron(self):
+    def init_neuron(self, init_grad_tensor=False):
         r"""Initialize state, parameters, and turn off gradients."""
-        self.no_grad()
+        self.no_grad(init_grad_tensor=init_grad_tensor)
         self.reset_state()
         self.reset_thresh()
 

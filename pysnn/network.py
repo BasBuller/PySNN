@@ -42,7 +42,9 @@ class SNNNetwork(nn.Module):
         # Check presynaptic neuron, if supplied:
         if presyn_neuron is not None:
             if not isinstance(neuron, (BaseNeuron, BaseInput, str)):
-                raise TypeError("Presynaptic neuron needs to be a BaseNeuron or BaseInput object.")
+                raise TypeError(
+                    "Presynaptic neuron needs to be a BaseNeuron or BaseInput object."
+                )
 
         # Check name
         if name in self._layers:
@@ -53,11 +55,20 @@ class SNNNetwork(nn.Module):
             raise KeyError("Name cannot be an empty string.")
 
         # Check specific connection type
-        if isinstance(self._modules[connection] if isinstance(connection, str) else connection, _Linear):
+        if isinstance(
+            self._modules[connection] if isinstance(connection, str) else connection,
+            _Linear,
+        ):
             ctype = "linear"
-        elif isinstance(self._modules[connection] if isinstance(connection, str) else connection, _ConvNd):
+        elif isinstance(
+            self._modules[connection] if isinstance(connection, str) else connection,
+            _ConvNd,
+        ):
             ctype = "conv2d"
-        elif isinstance(self._modules[connection] if isinstance(connection, str) else connection, _Recurrent):
+        elif isinstance(
+            self._modules[connection] if isinstance(connection, str) else connection,
+            _Recurrent,
+        ):
             ctype = "recurrent"
         else:
             raise TypeError("Connection is of an unkown type.")
@@ -67,7 +78,7 @@ class SNNNetwork(nn.Module):
         if presyn_neuron:
             self._layers[name]["presyn_neuron"] = presyn_neuron
 
-    def layer_state_dict(self):
+    def layer_state_dict(self, keep_vars=False):
         r"""Return state dicts grouped per layer, so a single Connection and a single Neuron state dict per layer.
         
         :return: State Dicts for the :class:`Connection` and :class:`Neuron` of the layer, as well as the layer type.
@@ -82,7 +93,7 @@ class SNNNetwork(nn.Module):
                     if isinstance(v, str):
                         obj_name = v
                         v = self._modules[v]
-                    states[k] = v.state_dict()
+                    states[k] = v.state_dict(keep_vars=keep_vars)
                     if obj_name:
                         states[k]["name"] = obj_name
                 elif k == "type":
