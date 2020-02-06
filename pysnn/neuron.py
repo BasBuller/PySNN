@@ -60,6 +60,10 @@ class BaseInput(nn.Module):
         """
         return x.type(self.trace.dtype)
 
+    def return_batch_size(self):
+        r"""Simply returns batch size."""
+        return self.cells_shape[0].item()
+
     def change_batch_size(self, batch_size):
         r"""Changes the batch dimension of all state tensors. Be careful, only call this method after resetting state, otherwise part of your data will be lost."""
         # Update to new shape

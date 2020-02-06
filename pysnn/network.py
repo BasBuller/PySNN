@@ -102,8 +102,15 @@ class SNNNetwork(nn.Module):
         return state_dicts
 
     def change_batch_size(self, batch_size):
-        r"""Changes the batch dimension of all state tensors. Be careful, only call this method after resetting state, otherwise part of your data will be lost."""
+        r"""Changes the batch dimension of all state tensors. Be careful, only call this method after resetting state, otherwise part of your data will be lost.
+        
+        returns batch size from before adjusting it.
+        """
 
+        cur_bsize = None
         for module in self.modules():
+            if isinstance(module, BaseInput) and not cur_bsize:
+                cur_bsize = module.return_batch_size()
             if isinstance(module, (BaseNeuron, BaseInput, Connection)):
                 module.change_batch_size(batch_size)
+        return cur_bsize
