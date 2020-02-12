@@ -181,9 +181,7 @@ class BaseNeuron(nn.Module):
         # Fixed parameters
         self.register_buffer("v_rest", torch.tensor(v_rest, dtype=torch.float))
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
-        self.register_buffer(
-            "duration_refrac", torch.tensor(duration_refrac, dtype=torch.float)
-        )
+        self.register_buffer("duration_refrac", duration_refrac)
         self.register_buffer(
             "thresh_center", thresh * torch.ones(cells_shape, dtype=torch.float)
         )
