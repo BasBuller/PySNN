@@ -12,7 +12,33 @@ from pysnn.neuron import BaseNeuron, BaseInput
 class SpikingModule(nn.Module):
     def __init__(self):
         super(SpikingModule, self).__init__()
+
+        # Keep track of spiking neuron specific elements
         self._layers = OrderedDict()
+        self._neurons = OrderedDict()
+        self._connections = OrderedDict()
+
+        # For easy tree traversal
+        self.name = None
+        self.prev_module = []
+        self.next_module = []
+
+    def __setattr__(self, name, value):
+        r"""Performs tracking of neurons and connections, in addition to nn.Module tracking of PyTorch."""
+
+        super(SpikingModule, self).__setattr__(name, value)
+
+        if isinstance(value, SpikingModule):
+            value.name = self.name + "." + name if self.name else name
+            for mod in value._modules.values():
+                if isinstance(mod, SpikingModule):
+                    mod.name = value.name + "." + mod.name
+            if value._layers:
+                self._layers[name] = value
+        if isinstance(value, (BaseInput, BaseNeuron)):
+            self._neurons[name] = value
+        elif isinstance(value, Connection):
+            self._connections[name] = value
 
     def reset_state_recursive(self):
         r"""Reset state of all child nodes of this module."""
@@ -74,6 +100,13 @@ class SpikingModule(nn.Module):
         else:
             raise TypeError("Connection is of an unkown type.")
 
+        # Set references
+        connection.next_module.append(neuron)
+        neuron.prev_module.append(connection)
+        if presyn_neuron:
+            presyn_neuron.next_module.append(connection)
+            connection.prev_module.append(presyn_neuron)
+
         # Add layer
         self._layers[name] = {"connection": connection, "neuron": neuron, "type": ctype}
         if presyn_neuron:
@@ -93,12 +126,10 @@ class SpikingModule(nn.Module):
                 obj_name = None
                 if isinstance(v, str):
                     obj_name = v
-                    v = modules[
-                        v
-                    ]  # TODO: Change this layer object to the actual modules it is referring to!
-                states[k] = v.state_dict(keep_vars=keep_vars)
-                if obj_name:
-                    states[k]["name"] = obj_name
+                    v = modules[v]
+                state = v.state_dict(keep_vars=keep_vars)
+                state["name"] = v.name
+                states[k] = state
             elif k == "type":
                 states[k] = v
 
