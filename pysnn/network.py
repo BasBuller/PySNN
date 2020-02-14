@@ -29,10 +29,12 @@ class SpikingModule(nn.Module):
         super(SpikingModule, self).__setattr__(name, value)
 
         if isinstance(value, SpikingModule):
-            value.name = self.name + "." + name if self.name else name
-            for mod in value._modules.values():
-                if isinstance(mod, SpikingModule):
-                    mod.name = value.name + "." + mod.name
+            prefix = self.name + "." if self.name else ""
+            value.name = prefix + name
+            for con in value._connections.values():
+                con.name = value.name + "." + con.name
+            for neur in value._neurons.values():
+                neur.name = value.name + "." + neur.name
             if value._layers:
                 self._layers[name] = value
         if isinstance(value, (BaseInput, BaseNeuron)):
@@ -82,6 +84,14 @@ class SpikingModule(nn.Module):
             raise KeyError("Name cannot be an empty string.")
 
         # Check specific connection type
+        if isinstance(connection, str):
+            connection = self._modules[connection]
+        if isinstance(neuron, str):
+            neuron = self._modules[neuron]
+        if isinstance(presyn_neuron, str):
+            neuron = self._modules[presyn_neuron]
+
+        # Assign layer type to dict
         if isinstance(
             self._modules[connection] if isinstance(connection, str) else connection,
             _Linear,
@@ -112,27 +122,16 @@ class SpikingModule(nn.Module):
         if presyn_neuron:
             self._layers[name]["presyn_neuron"] = presyn_neuron
 
-    def add_module_layer(self, module_name):
-        assert (
-            module_name in self._modules
-        ), "Name of snn modules has to be present in modules list."
-        self._layers[module_name] = self._modules[module_name]
-
     def _save_to_layer_state_dict(self, layer, modules, keep_vars):
         dict_names = ["connection", "neuron", "presyn_neuron"]
         states = {}
-        for k, v in layer.items():
-            if k in dict_names:
-                obj_name = None
-                if isinstance(v, str):
-                    obj_name = v
-                    v = modules[v]
-                state = v.state_dict(keep_vars=keep_vars)
-                state["name"] = v.name
-                states[k] = state
-            elif k == "type":
-                states[k] = v
-
+        for name, value in layer.items():
+            if name != "type":
+                state = value.state_dict(keep_vars=keep_vars)
+                state["name"] = value.name
+                states[name] = state
+            elif name == "type":
+                states[name] = value
         return states
 
     def layer_state_dict(
