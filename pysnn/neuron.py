@@ -431,19 +431,20 @@ class LIFNeuron(BaseNeuron):
         super(LIFNeuron, self).__init__(
             cells_shape, thresh, v_rest, dt, duration_refrac, store_trace=store_trace
         )
+        param_shape = (1, *cells_shape[1:])
 
         # Fixed parameters
         self.register_buffer(
-            "alpha_v", alpha_v * torch.ones(cells_shape, dtype=torch.float)
+            "alpha_v", alpha_v * torch.ones(param_shape, dtype=torch.float)
         )
         self.register_buffer(
-            "alpha_t", alpha_t * torch.ones(cells_shape, dtype=torch.float)
+            "alpha_t", alpha_t * torch.ones(param_shape, dtype=torch.float)
         )
         self.register_buffer(
-            "tau_v", tau_v * torch.ones(cells_shape, dtype=torch.float)
+            "tau_v", tau_v * torch.ones(param_shape, dtype=torch.float)
         )
         self.register_buffer(
-            "tau_t", tau_t * torch.ones(cells_shape, dtype=torch.float)
+            "tau_t", tau_t * torch.ones(param_shape, dtype=torch.float)
         )
 
         # Type of updates
