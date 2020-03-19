@@ -176,9 +176,11 @@ class BaseNeuron(nn.Module):
         assert (duration_refrac >= 0).all(), "duration_refrac should be non-negative."
 
         # Store shape for easy use
-        self.cells_shape = torch.tensor(cells_shape)
+        self.cells_shape = list(cells_shape)
+        # self.cells_shape = torch.tensor(cells_shape)
         param_shape = cells_shape[1:]
-        self.param_shape = torch.tensor(param_shape)
+        self.param_shape = list(param_shape)
+        # self.param_shape = torch.tensor(param_shape)
 
         # Fixed parameters
         self.register_buffer("v_rest", torch.tensor(v_rest, dtype=torch.float))

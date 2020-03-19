@@ -152,7 +152,7 @@ class NeuromorphicDataset(Dataset):
         if self.lbl_encoder:
             label = self.lbl_encoder(label)
 
-        return sample, label, class_idx
+        return sample, label, class_idx, class_idx
 
 
 #########################################################
@@ -257,6 +257,7 @@ def create_torchvision_dataset_wrapper(ds_type):
             :return: The relevant data and encoded data from the requested index.
             """
             image, label = super().__getitem__(idx)
+            label = torch.tensor(label, dtype=torch.int64)
             label_int = label.clone()
 
             if self.image_encoder:
@@ -264,7 +265,7 @@ def create_torchvision_dataset_wrapper(ds_type):
             if self.label_encoder:
                 label = self.label_encoder(label)
 
-            return image, label, label_int
+            return image, label, label_int, label_int
 
         def __len__(self):
             return super().__len__()
@@ -560,5 +561,10 @@ class Intensity:
 
 
 if __name__ == "__main__":
-    train, test = nmnist_train_test(os.path.expanduser("~/thesis_final/code/data/nmnist"))
-    print(len(test[0]))
+    from torchvision.transforms import ToTensor
+
+    # train, test = nmnist_train_test(os.path.expanduser("~/Thesis_final/data/nmnist/"))
+    data = mnist_wrapper(root="/home/bas/stack/ai_projects/graph_nns/data/", transform=ToTensor())
+
+    print(data[0][0].shape)
+    
