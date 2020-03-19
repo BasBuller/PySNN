@@ -26,12 +26,13 @@ def poisson_encoding(intensities, duration, dt):
 
     # Get shape and size of data.
     shape, size = intensities.shape, intensities.numel()
-    intensities = intensities.view(-1)
+    intensities = intensities.view(-1).int().float()
     time = int(duration / dt)
 
     # Compute firing rates in seconds as function of data intensity,
     # accounting for simulation time step.
     rate = torch.zeros(size)
+    # non_zero = intensities > 1e-3
     non_zero = intensities != 0
     rate[non_zero] = 1 / intensities[non_zero] * (1000 / dt)
 
