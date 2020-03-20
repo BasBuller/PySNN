@@ -227,6 +227,7 @@ def create_torchvision_dataset_wrapper(ds_type):
             self,
             image_encoder=None,
             label_encoder=None,
+            n_ims=None,
             *args,
             **kwargs
         ):
@@ -241,6 +242,11 @@ def create_torchvision_dataset_wrapper(ds_type):
             :param **kwargs: Keyword arguments for the original dataset
             """
             super().__init__(*args, **kwargs)
+
+            if n_ims:
+                idxs = torch.randperm(self.data.shape[0])[:n_ims]
+                self.data = self.data[idxs]
+                self.targets = self.targets[idxs]
 
             self.args = args
             self.kwargs = kwargs
@@ -564,7 +570,5 @@ if __name__ == "__main__":
     from torchvision.transforms import ToTensor
 
     # train, test = nmnist_train_test(os.path.expanduser("~/Thesis_final/data/nmnist/"))
-    data = mnist_wrapper(root="/home/bas/stack/ai_projects/graph_nns/data/", transform=ToTensor())
-
-    print(data[0][0].shape)
+    data = mnist_wrapper(n_ims=10, root="/home/bas/stack/ai_projects/graph_nns/data/", transform=ToTensor(), train=False)
     
