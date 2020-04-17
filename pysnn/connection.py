@@ -8,12 +8,13 @@ from torch.nn.modules.pooling import _MaxPoolNd, _AdaptiveMaxPoolNd
 
 from pysnn.utils import _set_no_grad, conv2d_output_shape
 import pysnn.functional as sf
+from pysnn.network import SpikingModule
 
 
 #########################################################
 # Linear layer
 #########################################################
-class Connection(nn.Module):
+class Connection(SpikingModule):
     r"""Base class for defining SNN connection/layer.
 
     This object connects layers of neurons, it also contains the synaptic weights.
@@ -494,7 +495,7 @@ class LateralInhib(_Recurrent):
 #########################################################
 # Max Pooling
 #########################################################
-class _SpikeMaxPoolNd(nn.Module):
+class _SpikeMaxPoolNd(SpikingModule):
     def __init__(
         self, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False
     ):
@@ -537,7 +538,7 @@ class MaxPool2d(_SpikeMaxPoolNd):
 #########################################################
 # Adaptive Max Pooling
 #########################################################
-class _SpikeAdaptiveMaxPoolNd(nn.Module):
+class _SpikeAdaptiveMaxPoolNd(SpikingModule):
     def __init__(self, output_size):
         super(_SpikeAdaptiveMaxPoolNd, self).__init__()
         self.output_size = output_size

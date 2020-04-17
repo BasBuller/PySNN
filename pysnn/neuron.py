@@ -4,12 +4,13 @@ from torch.nn.parameter import Parameter
 
 from pysnn.utils import _set_no_grad
 import pysnn.functional as sf
+from pysnn.network import SpikingModule
 
 
 #########################################################
 # Input Neuron
 #########################################################
-class BaseInput(nn.Module):
+class BaseInput(SpikingModule):
     r"""Simple feed-through layer of neurons used for generating a trace.
     
     :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
@@ -138,7 +139,7 @@ class Input(BaseInput):
 #########################################################
 # Base Neuron
 #########################################################
-class BaseNeuron(nn.Module):
+class BaseNeuron(SpikingModule):
     r"""Base neuron model, is a container to define basic neuron functionalties.
 
     Defines basic spiking, voltage and trace characteristics. Just has to

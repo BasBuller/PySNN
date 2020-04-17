@@ -1,10 +1,9 @@
 import torch
-
 from torch.nn.modules.utils import _pair
 
 
 #########################################################
-# Class initialization
+# Object modification
 #########################################################
 def _set_no_grad(module, init_grad_tensor=False):
     for param in module.parameters():
@@ -12,6 +11,20 @@ def _set_no_grad(module, init_grad_tensor=False):
 
         if init_grad_tensor:
             param.grad = torch.zeros_like(param)
+
+
+def change_batch_size(obj, batch_size):
+    r"""Changes the batch dimension of all state tensors. Be careful, only call this method after resetting state, otherwise part of your data will be lost.
+    
+    returns batch size from before adjusting it.
+    """
+
+    cur_bsize = None
+    for module in obj.modules():
+        if cur_bsize == None:
+            cur_bsize = module.return_batch_size()
+        module.change_batch_size(batch_size)
+    return cur_bsize
 
 
 #########################################################
