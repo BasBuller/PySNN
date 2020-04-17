@@ -2,8 +2,28 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 
-from pysnn.connection import Connection, _Linear, _ConvNd, _Recurrent
-from pysnn.neuron import BaseNeuron, BaseInput
+
+#########################################################
+# Utilities
+#########################################################
+def _tag_tensor(item, tag):
+    if isinstance(item, torch.Tensor):  # TODO: unsure if this is sufficient
+        item._parent = tag
+    
+
+def _graph_tracing_pre_hook(self, input):
+    r"""Trace computational graph of a SNN using _forward_pre_hooks.
+    
+    Stores parent node in self._prev. The previous object location is stored in incoming Tensor.
+    """
+    prevs = [i._parent for i in input if hasattr(i, "_parent") and i._parent]
+    self._prev = set(prevs)
+
+
+def _graph_tracing_post_hook(self, _, output):
+    r"""Tag module outputs with the object that produced them."""
+    for i in output:
+        _tag_tensor(i, self)
 
 
 #########################################################
@@ -22,6 +42,8 @@ class SpikingModule(nn.Module):
         self.name = None
         self.prev_module = []
         self.next_module = []
+        self._prev = set()
+
 
     def __setattr__(self, name, value):
         r"""Performs tracking of neurons and connections, in addition to nn.Module tracking of PyTorch."""
@@ -37,90 +59,102 @@ class SpikingModule(nn.Module):
                 neur.name = value.name + "." + neur.name
             if value._layers:
                 self._layers[name] = value
-        if isinstance(value, (BaseInput, BaseNeuron)):
-            self._neurons[name] = value
-        elif isinstance(value, Connection):
-            self._connections[name] = value
 
-    def reset_state_recursive(self):
-        r"""Reset state of all child nodes of this module."""
-        for module in self._modules.values():
-            module.reset_state()
 
+    # ######################################################
+    # Spiking versions of regular utility functions
+    # ######################################################
+    def named_spiking_children(self):
+        r"""Regular named_children function only for SpikingModules."""
+        memo = set()
+        for name, module in self._modules.items():
+            if module is not None and isinstance(module, SpikingModule) and module not in memo:
+                memo.add(module)
+                yield name, module
+
+    
+    def spiking_children(self):
+        r"""Regular children function only for SpikingModules."""
+        for _, module in self.named_spiking_children():
+            yield module
+
+    
+    def named_spiking_modules(self, memo=None, prefix=""):
+        r"""Regular named modules function only for SpikingModules."""
+        if memo is None:
+            memo = set()
+        if self not in memo:
+            memo.add(self)
+            yield prefix, self
+
+            for name, module in self._modules.items():
+                if module is None:
+                    continue
+                submodule_prefix = prefix + ("." if prefix else "") + name
+                for m in module.named_spiking_modules(memo, submodule_prefix):
+                    yield m
+
+
+    def spiking_modules(self):
+        r"""Regular modules function only for SpikingModules."""
+        for _, module in self.named_spiking_modules():
+            yield module
+
+
+    def spiking_apply(self, fn):
+        r"""Regular apply function only for SpikingModules."""
+        for module in self.spiking_children():
+            module.spiking_apply(fn)
+        fn(self)
+        return self
+
+
+    # ######################################################
+    # Graph tracing
+    # ######################################################
+    def trace_graph(self, *input, **kwargs):
+        r"""Trace complete graph by tracking the flow of data through the network."""
+        pre_hooks, hooks = {}, {}
+        for name, module in self.named_spiking_modules():
+            pre_hooks[name] = module.register_forward_pre_hook(_graph_tracing_pre_hook)
+            hooks[name] = module.register_forward_hook(_graph_tracing_post_hook)
+
+        for i in input:
+            _tag_tensor(i, ())
+
+        # Forward tracing of input
+        out = self.forward(*input, **kwargs)
+        out = out[0] if isinstance(out, (tuple, list)) else out  # select just single output tensor
+
+        # Construct graph from output to input
+        nodes, edges = set(), set()
+        def build(v):
+            if v not in nodes:
+                nodes.add(v)
+                for child in v._prev:
+                    edges.add((child, v))
+                    build(child)
+        build(out._parent)
+
+        # TODO: Clear hook dicts
+        self.reset_state()
+
+        return nodes, edges
+
+
+    # ######################################################
+    # Spiking functions
+    # ######################################################
     def reset_state(self):
-        r"""Resets state parameters of all submodules, requires each submodule to have a reset_state function."""
-        # raise NotImplementedError("Every SNN Module needs to implement a reset state function.")
-        self.reset_state_recursive()
-
-    def add_layer(self, name, connection, neuron, presyn_neuron=None):
-        r"""Adds which :class:`Neuron` and :class:`Connection` objects together form a layer, as well as the layer type.
+        r"""Resets state parameters of all submodules, requires each submodule to have a reset_state function.
         
-        :param name: Name of the layer
-        :param connection: :class:`Connection` object
-        :param neuron: postsynaptic :class:`Neuron` object, required
-        :param presyn_neuron: Optional, presynaptic :class:`Neuron` object
+        When defining reset_state at network level, make sure to call super().reset_state() at the end of it.
+        This makes sure that all sub SpikingModules.reset_state() is called.
         """
-        # Check connection object
-        if not isinstance(connection, (Connection, str)):
-            raise TypeError("Connection input needs to be a Connection object.")
+        for module in self.spiking_modules():
+            if module is not self:
+                module.reset_state()
 
-        # Check neuron object
-        if not isinstance(neuron, (BaseNeuron, str)):
-            raise TypeError("Neuron input needs to be a BaseNeuron object.")
-
-        # Check presynaptic neuron, if supplied:
-        if presyn_neuron is not None:
-            if not isinstance(neuron, (BaseNeuron, BaseInput, str)):
-                raise TypeError(
-                    "Presynaptic neuron needs to be a BaseNeuron or BaseInput object."
-                )
-
-        # Check name
-        if name in self._layers:
-            raise KeyError("Layer name already exists, please use a different one.")
-        elif "." in name:
-            raise KeyError("Name cannot contain  a '.'")
-        elif name == "":
-            raise KeyError("Name cannot be an empty string.")
-
-        # Check specific connection type
-        if isinstance(connection, str):
-            connection = self._modules[connection]
-        if isinstance(neuron, str):
-            neuron = self._modules[neuron]
-        if isinstance(presyn_neuron, str):
-            neuron = self._modules[presyn_neuron]
-
-        # Assign layer type to dict
-        if isinstance(
-            self._modules[connection] if isinstance(connection, str) else connection,
-            _Linear,
-        ):
-            ctype = "linear"
-        elif isinstance(
-            self._modules[connection] if isinstance(connection, str) else connection,
-            _ConvNd,
-        ):
-            ctype = "conv2d"
-        elif isinstance(
-            self._modules[connection] if isinstance(connection, str) else connection,
-            _Recurrent,
-        ):
-            ctype = "recurrent"
-        else:
-            raise TypeError("Connection is of an unkown type.")
-
-        # Set references
-        connection.next_module.append(neuron)
-        neuron.prev_module.append(connection)
-        if presyn_neuron:
-            presyn_neuron.next_module.append(connection)
-            connection.prev_module.append(presyn_neuron)
-
-        # Add layer
-        self._layers[name] = {"connection": connection, "neuron": neuron, "type": ctype}
-        if presyn_neuron:
-            self._layers[name]["presyn_neuron"] = presyn_neuron
 
     def _save_to_layer_state_dict(self, layer, modules, keep_vars):
         dict_names = ["connection", "neuron", "presyn_neuron"]
@@ -164,127 +198,3 @@ class SpikingModule(nn.Module):
                 )
 
         return destination
-
-    def change_batch_size(self, batch_size):
-        r"""Changes the batch dimension of all state tensors. Be careful, only call this method after resetting state, otherwise part of your data will be lost.
-        
-        returns batch size from before adjusting it.
-        """
-
-        cur_bsize = None
-        for module in self.modules():
-            if isinstance(module, BaseInput) and not cur_bsize:
-                cur_bsize = module.return_batch_size()
-            if isinstance(module, (BaseNeuron, BaseInput, Connection)):
-                module.change_batch_size(batch_size)
-        return cur_bsize
-
-
-#########################################################
-# SNN Network
-#########################################################
-class SNNNetwork(nn.Module):
-    r"""Base clase for defining SNN network, contains several convenience operators for network simulations.
-    """
-
-    def __init__(self):
-        super(SNNNetwork, self).__init__()
-        self._layers = OrderedDict()
-
-    def reset_state(self):
-        r"""Resets state parameters of all submodules, requires each submodule to have a reset_state function."""
-        for module in self._modules.values():
-            if not isinstance(module, SNNNetwork):
-                module.reset_state()
-
-    def add_layer(self, name, connection, neuron, presyn_neuron=None):
-        r"""Adds which :class:`Neuron` and :class:`Connection` objects together form a layer, as well as the layer type.
-        
-        :param name: Name of the layer
-        :param connection: :class:`Connection` object
-        :param neuron: postsynaptic :class:`Neuron` object, required
-        :param presyn_neuron: Optional, presynaptic :class:`Neuron` object
-        """
-        # Check connection object
-        if not isinstance(connection, (Connection, str)):
-            raise TypeError("Connection input needs to be a Connection object.")
-
-        # Check neuron object
-        if not isinstance(neuron, (BaseNeuron, str)):
-            raise TypeError("Neuron input needs to be a BaseNeuron object.")
-
-        # Check presynaptic neuron, if supplied:
-        if presyn_neuron is not None:
-            if not isinstance(neuron, (BaseNeuron, BaseInput, str)):
-                raise TypeError(
-                    "Presynaptic neuron needs to be a BaseNeuron or BaseInput object."
-                )
-
-        # Check name
-        if name in self._layers:
-            raise KeyError("Layer name already exists, please use a different one.")
-        elif "." in name:
-            raise KeyError("Name cannot contain  a '.'")
-        elif name == "":
-            raise KeyError("Name cannot be an empty string.")
-
-        # Check specific connection type
-        if isinstance(
-            self._modules[connection] if isinstance(connection, str) else connection,
-            _Linear,
-        ):
-            ctype = "linear"
-        elif isinstance(
-            self._modules[connection] if isinstance(connection, str) else connection,
-            _ConvNd,
-        ):
-            ctype = "conv2d"
-        elif isinstance(
-            self._modules[connection] if isinstance(connection, str) else connection,
-            _Recurrent,
-        ):
-            ctype = "recurrent"
-        else:
-            raise TypeError("Connection is of an unkown type.")
-
-        # Add layer
-        self._layers[name] = {"connection": connection, "neuron": neuron, "type": ctype}
-        if presyn_neuron:
-            self._layers[name]["presyn_neuron"] = presyn_neuron
-
-    def layer_state_dict(self, keep_vars=False):
-        r"""Return state dicts grouped per layer, so a single Connection and a single Neuron state dict per layer.
-        
-        :return: State Dicts for the :class:`Connection` and :class:`Neuron` of the layer, as well as the layer type.
-        """
-        dict_names = ["connection", "neuron", "presyn_neuron"]
-        state_dicts = OrderedDict()
-        for layer_name, layer in self._layers.items():
-            states = {}
-            for k, v in layer.items():
-                if k in dict_names:
-                    obj_name = None
-                    if isinstance(v, str):
-                        obj_name = v
-                        v = self._modules[v]
-                    states[k] = v.state_dict(keep_vars=keep_vars)
-                    if obj_name:
-                        states[k]["name"] = obj_name
-                elif k == "type":
-                    states[k] = v
-            state_dicts[layer_name] = states
-        return state_dicts
-
-    def change_batch_size(self, batch_size):
-        r"""Changes the batch dimension of all state tensors. Be careful, only call this method after resetting state, otherwise part of your data will be lost.
-        
-        returns batch size from before adjusting it.
-        """
-
-        cur_bsize = None
-        for module in self.modules():
-            if isinstance(module, BaseInput) and not cur_bsize:
-                cur_bsize = module.return_batch_size()
-            if isinstance(module, (BaseNeuron, BaseInput, Connection)):
-                module.change_batch_size(batch_size)
-        return cur_bsize
