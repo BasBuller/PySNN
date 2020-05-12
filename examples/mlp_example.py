@@ -8,7 +8,7 @@ from pysnn.connection import Linear
 from pysnn.neuron import FedeNeuron, Input
 from pysnn.learning import FedeSTDP
 from pysnn.encoding import PoissonEncoder
-from pysnn.network import SNNNetwork
+from pysnn.network import SpikingModule
 from pysnn.datasets import OR, BooleanNoise, Intensity
 
 
@@ -49,7 +49,7 @@ a = 0.5
 #########################################################
 # Network
 #########################################################
-class Network(SNNNetwork):
+class Network(SpikingModule):
     def __init__(self):
         super(Network, self).__init__()
 
@@ -61,12 +61,12 @@ class Network(SNNNetwork):
         # Layer 1
         self.mlp1_c = Linear(n_in, n_hidden, *c_dynamics)
         self.neuron1 = FedeNeuron((batch_size, 1, n_hidden), *n_dynamics)
-        self.add_layer("fc1", self.mlp1_c, self.neuron1)
+        # self.add_layer("fc1", self.mlp1_c, self.neuron1)
 
         # Layer 2
         self.mlp2_c = Linear(n_hidden, n_out, *c_dynamics)
         self.neuron2 = FedeNeuron((batch_size, 1, n_out), *n_dynamics)
-        self.add_layer("fc2", self.mlp2_c, self.neuron2)
+        # self.add_layer("fc2", self.mlp2_c, self.neuron2)
 
     def forward(self, input):
         x, t = self.input(input)
@@ -80,6 +80,9 @@ class Network(SNNNetwork):
         x, t = self.neuron2(x, t)
 
         return x
+
+    def reset_state(self):
+        pass
 
 
 #########################################################
@@ -109,31 +112,37 @@ train_dataloader = DataLoader(
 #########################################################
 device = torch.device("cpu")
 net = Network()
+nodes, edges, topo = net.trace_graph(train_dataset[0][0][..., 0])
+print(nodes)
+print(edges)
+print(topo)
 
-# Add graph to tensorboard
-logger = SummaryWriter()
-input = next(iter(train_dataloader))
-input = input[0][:, :, :, 0]
-logger.add_graph(net, input)
+# # Add graph to tensorboard
+# logger = SummaryWriter()
+# input = next(iter(train_dataloader))
+# input = input[0][:, :, :, 0]
+# logger.add_graph(net, input)
 
-# Learning rule definition
-layers = net.layer_state_dict()
-learning_rule = FedeSTDP(layers, lr, w_init, a)
+# # # Learning rule definition
+# # layers = net.layer_state_dict()
+# # learning_rule = FedeSTDP(layers, lr, w_init, a)
 
-# Training loop
-out = []
-for batch in tqdm(train_dataloader):
-    single_out = []
-    sample, label = batch
+# # Training loop
+# out = []
+# for batch in tqdm(train_dataloader):
+#     single_out = []
+#     sample, label = batch[0], batch[1]
 
-    # Iterate over input's time dimension
-    for idx in range(sample.shape[-1]):
-        input = sample[:, :, :, idx]
-        single_out.append(net(input))
+#     # Iterate over input's time dimension
+#     for idx in range(sample.shape[-1]):
+#         input = sample[:, :, :, idx]
+#         single_out.append(net(input))
 
-        learning_rule.step()
+#         # learning_rule.step()
 
-    net.reset_state()
-    out.append(torch.stack(single_out, dim=-1))
+#     net.reset_state()
+#     out.append(torch.stack(single_out, dim=-1))
 
-print(out[0].shape)
+# from pprint import pprint
+# pprint(list(net.state_dict().keys()))
+# print(out[0].shape)

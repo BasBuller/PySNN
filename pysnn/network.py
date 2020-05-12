@@ -127,19 +127,23 @@ class SpikingModule(nn.Module):
         out = out[0] if isinstance(out, (tuple, list)) else out  # select just single output tensor
 
         # Construct graph from output to input
-        nodes, edges = set(), set()
+        nodes, edges, topo = set(), set(), []
         def build(v):
             if v not in nodes:
                 nodes.add(v)
                 for child in v._prev:
                     edges.add((child, v))
                     build(child)
+                topo.append(v)
         build(out._parent)
 
-        # TODO: Clear hook dicts
+        # Clean hooks, TODO: Make select for just the added hooks
+        for mod in self.spiking_modules():
+            mod._forward_pre_hooks.clear()
+            mod._forward_hooks.clear()
         self.reset_state()
 
-        return nodes, edges
+        return nodes, edges, topo
 
 
     # ######################################################
