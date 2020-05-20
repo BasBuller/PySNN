@@ -6,6 +6,7 @@ from torch.nn.parameter import Parameter
 from torch.nn.modules.utils import _pair
 from torch.nn.modules.pooling import _MaxPoolNd, _AdaptiveMaxPoolNd
 
+from pysnn.network import SpikingModule
 from pysnn.utils import _set_no_grad, conv2d_output_shape
 import pysnn.functional as sf
 from pysnn.network import SpikingModule
