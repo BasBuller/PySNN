@@ -1,3 +1,10 @@
+"""
+Approach correlation based learning, gradient-based learning uses PyTorch's learning rules.
+    1. Base LR loops over all layers and provides access to presyn neuron, postsyn neuron, and connection objects.
+    2. Applies consistent update function to each layer. This method is variable and can use any of the previously metnioned objects.
+    3. Implement a hook mechanism that can modulate the update, i.e. for RL based learning rules.
+"""
+
 from collections import OrderedDict
 import numpy as np
 import torch
