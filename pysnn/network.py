@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 import torch
 import torch.nn as nn
 
@@ -6,24 +6,24 @@ import torch.nn as nn
 #########################################################
 # Utilities
 #########################################################
-def _tag_tensor(item, tag):
-    if isinstance(item, torch.Tensor):  # TODO: unsure if this is sufficient
-        item._parent = tag
+def _tag_tensor(tens, tag):
+    if isinstance(tens, torch.Tensor):  # TODO: unsure if this is sufficient
+        tens._parent = tag
     
 
-def _graph_tracing_pre_hook(self, input):
+def _graph_tracing_pre_hook(node, input):
     r"""Trace computational graph of a SNN using _forward_pre_hooks.
     
     Stores parent node in self._prev. The previous object location is stored in incoming Tensor.
     """
     prevs = [i._parent for i in input if hasattr(i, "_parent") and i._parent]
-    self._prev = set(prevs)
+    node._prev = set(prevs)
 
 
-def _graph_tracing_post_hook(self, _, output):
+def _graph_tracing_post_hook(node, _, output):
     r"""Tag module outputs with the object that produced them."""
     for i in output:
-        _tag_tensor(i, self)
+        _tag_tensor(i, node)
 
 
 #########################################################
@@ -114,10 +114,10 @@ class SpikingModule(nn.Module):
     # ######################################################
     def trace_graph(self, *input, **kwargs):
         r"""Trace complete graph by tracking the flow of data through the network."""
-        pre_hooks, hooks = {}, {}
+        pre_hooks, post_hooks = {}, {}
         for name, module in self.named_spiking_modules():
             pre_hooks[name] = module.register_forward_pre_hook(_graph_tracing_pre_hook)
-            hooks[name] = module.register_forward_hook(_graph_tracing_post_hook)
+            post_hooks[name] = module.register_forward_hook(_graph_tracing_post_hook)
 
         for i in input:
             _tag_tensor(i, ())
@@ -126,15 +126,20 @@ class SpikingModule(nn.Module):
         out = self.forward(*input, **kwargs)
         out = out[0] if isinstance(out, (tuple, list)) else out  # select just single output tensor
 
+        # TODO: What about feedback connections?
         # Construct graph from output to input
-        nodes, edges, topo = set(), set(), []
-        def build(v):
-            if v not in nodes:
-                nodes.add(v)
-                for child in v._prev:
-                    edges.add((child, v))
-                    build(child)
-                topo.append(v)
+        Layer = namedtuple("Layer", ["presynaptic", "connection", "postsynaptic"])
+        layers, nodes, connections, topo = {}, set(), set(), []
+        def build(postsyn):
+            if postsyn not in nodes:
+                nodes.add(postsyn)
+                for conn in postsyn._prev:
+                    connections.add(conn)
+                    for presyn in conn._prev:
+                        layers[presyn.name + "-" + postsyn.name] = Layer(presyn, conn, postsyn)
+                        build(presyn)
+                for conn in postsyn._prev: topo.append(conn)
+                topo.append(postsyn)
         build(out._parent)
 
         # Clean hooks, TODO: Make select for just the added hooks
@@ -143,21 +148,22 @@ class SpikingModule(nn.Module):
             mod._forward_hooks.clear()
         self.reset_state()
 
-        return nodes, edges, topo
+        return layers, nodes, connections, topo
 
 
     # ######################################################
     # Spiking functions
     # ######################################################
     def reset_state(self):
+        """Define which parameters are cleaned after a simulation."""
+        raise NotImplementedError("Every SpikingModule requires a reset_state function.")
+
+
+    def reset_network_state(self):
         r"""Resets state parameters of all submodules, requires each submodule to have a reset_state function.
-        
-        When defining reset_state at network level, make sure to call super().reset_state() at the end of it.
-        This makes sure that all sub SpikingModules.reset_state() is called.
         """
         for module in self.spiking_modules():
-            if module is not self:
-                module.reset_state()
+            module.reset_state()
 
 
     def _save_to_layer_state_dict(self, layer, modules, keep_vars):
