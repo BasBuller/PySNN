@@ -15,14 +15,14 @@ from pysnn.network import SpikingModule
 #########################################################
 # Linear layer
 #########################################################
-class Connection(SpikingModule):
+class BaseConnection(SpikingModule):
     r"""Base class for defining SNN connection/layer.
 
     This object connects layers of neurons, it also contains the synaptic weights.
     """
 
     def __init__(self, shape, dt, delay):
-        super(Connection, self).__init__()
+        super(BaseConnection, self).__init__()
         self.synapse_shape = torch.tensor(shape)
 
         # TODO: Should there be a check for dt fitting integer number of times in delay duration?
@@ -147,7 +147,7 @@ class Connection(SpikingModule):
 # Linear Layers
 #########################################################
 # Base class
-class _Linear(Connection):
+class _Linear(BaseConnection):
     r"""SNN linear base class, comparable to torch.nn.Linear in format.
     
     This class implements basic methods and parameters that are shared among all version of Linear layers.
@@ -238,7 +238,7 @@ class Linear(_Linear):
 # Convolutional Layers
 #########################################################
 # Base class
-class _ConvNd(Connection):
+class _ConvNd(BaseConnection):
     def __init__(
         self,
         in_channels,
@@ -392,7 +392,7 @@ class Conv2d(_ConvNd):
 #########################################################
 # Recurrent
 #########################################################
-class _Recurrent(Connection):
+class _Recurrent(BaseConnection):
     r"""SNN linear base class, comparable to torch.nn.Linear in format.
     
     This class implements basic methods and parameters that are shared among all versions of Recurrent layers.

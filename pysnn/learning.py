@@ -8,6 +8,7 @@ Approach correlation based learning, gradient-based learning uses PyTorch's lear
 from collections import OrderedDict
 import numpy as np
 import torch
+from .connection import _Linear, _ConvNd
 
 
 #########################################################
@@ -29,45 +30,26 @@ class LearningRule:
     """
 
     def __init__(self, layers, defaults):
-        self.defaults = defaults
         self.layers = layers
+        self.defaults = defaults
 
     def update_state(self):
         r"""Update state parameters of LearningRule based on latest network forward pass."""
-        raise NotImplementedError
-
-    def step(self):
-        r"""Performs single learning step."""
-        raise NotImplementedError
+        pass
 
     def reset_state(self):
         r"""Reset state parameters of LearningRule."""
-        raise NotImplementedError
+        pass
 
-    def check_layers(self, layers):
-        r"""Check if layers provided to constructor are of the right format.
-        
-        :param layers: OrderedDict containing state dicts for each layer.
-        """
+    def weight_update(self, layer, params, *args, **kwargs):
+        raise NotImplementedError("Each learning rule needs an update function")
 
-        # Check if layers is iterator
-        if not isinstance(layers, OrderedDict):
-            raise TypeError(
-                "Layers should be an iterator with deterministic ordering, a list, a tuple, or an OrderedDict. Current type is "
-                + type(layers)
-            )
+    def step(self, *args, **kwargs):
+        r"""Performs single learning step for each layer."""
+        for l in self.layers.values():
+            self.weight_update(l, self.defaults, args, kwargs)
 
-        # Check for empty iterator
-        if len(layers) == 0:
-            raise ValueError("Got an empty layers iterator.")
-
-        # Check for type of layers
-        if not isinstance(list(layers.values())[0], (dict, OrderedDict)):
-            raise TypeError(
-                "A layer object should be a dict. Currently got a " + type(layers[0])
-            )
-
-    def pre_mult_post(self, pre, post, con_type):
+    def pre_mult_post(self, pre, post, conn):
         r"""Multiply a presynaptic term with a postsynaptic term, in the following order: pre x post.
 
         The outcome of this operation preserves batch size, but furthermore is directly broadcastable 
@@ -77,7 +59,7 @@ class LearningRule:
 
         :param pre: Presynaptic term
         :param post: Postsynaptic term
-        :param con_type: Connection type, supports Linear and Conv2d
+        :param conn: Connection, support Linear and Conv2d
 
         :return: Tensor broadcastable with the weight of the connection
         """
@@ -92,16 +74,16 @@ class LearningRule:
             )
 
         # Perform actual multiplication
-        if con_type == "linear":
+        if isinstance(conn, _Linear):
             pre = pre.transpose(2, 1)
-        elif con_type == "conv2d":
+        if isinstance(conn, _ConvNd):
             pre = pre.transpose(2, 1)
             post = post.view(post.shape[0], 1, post.shape[1], -1)
 
         output = pre * post
         return output.transpose(2, 1)
 
-    def reduce_connections(self, tensor, con_type, red_method=torch.mean):
+    def reduce_connections(self, tensor, conn, red_method=torch.mean):
         r"""Reduces the tensor along the dimensions that represent seperate connections to an element of the weight Tensor.
 
         The function used for reducing has to be a callable that can be applied to single axes of a tensor.
@@ -111,16 +93,43 @@ class LearningRule:
         For Conv2d, the batch (dim 0) and the number of kernel multiplications dimension (dim 3) are reduced.
 
         :param tensor: Tensor that will be reduced
-        :param con_type: Connection type, support Linear and Conv2d
+        :param conn: Connection, support Linear and Conv2d
         :param red_method: Method used to reduce each dimension
 
         :return: Reduced Tensor
         """
-        if con_type == "linear":
+        if isinstance(conn, _Linear):
             output = red_method(tensor, dim=0)
-        if con_type == "conv2d":
+        if isinstance(conn, _ConvNd):
             output = red_method(tensor, dim=(0, 3))
         return output
+
+
+#########################################################
+# STDP
+#########################################################
+class OnlineSTDP(LearningRule):
+    r"""Basic online STDP implementation from http://www.scholarpedia.org/article/Spike-timing_dependent_plasticity
+
+    :param layers: OrderedDict containing state dicts for each layer.
+    :param lr: Learning rate.
+    """
+    def __init__(
+        self, 
+        layers,
+        lr=0.001,
+        a_plus=1.,
+        a_min=1.,
+    ):
+        params = dict(lr=lr, a_plus=a_plus, a_min=a_min)
+        super(OnlineSTDP, self).__init__(layers, params)
+
+    def weight_update(self, layer, params, *args, **kwargs):
+        pre_trace, post_trace = layer.presynaptic.trace, layer.postsynaptic.trace
+        pre_spike, post_spike = layer.presynaptic.spikes, layer.postsynaptic.spikes
+        dw = params["a_plus"] * self.pre_mult_post(pre_trace, post_spike, layer.connection)
+        dw = params["a_plus"] * self.pre_mult_post(pre_spike, post_trace, layer.connection)
+        layer.connection.weight += params["lr"] * self.reduce_connections(dw, layer.connection)
 
 
 #########################################################
