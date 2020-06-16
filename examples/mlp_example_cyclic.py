@@ -50,7 +50,7 @@ a = 0.5
 # Cyclic Network
 #########################################################
 class Network(SNNNetwork):
-    r"""Cyclic network, serves the purpose of showing the possibilty of constructing cyclic graphs with PySNN. 
+    r"""Cyclic network, serves the purpose of showing the possibility of constructing cyclic graphs with PySNN. 
 
     This network is by no means an example of a well performing network.
     """

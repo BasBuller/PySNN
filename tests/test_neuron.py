@@ -8,7 +8,7 @@ import torch
 @pytest.fixture(
     scope="function",
     params=[
-        # cell_shape, dt, alpha_t, tau_t
+        # cell_shape (batch, channels, height, width), dt, alpha_t, tau_t
         ((1, 2, 2, 2), 1.0, 1.0, 0.5)
     ],
 )
@@ -25,6 +25,7 @@ def input_neuron(request):
     "inputs, expected",
     [
         (
+            # (batch, channels, height, width)
             torch.ones(1, 2, 2, 2, dtype=torch.float) * 2,
             torch.ones(1, 2, 2, 2, dtype=torch.bool),
         )
@@ -45,8 +46,8 @@ def test_input_forward(inputs, expected, input_neuron):
 @pytest.fixture(
     scope="function",
     params=[
-        # cell_shape, thresh, v_rest, dt, duration_refrac
-        ((1, 2, 2), 1.0, 0.0, 1.0, 3.0)
+        # cells_shape (batch, channels, height, width), thresh, v_rest, dt, duration_refrac
+        ((1, 2, 2, 2), 1.0, 0.0, 1.0, 3.0)
     ],
 )
 def neuron(request):
@@ -62,11 +63,20 @@ def neuron(request):
 @pytest.mark.parametrize(
     "mask, voltage, spikes",
     [
-        (torch.ones(1, 2, 2, dtype=torch.bool), 2.0, 4),
-        (torch.ones(1, 2, 2, dtype=torch.bool), 1.0, 4),
-        (torch.ones(1, 2, 2, dtype=torch.bool), 0.0, 0),
-        (torch.tensor([[[1, 0], [0, 1]]], dtype=torch.bool), 2.0, 2),
-        (torch.tensor([[[1, 0], [0, 0]]], dtype=torch.bool), 2.0, 1),
+        # (batch, channels, height, width)
+        (torch.ones(1, 2, 2, 2, dtype=torch.bool), 2.0, 8),
+        (torch.ones(1, 2, 2, 2, dtype=torch.bool), 1.0, 8),
+        (torch.ones(1, 2, 2, 2, dtype=torch.bool), 0.0, 0),
+        (
+            torch.tensor([[[[1, 0], [1, 0]], [[0, 1], [0, 1]]]], dtype=torch.bool),
+            4.0,
+            4,
+        ),
+        (
+            torch.tensor([[[[1, 0], [0, 0]], [[0, 0], [0, 0]]]], dtype=torch.bool),
+            2.0,
+            1,
+        ),
     ],
 )
 def test_spiking(mask, voltage, spikes, neuron):
@@ -79,8 +89,9 @@ def test_spiking(mask, voltage, spikes, neuron):
 @pytest.mark.parametrize(
     "spikes",
     [
-        torch.tensor([[[1, 1], [1, 1]]], dtype=torch.bool),
-        torch.tensor([[[1, 0], [0, 1]]], dtype=torch.bool),
+        # (batch, channels, height, width)
+        torch.ones(1, 2, 2, 2, dtype=torch.bool),
+        torch.tensor([[[[1, 0], [0, 0]], [[0, 0], [0, 1]]]], dtype=torch.bool),
     ],
 )
 def test_refrac(spikes, neuron):
@@ -114,7 +125,7 @@ def test_refrac(spikes, neuron):
 @pytest.fixture(
     scope="function",
     params=[
-        # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_t
+        # cells_shape (batch, channels, height, width), thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_t
         ((1, 2, 2, 2), 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.5)
     ],
 )
@@ -131,6 +142,7 @@ def if_neuron(request):
     "inputs, expected",
     [
         (
+            # (batch, channels, height, width)
             torch.ones(1, 2, 2, 2, dtype=torch.float) * 2,
             torch.ones(1, 2, 2, 2, dtype=torch.bool),
         )
@@ -149,7 +161,7 @@ def test_lif_forward(inputs, expected, if_neuron):
 @pytest.fixture(
     scope="function",
     params=[
-        # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t
+        # cells_shape (batch, channels, height, width), thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t
         ((1, 2, 2, 2), 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5)
     ],
 )
@@ -166,6 +178,7 @@ def lif_neuron(request):
     "inputs, expected",
     [
         (
+            # (batch, channels, height, width)
             torch.ones(1, 2, 2, 2, dtype=torch.float) * 2,
             torch.ones(1, 2, 2, 2, dtype=torch.bool),
         )
@@ -184,7 +197,7 @@ def test_lif_forward(inputs, expected, lif_neuron):
 @pytest.fixture(
     scope="function",
     params=[
-        # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t, alpha_thresh, tau_thresh
+        # cells_shape (batch, channels, height, width), thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t, alpha_thresh, tau_thresh
         ((1, 2, 2, 2), 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 1.0, 0.5)
     ],
 )
@@ -201,6 +214,7 @@ def adaptive_lif_neuron(request):
     "inputs, expected",
     [
         (
+            # (batch, channels, height, width)
             torch.ones(1, 2, 2, 2, dtype=torch.float) * 2,
             torch.ones(1, 2, 2, 2, dtype=torch.bool),
         )
@@ -224,7 +238,7 @@ def test_adaptive_lif_forward(inputs, expected, adaptive_lif_neuron):
 @pytest.fixture(
     scope="function",
     params=[
-        # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t
+        # cells_shape (batch, channels, height, width), thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t
         ((1, 2, 2, 2), 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5)
     ],
 )
@@ -241,6 +255,7 @@ def stochastic_neuron(request):
     "inputs, expected",
     [
         (
+            # (batch, channels, height, width)
             torch.ones(1, 2, 2, 2, dtype=torch.float) * 0.5,
             1 - torch.exp(-(torch.ones(1, 2, 2, 2, dtype=torch.float) * 0.5).sum(-1)),
         )
@@ -258,7 +273,7 @@ def test_stochastic_spikeprob(inputs, expected, stochastic_neuron):
 @pytest.fixture(
     scope="function",
     params=[
-        # cells_shape, a, b, c, d, thresh, dt, alpha_t, tau_t
+        # cells_shape (batch, channels, height, width), a, b, c, d, thresh, dt, alpha_t, tau_t
         ((1, 2, 2, 2), 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.5, 0.5)
     ],
 )
@@ -275,6 +290,7 @@ def izhikevich_neuron(request):
     "inputs, expected",
     [
         (
+            # (batch, channels, height, width)
             torch.ones(1, 2, 2, 2, dtype=torch.float) * 2,
             torch.ones(1, 2, 2, 2, dtype=torch.bool),
         )
@@ -293,7 +309,7 @@ def test_izhikevich_forward(inputs, expected, izhikevich_neuron):
 @pytest.fixture(
     scope="function",
     params=[
-        # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t
+        # cells_shape (batch, channels, height, width), thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t
         ((1, 2, 2, 2), 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0)
     ],
 )
@@ -310,7 +326,9 @@ def fede_neuron(request):
     "inputs, pre_trace, expected",
     [
         (
+            # (batch, channels, height, width)
             torch.ones(1, 2, 2, 2, dtype=torch.float) * 2,
+            # (batch, channels, height, width, trace)
             torch.ones(1, 2, 2, 2, 1, dtype=torch.float),
             torch.ones(1, 2, 2, 2, dtype=torch.bool),
         )

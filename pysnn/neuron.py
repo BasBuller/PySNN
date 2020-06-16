@@ -13,7 +13,13 @@ from pysnn.network import SpikingModule
 class BaseInput(SpikingModule):
     r"""Simple feed-through layer of neurons used for generating a trace.
     
-    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    Appropriate cell shape:
+     - for input to `Linear` with synapse shape `(batch_size, out_features, in_features)`: `(batch_size, ?, in_features)`
+     - for input to `Conv2d`: `(batch_size, in_channels, im_dims[0], im_dims[1])`
+     - for input to `Lateral` with synapse shape `(batch_size, in_features, in_features)`: `(batch_size, ?, in_features)`
+     where `?` is the free dimension.
+    
+    :param cells_shape: a list or tuple that specifies the shape of the neurons as discussed above.
     :param dt: duration of a single timestep.
     """
 
@@ -86,8 +92,8 @@ class BaseInput(SpikingModule):
 
 class Input(BaseInput):
     r"""Standard input neuron, used to propagate input traces to the following :class:`Connection` object, and calculates a trace.
-    
-    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+
+    :param cells_shape: a list or tuple that specifies the shape of the neurons.
     :param dt: duration of a single timestep.
     :param alpha_t: scaling constant for the increase of the trace by a single spike.
     :param tau_t: decay parameter for the trace.
@@ -148,7 +154,13 @@ class BaseNeuron(SpikingModule):
     Make sure the Neuron class receives input voltage for each neuron and
     returns a Tensor indicating which neurons have spiked.
 
-    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    Appropriate cell shape:
+     - for receiving from `Linear` with synapse shape `(batch_size, out_features, in_features)`: `(batch_size, ?, out_features)`
+     - for receiving from `Conv2d`: `(batch_size, out_channels, image_out_shape[0], image_out_shape[1])`
+     - for receiving from `Lateral` with synapse shape `(batch_size, in_features, in_features)`: `(batch_size, ?, in_features)`
+     where `?` is the free dimension.
+    
+    :param cells_shape: a list or tuple that specifies the shape of the neurons as discussed above.
     :param thresh: spiking threshold, when the cells' voltage surpasses this value it generates a spike.
     :param v_rest: voltage resting value, the :class:`Neuron` will default back to this over time or after spiking.
     :param dt: duration of a single timestep.
@@ -233,7 +245,7 @@ class BaseNeuron(SpikingModule):
         self.complete_trace = torch.cat([self.complete_trace, x.unsqueeze(-1)], dim=-1)
 
     def fold(self, x):
-        r"""Fold incoming spike train by summing last dimension."""
+        r"""Fold incoming spike train (either in time or from different neurons) by summing last dimension."""
         if isinstance(x, (list, tuple)):
             x = torch.cat(x, dim=-1)
         return x.sum(-1)
@@ -309,7 +321,7 @@ class BaseNeuron(SpikingModule):
 class IFNeuron(BaseNeuron):
     r"""Basic integrate and fire neuron, cell voltage does not decay over time.
 
-    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    :param cells_shape: a list or tuple that specifies the shape of the neurons.
     :param thresh: spiking threshold, when the cells' voltage surpasses this value it generates a spike.
     :param v_rest: voltage resting value, the :class:`Neuron` will default back to this over time or after spiking.
     :param alpha_v: scaling constant for the increase of the voltage by a single spike.
@@ -401,7 +413,7 @@ class IFNeuron(BaseNeuron):
 class LIFNeuron(BaseNeuron):
     r"""Leaky integrate and fire neuron, cell voltage decays over time.
     
-    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    :param cells_shape: a list or tuple that specifies the shape of the neurons.
     :param thresh: spiking threshold, when the cells' voltage surpasses this value it generates a spike.
     :param v_rest: voltage resting value, the :class:`Neuron` will default back to this over time or after spiking.
     :param alpha_v: scaling constant for the increase of the voltage by a single spike.
@@ -519,7 +531,7 @@ class AdaptiveLIFNeuron(BaseNeuron):
     
     The cell voltage decays over time, the spiking threshold adapts based on the recent spiking activity of the :class:`Neuron`.
 
-    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    :param cells_shape: a list or tuple that specifies the shape of the neurons.
     :param thresh: spiking threshold, when the cells' voltage surpasses this value it generates a spike.
     :param v_rest: voltage resting value, the :class:`Neuron` will default back to this over time or after spiking.
     :param alpha_v: scaling constant for the increase of the voltage by a single spike.
@@ -671,7 +683,7 @@ class StochasticNeuron(BaseNeuron):
     
     The cell voltage decays over time, threshold is stochastic: the closer the potential is to the threshold, the larger the chance of a spike.
 
-    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    :param cells_shape: a list or tuple that specifies the shape of the neurons.
     :param thresh: spiking threshold, when the cells' voltage surpasses this value it generates a spike.
     :param v_rest: voltage resting value, the :class:`Neuron` will default back to this over time or after spiking.
     :param alpha_v: scaling constant for the increase of the voltage by a single spike.
@@ -797,7 +809,7 @@ class IzhikevichNeuron(BaseNeuron):
     
     Copy of the neuron model published in: https://www.izhikevich.org/publications/spikes.htm
 
-    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    :param cells_shape: a list or tuple that specifies the shape of the neurons.
     :param a: Time scale of membrane potential recovery (negative feedback). Smaller value = slower recovery.
     :param b: Sensitivity of membrane potential recovery to its fluctuations. Greater value = stronger coupling.
     :param c: After-spike reset value of membrane potential.
@@ -900,7 +912,7 @@ class FedeNeuron(BaseNeuron):
 
     Defined in "Unsupervised Learning of a Hierarchical Spiking Neural Network for Optical Flow Estimation: From Events to Global Motion Perception - F.P. Valles, et al."
 
-    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    :param cells_shape: a list or tuple that specifies the shape of the neurons.
     :param thresh: spiking threshold, when the cells' voltage surpasses this value it generates a spike.
     :param v_rest: voltage resting value, the :class:`Neuron` will default back to this over time or after spiking.
     :param alpha_v: scaling constant for the increase of the voltage by a single spike.
@@ -946,6 +958,7 @@ class FedeNeuron(BaseNeuron):
         self.init_neuron()
 
     def fold(self, x, t):
+        r"""Fold incoming spike train and trace (either in time or from different neurons) by summing last dimension."""
         if isinstance(x, (list, tuple)):
             x = torch.cat(x, dim=-1)
             t = torch.cat(t, dim=-1)
