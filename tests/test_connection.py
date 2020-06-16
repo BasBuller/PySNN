@@ -17,10 +17,10 @@ import torch
 )
 def delayed_connection(request):
     from torch.nn.parameter import Parameter
-    from pysnn.connection import Connection
+    from pysnn.connection import BaseConnection
 
     params = request.param
-    connection = Connection(*params)
+    connection = BaseConnection(*params)
     connection.weight = Parameter(torch.Tensor(params[0][1], params[0][0]))
     connection.init_connection()
     return connection
@@ -72,10 +72,10 @@ def test_propagate_delayed(spikes_in, spikes_out, delayed_connection):
 )
 def instant_connection(request):
     from torch.nn.parameter import Parameter
-    from pysnn.connection import Connection
+    from pysnn.connection import BaseConnection
 
     params = request.param
-    connection = Connection(*params)
+    connection = BaseConnection(*params)
     connection.weight = Parameter(torch.Tensor(params[0][1], params[0][0]))
     connection.init_connection()
     return connection
