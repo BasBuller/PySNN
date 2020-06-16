@@ -35,10 +35,11 @@ class BaseConnection(SpikingModule):
             else:
                 delay_init = torch.ones(*shape) * (delay + 1)
         elif isinstance(delay, torch.Tensor):
+            assert delay.shape == shape, f"delay tensor should have shape {shape}"
             delay_init = delay + 1
         else:
             raise TypeError(
-                "Incorrect data type provided for delay_init, please provide an int or FloatTensor"
+                f"Incorrect data type provided for delay_init, please provide an int or {shape} FloatTensor"
             )
         self.register_buffer("delay_init", delay_init)
 
@@ -393,7 +394,7 @@ class Conv2d(_ConvNd):
 # Recurrent
 #########################################################
 class _Recurrent(BaseConnection):
-    r"""SNN linear base class, comparable to torch.nn.Linear in format.
+    r"""SNN recurrent base class, comparable to torch.nn.Linear in format.
     
     This class implements basic methods and parameters that are shared among all versions of Recurrent layers.
     By inhereting from this class one can easily change voltage update, trace update and forward functionalities. 
@@ -439,8 +440,8 @@ class _Recurrent(BaseConnection):
         self.trace.copy_(t_in.expand(-1, self.out_features, -1).contiguous())
 
 
-class LateralInhib(_Recurrent):
-    r"""SNN lateral inhibitory layer, factually this is a specialzed recurrent layer.
+class Lateral(_Recurrent):
+    r"""SNN laterally connected layer, factually this is a specialzed recurrent layer.
     
     :param in_features: Size of each input sample.
     :param batch_size: Number of samples in a batch.
@@ -449,9 +450,7 @@ class LateralInhib(_Recurrent):
     """
 
     def __init__(self, in_features, batch_size, dt, delay):
-        super(LateralInhib, self).__init__(
-            in_features, in_features, batch_size, dt, delay
-        )
+        super(Lateral, self).__init__(in_features, in_features, batch_size, dt, delay)
 
         # Initialize connection
         self.init_connection()
