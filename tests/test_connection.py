@@ -6,13 +6,14 @@ import torch
 
 
 ##########################################################
-# Test Connection: delayed propagation of spikes and spike conversion
+# Test Connection: weight init, delayed propagation of spikes and spike conversion
 ##########################################################
 @pytest.fixture(
     scope="function",
     params=[
         # shape (in feat, out feat, batch), dt, delay
-        ((1, 4, 2), 1.0, 3)
+        ((1, 4, 2), 1.0, 3),
+        ((1, 4, 2), 1.0, torch.ones((1, 4, 2)) * 3),
     ],
 )
 def delayed_connection(request):
@@ -24,6 +25,26 @@ def delayed_connection(request):
     connection.weight = Parameter(torch.Tensor(params[0][1], params[0][0]))
     connection.init_connection()
     return connection
+
+
+# Test weight init
+@pytest.mark.parametrize(
+    "wtype",
+    [
+        ("uniform"),
+        ("neuron_scaled_uniform"),
+        ("neuron_scaled_normal"),
+        ("normalized"),
+        ("normal"),
+        ("xavier_normal"),
+        ("xavier_uniform"),
+        ("kaiming_normal"),
+        ("kaiming_uniform"),
+    ],
+)
+def test_weight_init(wtype, delayed_connection):
+    r"""Checks if all types of weight initialization are available"""
+    delayed_connection.reset_weights(distribution=wtype)
 
 
 # Test spike propagation
@@ -259,5 +280,92 @@ def test_conv2d_forward(
     spikes_in, trace_in, activation_out, trace_out, conv2d_connection
 ):
     activation, trace = conv2d_connection.forward(spikes_in, trace_in)
+    assert (activation == activation_out).all()
+    assert (trace == trace_out).all()
+
+
+##########################################################
+# Test Lateral Connection
+##########################################################
+lib_in_feat = 5
+lib_batch = 2
+lib_in_shape = (lib_batch, 1, lib_in_feat)
+lib_out_shape = (lib_batch, 1, lib_in_feat, lib_in_feat)
+lib_wgt_shape = (lib_in_feat, lib_in_feat)
+
+
+@pytest.fixture(
+    scope="function",
+    params=[
+        # in_features, batch_size, dt, delay, weight
+        (lib_in_feat, lib_batch, 1.0, 0, 0.5)
+    ],
+)
+def lateral_connection(request):
+    from pysnn.connection import Lateral
+
+    params = request.param
+    connection = Lateral(*params[:-1])
+    connection.reset_weights("constant", params[-1])
+    connection.set_diag_weights_zero()
+    return connection
+
+
+@pytest.mark.parametrize(
+    "spikes_in, weights, potential_out",
+    [
+        (
+            torch.ones(*lib_out_shape, dtype=torch.float),
+            -1.0,
+            torch.ones(*lib_out_shape, dtype=torch.float) * -1.0
+            - torch.eye(lib_in_feat) * -1.0,
+        ),
+        (
+            torch.ones(*lib_out_shape, dtype=torch.float),
+            -0.5,
+            torch.ones(*lib_out_shape, dtype=torch.float) * -0.5
+            - torch.eye(lib_in_feat) * -0.5,
+        ),
+        (
+            torch.ones(*lib_out_shape, dtype=torch.float),
+            0.5,
+            torch.ones(*lib_out_shape, dtype=torch.float) * 0.5
+            - torch.eye(lib_in_feat) * 0.5,
+        ),
+        (
+            torch.ones(*lib_out_shape, dtype=torch.float),
+            1.0,
+            torch.ones(*lib_out_shape, dtype=torch.float) * 1.0
+            - torch.eye(lib_in_feat) * 1.0,
+        ),
+    ],
+)
+def test_lateral_activation_potential(
+    spikes_in, weights, potential_out, lateral_connection
+):
+    r"""Checks if the proper activation potential is calculated."""
+    lateral_connection.reset_weights("constant", weights)
+    lateral_connection.set_diag_weights_zero()
+    potential = lateral_connection.activation_potential(spikes_in)
+    assert (potential == potential_out).all()
+
+
+@pytest.mark.parametrize(
+    "spikes_in, trace_in, activation_out, trace_out",
+    [
+        (
+            torch.ones(*lib_in_shape, dtype=torch.bool),
+            torch.ones(*lib_in_shape, dtype=torch.float),
+            torch.ones(*lib_out_shape, dtype=torch.float) * 0.5
+            - torch.eye(lib_in_feat) * 0.5,
+            torch.ones(*lib_out_shape, dtype=torch.float),
+        )
+    ],
+)
+def test_lateral_forward(
+    spikes_in, trace_in, activation_out, trace_out, lateral_connection
+):
+    r"""Checks correct activation and trace increase."""
+    activation, trace = lateral_connection.forward(spikes_in, trace_in)
     assert (activation == activation_out).all()
     assert (trace == trace_out).all()

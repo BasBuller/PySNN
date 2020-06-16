@@ -219,6 +219,75 @@ def test_adaptive_lif_forward(inputs, expected, adaptive_lif_neuron):
 
 
 ##########################################################
+# Test Stochastic Neuron
+##########################################################
+@pytest.fixture(
+    scope="function",
+    params=[
+        # cells_shape, thresh, v_rest, alpha_v, alpha_t, dt, duration_refrac, tau_v, tau_t
+        ((1, 2, 2, 2), 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5)
+    ],
+)
+def stochastic_neuron(request):
+    from pysnn.neuron import StochasticNeuron
+
+    params = request.param
+    neuron = StochasticNeuron(*params)
+    return neuron
+
+
+# Test forward
+@pytest.mark.parametrize(
+    "inputs, expected",
+    [
+        (
+            torch.ones(1, 2, 2, 2, dtype=torch.float) * 0.5,
+            1 - torch.exp(-(torch.ones(1, 2, 2, 2, dtype=torch.float) * 0.5).sum(-1)),
+        )
+    ],
+)
+def test_stochastic_spikeprob(inputs, expected, stochastic_neuron):
+    r"""Checks correct spike probability pattern."""
+    spikes, trace = stochastic_neuron.forward(inputs)
+    assert (stochastic_neuron.spike_prob == expected).all()
+
+
+##########################################################
+# Test Izhikevich Neuron
+##########################################################
+@pytest.fixture(
+    scope="function",
+    params=[
+        # cells_shape, a, b, c, d, thresh, dt, alpha_t, tau_t
+        ((1, 2, 2, 2), 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.5, 0.5)
+    ],
+)
+def izhikevich_neuron(request):
+    from pysnn.neuron import IzhikevichNeuron
+
+    params = request.param
+    neuron = IzhikevichNeuron(*params)
+    return neuron
+
+
+# Test forward
+@pytest.mark.parametrize(
+    "inputs, expected",
+    [
+        (
+            torch.ones(1, 2, 2, 2, dtype=torch.float) * 2,
+            torch.ones(1, 2, 2, 2, dtype=torch.bool),
+        )
+    ],
+)
+def test_izhikevich_forward(inputs, expected, izhikevich_neuron):
+    r"""Checks correct output spiking pattern."""
+    spikes, trace = izhikevich_neuron.forward(inputs)
+    assert (spikes == expected).all()
+    assert (trace == expected.float() * izhikevich_neuron.alpha_t).all()
+
+
+##########################################################
 # Test Fede's neuron
 ##########################################################
 @pytest.fixture(

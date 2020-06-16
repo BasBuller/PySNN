@@ -91,7 +91,7 @@ class Input(BaseInput):
     :param dt: duration of a single timestep.
     :param alpha_t: scaling constant for the increase of the trace by a single spike.
     :param tau_t: decay parameter for the trace.
-    :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``.
+    :param update_type: string, either ``"linear"`` or ``"exponential"``, default is ``"linear"``.
     """
 
     def __init__(
@@ -153,7 +153,7 @@ class BaseNeuron(SpikingModule):
     :param v_rest: voltage resting value, the :class:`Neuron` will default back to this over time or after spiking.
     :param dt: duration of a single timestep.
     :param duration_refrac: Number of timesteps the :class:`Neuron` is dormant after spiking. Make sure ``dt`` fits an integer number of times in ``duration refrac``.
-    :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``.
+    :param update_type: string, either ``"linear"`` or ``"exponential"``, default is ``"linear"``.
     :param store_trace: ``Boolean`` flag to store the complete spiking history, defaults to ``False``.
     """
 
@@ -317,7 +317,7 @@ class IFNeuron(BaseNeuron):
     :param dt: duration of a single timestep.
     :param duration_refrac: Number of timesteps the :class:`Neuron` is dormant after spiking. Make sure ``dt`` fits an integer number of times in ``duration refrac``.
     :param tau_t: decay parameter for the trace.
-    :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``.
+    :param update_type: string, either ``"linear"`` or ``"exponential"``, default is ``"linear"``.
     :param store_trace: ``Boolean`` flag to store the complete spiking history, defaults to ``False``.
     """
 
@@ -410,7 +410,7 @@ class LIFNeuron(BaseNeuron):
     :param duration_refrac: Number of timesteps the :class:`Neuron` is dormant after spiking. Make sure ``dt`` fits an integer number of times in ``duration refrac``.
     :param tau_v: decay parameter for the voltage.
     :param tau_t: decay parameter for the trace.
-    :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``. Also support custom functions, should be added as elements in the following dict: update_types = {"voltage_update": ..., "trace_update": ...}
+    :param update_type: string, either ``"linear"`` or ``"exponential"``, default is ``"linear"``. Also support custom functions, should be added as elements in the following dict: update_types = {"voltage_update": ..., "trace_update": ...}
     :param store_trace: ``Boolean`` flag to store the complete spiking history, defaults to ``False``.
     """
 
@@ -530,7 +530,7 @@ class AdaptiveLIFNeuron(BaseNeuron):
     :param tau_t: decay parameter for the trace.
     :param alpha_thresh: scaling constant for the increase of the threshold by a single spike.
     :param tau_thresh: decay parameter for the threshold.
-    :param update_type: string, either ``'linear'`` or ``'exponential'``, default is ``'linear'``.
+    :param update_type: string, either ``"linear"`` or ``"exponential"``, default is ``"linear"``.
     :param store_trace: ``Boolean`` flag to store the complete spiking history, defaults to ``False``.
     """
 
@@ -666,12 +666,24 @@ class AdaptiveLIFNeuron(BaseNeuron):
 #########################################################
 # Stochastic Neuron
 #########################################################
-def exponential_prob_update(v):
-    return 1 - torch.exp(-v)
-
-
 class StochasticNeuron(BaseNeuron):
-    r"""Stochastic neuron."""
+    r"""Stochastic neuron. 
+    
+    The cell voltage decays over time, threshold is stochastic: the closer the potential is to the threshold, the larger the chance of a spike.
+
+    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    :param thresh: spiking threshold, when the cells' voltage surpasses this value it generates a spike.
+    :param v_rest: voltage resting value, the :class:`Neuron` will default back to this over time or after spiking.
+    :param alpha_v: scaling constant for the increase of the voltage by a single spike.
+    :param alpha_t: scaling constant for the increase of the trace by a single spike.
+    :param dt: duration of a single timestep.
+    :param duration_refrac: Number of timesteps the :class:`Neuron` is dormant after spiking. Make sure ``dt`` fits an integer number of times in ``duration refrac``.
+    :param tau_v: decay parameter for the voltage.
+    :param tau_t: decay parameter for the trace.
+    :param update_type: string, either ``"linear"`` or ``"exponential"``, default is ``"linear"``.
+    :param store_trace: ``Boolean`` flag to store the complete spiking history, defaults to ``False``.
+    :param spike_prob: Probability function for spiking to occur, defaults to ``"exp"``.
+    """
 
     def __init__(
         self,
@@ -711,14 +723,12 @@ class StochasticNeuron(BaseNeuron):
 
         # Spiking threshold generator
         if spike_prob == "exp":
-            self.prob_update = exponential_prob_update
+            self.prob_update = lambda v: 1 - torch.exp(-v)
         elif callable(spike_prob):
             self.prob_update = spike_prob
         else:
             raise TypeError(
-                "spike_prob has to be either a selected string or a callable, currently is {}".format(
-                    type(spike_prob)
-                )
+                f"spike_prob has to be either a selected string or a callable, currently is {type(spike_prob)}"
             )
 
         # Fixed parameters
@@ -783,7 +793,23 @@ class StochasticNeuron(BaseNeuron):
 # Izhikevich Neuron
 #########################################################
 class IzhikevichNeuron(BaseNeuron):
-    r"""Copy from the neuron model published in: https://www.izhikevich.org/publications/spikes.htm"""
+    r"""Izhikevich neuron. 
+    
+    Copy of the neuron model published in: https://www.izhikevich.org/publications/spikes.htm
+
+    :param cells_shape: a list or tuple that specifies the shape of the neurons in the conventional PyTorch format, but with the batch size as the first dimension.
+    :param a: Time scale of membrane potential recovery (negative feedback). Smaller value = slower recovery.
+    :param b: Sensitivity of membrane potential recovery to its fluctuations. Greater value = stronger coupling.
+    :param c: After-spike reset value of membrane potential.
+    :param d: After-spike reset value of membrane potential recovery.
+    :param thresh: spiking threshold, when the cells' voltage surpasses this value it generates a spike.
+    :param dt: duration of a single timestep.
+    :param alpha_t: scaling constant for the increase of the trace by a single spike.
+    :param tau_t: decay parameter for the trace.
+    :param update_type: string, either ``"linear"`` or ``"exponential"``, default is ``"linear"``.
+    :param store_trace: ``Boolean`` flag to store the complete spiking history, defaults to ``False``.
+    """
+    r""""""
 
     def __init__(
         self,
@@ -800,28 +826,38 @@ class IzhikevichNeuron(BaseNeuron):
         store_trace=False,
     ):
         super(IzhikevichNeuron, self).__init__(
-            cells_shape, thresh, 0, 0, alpha_t, dt, 0, store_trace=store_trace
+            cells_shape, thresh, 0, dt, 0, store_trace=store_trace
         )
 
         # Type of updates
         if update_type == "linear":
-            self.voltage_update = sf._lif_linear_voltage_update
-            self.trace_update = sf._linear_trace_update
+            self.voltage_update = sf.lif_linear_voltage_update
+            self.trace_update = sf.linear_trace_update
         elif update_type == "exponential":
-            self.voltage_update = sf._lif_exponential_voltage_update
-            self.trace_update = sf._exponential_trace_update
+            self.voltage_update = sf._if_exponential_voltage_update
+            self.trace_update = sf.exponential_trace_update
+        elif (  # check if dict contains actual functions
+            isinstance(update_type, dict)
+            and callable(update_type["voltage_update"])
+            and callable(update_type["trace_update"])
+        ):
+            self.voltage_update = update_type["voltage_update"]
+            self.trace_update = update_type["trace_update"]
         else:
             raise ValueError(f"Unsupported update type {update_type}")
 
         # Fixed parameters
+        self.register_buffer(
+            "alpha_t", alpha_t * torch.ones(cells_shape, dtype=torch.float)
+        )
         self.register_buffer("tau_t", torch.tensor(tau_t, dtype=torch.float))
 
         # Fixed parameters
-        self.register_buffer("a", torch.tensor(a, dtype=torch.float))
-        self.register_buffer("b", torch.tensor(b, dtype=torch.float))
-        self.register_buffer("c", torch.tensor(c, dtype=torch.float))
-        self.register_buffer("d", torch.tensor(d, dtype=torch.float))
-        self.register_buffer("u", torch.zeros(*cells_shape))
+        self.register_buffer("a", a * torch.ones(*cells_shape, dtype=torch.float))
+        self.register_buffer("b", b * torch.ones(*cells_shape, dtype=torch.float))
+        self.register_buffer("c", c * torch.ones(*cells_shape, dtype=torch.float))
+        self.register_buffer("d", d * torch.ones(*cells_shape, dtype=torch.float))
+        self.register_buffer("u", torch.zeros(*cells_shape, dtype=torch.float))
         self.init_neuron()
 
     def update_trace(self, x):
