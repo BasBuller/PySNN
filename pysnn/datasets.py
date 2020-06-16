@@ -224,12 +224,7 @@ def create_torchvision_dataset_wrapper(ds_type):
         )
 
         def __init__(
-            self,
-            image_encoder=None,
-            label_encoder=None,
-            n_ims=None,
-            *args,
-            **kwargs
+            self, image_encoder=None, label_encoder=None, n_ims=None, *args, **kwargs
         ):
             # language=rst
             """
@@ -277,6 +272,7 @@ def create_torchvision_dataset_wrapper(ds_type):
             return super().__len__()
 
     return TorchvisionDatasetWrapper
+
 
 mnist_wrapper = create_torchvision_dataset_wrapper("MNIST")
 
@@ -326,7 +322,9 @@ def nmnist_train_test(
         test_content = _list_dir_content(os.path.join(root, "Test"))
         test, _ = _concat_dir_content(test_content)
     else:
-        _, test = train_test(os.path.join(root, "Test"), train_size=((10000 - test_samples) / 10000))
+        _, test = train_test(
+            os.path.join(root, "Test"), train_size=((10000 - test_samples) / 10000)
+        )
     test_dataset = NeuromorphicDataset(
         test,
         sampling_time,
@@ -570,5 +568,9 @@ if __name__ == "__main__":
     from torchvision.transforms import ToTensor
 
     # train, test = nmnist_train_test(os.path.expanduser("~/Thesis_final/data/nmnist/"))
-    data = mnist_wrapper(n_ims=10, root="/home/bas/stack/ai_projects/graph_nns/data/", transform=ToTensor(), train=False)
-    
+    data = mnist_wrapper(
+        n_ims=10,
+        root="/home/bas/stack/ai_projects/graph_nns/data/",
+        transform=ToTensor(),
+        train=False,
+    )

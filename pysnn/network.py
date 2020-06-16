@@ -9,7 +9,7 @@ import torch.nn as nn
 def _tag_tensor(tens, tag):
     if isinstance(tens, torch.Tensor):  # TODO: unsure if this is sufficient
         tens._parent = tag
-    
+
 
 def _graph_tracing_pre_hook(node, input):
     r"""Trace computational graph of a SNN using _forward_pre_hooks.
@@ -44,7 +44,6 @@ class SpikingModule(nn.Module):
         self.next_module = []
         self._prev = set()
 
-
     def __setattr__(self, name, value):
         r"""Performs tracking of neurons and connections, in addition to nn.Module tracking of PyTorch."""
 
@@ -60,7 +59,6 @@ class SpikingModule(nn.Module):
             if value._layers:
                 self._layers[name] = value
 
-
     # ######################################################
     # Spiking versions of regular utility functions
     # ######################################################
@@ -68,17 +66,19 @@ class SpikingModule(nn.Module):
         r"""Regular named_children function only for SpikingModules."""
         memo = set()
         for name, module in self._modules.items():
-            if module is not None and isinstance(module, SpikingModule) and module not in memo:
+            if (
+                module is not None
+                and isinstance(module, SpikingModule)
+                and module not in memo
+            ):
                 memo.add(module)
                 yield name, module
 
-    
     def spiking_children(self):
         r"""Regular children function only for SpikingModules."""
         for _, module in self.named_spiking_children():
             yield module
 
-    
     def named_spiking_modules(self, memo=None, prefix=""):
         r"""Regular named modules function only for SpikingModules."""
         if memo is None:
@@ -94,12 +94,10 @@ class SpikingModule(nn.Module):
                 for m in module.named_spiking_modules(memo, submodule_prefix):
                     yield m
 
-
     def spiking_modules(self):
         r"""Regular modules function only for SpikingModules."""
         for _, module in self.named_spiking_modules():
             yield module
-
 
     def spiking_apply(self, fn):
         r"""Regular apply function only for SpikingModules."""
@@ -107,7 +105,6 @@ class SpikingModule(nn.Module):
             module.spiking_apply(fn)
         fn(self)
         return self
-
 
     # ######################################################
     # Graph tracing
@@ -124,22 +121,29 @@ class SpikingModule(nn.Module):
 
         # Forward tracing of input
         out = self.forward(*input, **kwargs)
-        out = out[0] if isinstance(out, (tuple, list)) else out  # select just single output tensor
+        out = (
+            out[0] if isinstance(out, (tuple, list)) else out
+        )  # select just single output tensor
 
         # TODO: What about feedback connections?
         # Construct graph from output to input
         Layer = namedtuple("Layer", ["presynaptic", "connection", "postsynaptic"])
         layers, nodes, connections, topo = {}, set(), set(), []
+
         def build(postsyn):
             if postsyn not in nodes:
                 nodes.add(postsyn)
                 for conn in postsyn._prev:
                     connections.add(conn)
                     for presyn in conn._prev:
-                        layers[presyn.name + "-" + postsyn.name] = Layer(presyn, conn, postsyn)
+                        layers[presyn.name + "-" + postsyn.name] = Layer(
+                            presyn, conn, postsyn
+                        )
                         build(presyn)
-                for conn in postsyn._prev: topo.append(conn)
+                for conn in postsyn._prev:
+                    topo.append(conn)
                 topo.append(postsyn)
+
         build(out._parent)
 
         # Clean hooks, TODO: Make select for just the added hooks
@@ -150,21 +154,20 @@ class SpikingModule(nn.Module):
 
         return layers, nodes, connections, topo
 
-
     # ######################################################
     # Spiking functions
     # ######################################################
     def reset_state(self):
         """Define which parameters are cleaned after a simulation."""
-        raise NotImplementedError("Every SpikingModule requires a reset_state function.")
-
+        raise NotImplementedError(
+            "Every SpikingModule requires a reset_state function."
+        )
 
     def reset_network_state(self):
         r"""Resets state parameters of all submodules, requires each submodule to have a reset_state function.
         """
         for module in self.spiking_modules():
             module.reset_state()
-
 
     def _save_to_layer_state_dict(self, layer, modules, keep_vars):
         dict_names = ["connection", "neuron", "presyn_neuron"]

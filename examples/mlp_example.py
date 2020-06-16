@@ -29,7 +29,7 @@ batch_size = 1
 
 # Neuronal Dynamics
 thresh = 1.0
-v_rest = 0.
+v_rest = 0.0
 alpha_v = 1.0
 tau_v = 0.7
 alpha_t = 1.0
@@ -53,9 +53,7 @@ class Network(SpikingModule):
         super(Network, self).__init__()
 
         # Input
-        self.input = Input(
-            (batch_size, 1, n_in), *i_dynamics
-        )
+        self.input = Input((batch_size, 1, n_in), *i_dynamics)
 
         # Layer 1
         self.mlp1_c = Linear(n_in, n_hidden, *c_dynamics)
@@ -85,11 +83,7 @@ class Network(SpikingModule):
 #########################################################
 # Dataset
 #########################################################
-data_transform = transforms.Compose(
-    [
-        Intensity(intensity)
-    ]
-)
+data_transform = transforms.Compose([Intensity(intensity)])
 lbl_transform = transforms.Lambda(lambda x: x * intensity)
 
 train_dataset = OR(
@@ -99,10 +93,7 @@ train_dataset = OR(
     repeats=int(n_in / 2),
 )
 train_dataloader = DataLoader(
-    train_dataset, 
-    batch_size=batch_size, 
-    shuffle=True, 
-    num_workers=num_workers,
+    train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers,
 )
 
 
@@ -152,7 +143,16 @@ print("Layer 2 weight difference: ", dw2)
 # Plotting network state and spikes
 _, axes = plt.subplots(nrows=5, ncols=2, sharex="row", sharey="row")
 data = map(torch.stack, (sp_n0, tr_n0, tr_n1, tr_n2, sp_n1, sp_n2, v_n1, v_n2))
-titles = ["spikes input", "traces input", "traces L1", "traces L2", "spikes L1", "spikes L2", "voltage L1", "voltage L2"]
+titles = [
+    "spikes input",
+    "traces input",
+    "traces L1",
+    "traces L2",
+    "spikes L1",
+    "spikes L2",
+    "voltage L1",
+    "voltage L2",
+]
 for d, ax, t in zip(data, axes.flatten(), titles):
     for idx in range(d.shape[1]):
         if not "spikes" in t:
