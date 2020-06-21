@@ -45,6 +45,13 @@ Code is formatted with [Black](https://github.com/psf/black) using a pre-commit 
 $ pre-commit install
 ```
 
+If you want to run tests, make sure you install the required packages:
+
+```bash
+$ pip install pysnn[tests]
+$ pytest tests
+```
+
 ### Requirements
 Installing PySNN requires a Python version of 3.6 or higher, Python 2 is not supported. It also requires PyTorch to be of version 1.2 or higher.
 
