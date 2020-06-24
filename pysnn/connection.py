@@ -35,10 +35,11 @@ class BaseConnection(SpikingModule):
             else:
                 delay_init = torch.ones(*shape) * (delay + 1)
         elif isinstance(delay, torch.Tensor):
+            assert delay.shape == shape, f"delay tensor should have shape {shape}"
             delay_init = delay + 1
         else:
             raise TypeError(
-                "Incorrect data type provided for delay_init, please provide an int or FloatTensor"
+                f"Incorrect data type provided for delay_init, please provide an int or {shape} FloatTensor"
             )
         self.register_buffer("delay_init", delay_init)
 
@@ -65,7 +66,7 @@ class BaseConnection(SpikingModule):
         self.spikes.fill_(False)
 
     def reset_weights(self, distribution="uniform", gain=1.0, a=0.0, b=1.0):
-        r"""Reinnitialize network weights.
+        r"""Reinitialize network weights.
 
         Note: Not all parameters apply to every distribution.
         
@@ -107,7 +108,7 @@ class BaseConnection(SpikingModule):
             nn.init.constant_(self.weight, gain)
 
     def init_connection(self, init_grad_tensor=False):
-        r"""Collection of all intialization methods.
+        r"""Collection of all initialization methods.
         
         Assumes weights are implemented by the class that inherits from this base class.
         """
@@ -122,13 +123,14 @@ class BaseConnection(SpikingModule):
         self.reset_weights()
 
     def propagate_spike(self, x):
-        r"""Track propagation of spikes through synapses if the connection."""
+        r"""Track propagation of spikes through synapses in the connection."""
         if self.delay_init is not None:
             self.delay[self.delay > 0] -= 1
             spike_out = self.delay == 1
             self.delay += self.delay_init * x
         else:
-            spike_out = x
+            # expand() to broadcast to synapse_shape, as happens when there is delay
+            spike_out = x.expand(*self.synapse_shape)
         self.spikes.copy_(spike_out)
         return self.convert_spikes(spike_out)
 
@@ -182,8 +184,8 @@ class _Linear(BaseConnection):
         :return: Folder input tensor.
         """
         return x.view(
-            self.synapse_shape[0], -1, self.out_features, self.in_features
-        )  # TODO: Add posibility for a channel dim at dim 2
+            self.batch_size, -1, self.out_features, self.in_features
+        )  # TODO: Add possibility for a channel dim at dim 2
 
     def update_trace(self, t_in):
         r"""Propagate traces incoming from pre-synaptic neuron through all its outgoing connections.
@@ -196,6 +198,12 @@ class _Linear(BaseConnection):
 
 class Linear(_Linear):
     r"""SNN linear (fully connected) layer with interface comparable to torch.nn.Linear.
+    Shapes:
+    - input: `(batch_size, ?, in_features)`
+    - synapse: `(batch_size, out_features, in_features)`
+    - output: `(batch_size, ?, out_features, in_features)`
+    - weight: `(out_features, in_features)`
+    with `?` the free dimension (usually 1).
     
     :param in_features: Size of each input sample.
     :param out_features: Size of each output sample.
@@ -321,6 +329,11 @@ class _ConvNd(BaseConnection):
 
 class Conv2d(_ConvNd):
     r"""Convolutional SNN layer interface comparable to torch.nn.Conv2d.
+    Shapes:
+    - input: `(batch_size, in_channels, im_dims[0], im_dims[1])`
+    - synapse: `(batch_size, out_channels, kernel_size * kernel_size, image_out_shape[0] * image_out_shape[1])`
+    - output: `(batch_size, out_channels, image_out_shape[0], image_out_shape[1], kernel_size * kernel_size)`
+    - weight: `(out_channels, in_channels, kernel_size, kernel_size)`
     
     :param: Number of channels in the input image.
     :param out_channels: Number of channels produced by the convolution
@@ -393,7 +406,7 @@ class Conv2d(_ConvNd):
 # Recurrent
 #########################################################
 class _Recurrent(BaseConnection):
-    r"""SNN linear base class, comparable to torch.nn.Linear in format.
+    r"""SNN recurrent base class, comparable to torch.nn.Linear in format.
     
     This class implements basic methods and parameters that are shared among all versions of Recurrent layers.
     By inhereting from this class one can easily change voltage update, trace update and forward functionalities. 
@@ -427,7 +440,7 @@ class _Recurrent(BaseConnection):
         :return: Folder input tensor.
         """
         return x.view(
-            self.synapse_shape[0], -1, self.out_features, self.in_features
+            self.batch_size, -1, self.out_features, self.in_features
         )  # TODO: Add posibility for a channel dim at dim 2
 
     def update_trace(self, t_in):
@@ -439,8 +452,14 @@ class _Recurrent(BaseConnection):
         self.trace.copy_(t_in.expand(-1, self.out_features, -1).contiguous())
 
 
-class LateralInhib(_Recurrent):
-    r"""SNN lateral inhibitory layer, factually this is a specialzed recurrent layer.
+class Lateral(_Recurrent):
+    r"""SNN laterally connected layer, factually this is a specialized recurrent layer.
+    Shapes:
+    - input: `(batch_size, ?, in_features)`
+    - synapse: `(batch_size, in_features, in_features)`
+    - output: `(batch_size, ?, in_features, in_features)`
+    - weight: `(in_features, in_features)`
+    with `?` the free dimension (usually 1).
     
     :param in_features: Size of each input sample.
     :param batch_size: Number of samples in a batch.
@@ -449,9 +468,7 @@ class LateralInhib(_Recurrent):
     """
 
     def __init__(self, in_features, batch_size, dt, delay):
-        super(LateralInhib, self).__init__(
-            in_features, in_features, batch_size, dt, delay
-        )
+        super(Lateral, self).__init__(in_features, in_features, batch_size, dt, delay)
 
         # Initialize connection
         self.init_connection()

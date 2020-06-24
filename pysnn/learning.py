@@ -8,7 +8,7 @@ Approach correlation based learning, gradient-based learning uses PyTorch's lear
 from collections import OrderedDict
 import numpy as np
 import torch
-from .connection import _Linear, _ConvNd
+from .connection import BaseConnection, _Linear, _ConvNd
 
 
 #########################################################
@@ -69,16 +69,21 @@ class LearningRule:
         elif post.dtype == torch.bool:
             post = post.to(pre.dtype)
         elif pre.dtype != post.dtype:
-            assert TypeError(
+            raise TypeError(
                 "The pre and post synaptic terms should either be of the same datatype, or one of them has to be a Boolean."
             )
 
         # Perform actual multiplication
         if isinstance(conn, _Linear):
             pre = pre.transpose(2, 1)
-        if isinstance(conn, _ConvNd):
+        elif isinstance(conn, _ConvNd):
             pre = pre.transpose(2, 1)
             post = post.view(post.shape[0], 1, post.shape[1], -1)
+        else:
+            if isinstance(conn, BaseConnection):
+                raise TypeError(f"Connection type {conn} is not supported.")
+            else:
+                raise TypeError("Provide an instance of BaseConnection.")
 
         output = pre * post
         return output.transpose(2, 1)
@@ -100,8 +105,14 @@ class LearningRule:
         """
         if isinstance(conn, _Linear):
             output = red_method(tensor, dim=0)
-        if isinstance(conn, _ConvNd):
+        elif isinstance(conn, _ConvNd):
             output = red_method(tensor, dim=(0, 3))
+        else:
+            if isinstance(conn, BaseConnection):
+                raise TypeError(f"Connection type {conn} is not supported.")
+            else:
+                raise TypeError("Provide an instance of BaseConnection.")
+
         return output
 
 
@@ -114,12 +125,9 @@ class OnlineSTDP(LearningRule):
     :param layers: OrderedDict containing state dicts for each layer.
     :param lr: Learning rate.
     """
+
     def __init__(
-        self, 
-        layers,
-        lr=0.001,
-        a_plus=1.,
-        a_min=1.,
+        self, layers, lr=0.001, a_plus=1.0, a_min=1.0,
     ):
         params = dict(lr=lr, a_plus=a_plus, a_min=a_min)
         super(OnlineSTDP, self).__init__(layers, params)
@@ -127,9 +135,15 @@ class OnlineSTDP(LearningRule):
     def weight_update(self, layer, params, *args, **kwargs):
         pre_trace, post_trace = layer.presynaptic.trace, layer.postsynaptic.trace
         pre_spike, post_spike = layer.presynaptic.spikes, layer.postsynaptic.spikes
-        dw = params["a_plus"] * self.pre_mult_post(pre_trace, post_spike, layer.connection)
-        dw = params["a_plus"] * self.pre_mult_post(pre_spike, post_trace, layer.connection)
-        layer.connection.weight += params["lr"] * self.reduce_connections(dw, layer.connection)
+        dw = params["a_plus"] * self.pre_mult_post(
+            pre_trace, post_spike, layer.connection
+        )
+        dw = params["a_plus"] * self.pre_mult_post(
+            pre_spike, post_trace, layer.connection
+        )
+        layer.connection.weight += params["lr"] * self.reduce_connections(
+            dw, layer.connection
+        )
 
 
 #########################################################

@@ -23,7 +23,7 @@ def learning_rule(request):
 
 # Test pre-post multiplication
 @pytest.mark.parametrize(
-    "pre, post, con_type, result",
+    "pre, post, conn, result",
     [
         (
             torch.tensor([[[0, 1, 1, 0]], [[1, 0, 0, 1]]], dtype=torch.bool),
@@ -45,15 +45,26 @@ def learning_rule(request):
         ),
     ],
 )
-def test_pre_mult_post(pre, post, con_type, result, learning_rule):
+def test_pre_mult_post(pre, post, conn, result, learning_rule):
     r"""Checks the multiplication of spikes/traces of pre and post neurons."""
-    out = learning_rule.pre_mult_post(pre, post, con_type)
+    from pysnn.connection import Linear, Conv2d
+
+    if conn == "linear":
+        # in, out, batch, dt, delay
+        conn_params = (1, 1, 1, 1.0, 0)
+        conn = Linear(*conn_params)
+    elif conn == "conv2d":
+        # in, out, kernel, image, batch, dt, delay
+        conn_params = (1, 1, 1, (1, 1), 1, 1.0, 0)
+        conn = Conv2d(*conn_params)
+
+    out = learning_rule.pre_mult_post(pre, post, conn)
     assert (out == result).all()
 
 
 # Test reduce
 @pytest.mark.parametrize(
-    "tensor, con_type, result",
+    "tensor, conn, result",
     [
         (
             torch.tensor(
@@ -65,9 +76,20 @@ def test_pre_mult_post(pre, post, con_type, result, learning_rule):
         (torch.ones(2, 4, 50, 1024, dtype=torch.float), "conv2d", torch.ones(4, 50)),
     ],
 )
-def test_reduce_connections(tensor, con_type, result, learning_rule):
+def test_reduce_connections(tensor, conn, result, learning_rule):
     r"""Checks the reduction to dimensions that represent separate connections."""
-    out = learning_rule.reduce_connections(tensor, con_type)
+    from pysnn.connection import Linear, Conv2d
+
+    if conn == "linear":
+        # in, out, batch, dt, delay
+        conn_params = (1, 1, 1, 1.0, 0)
+        conn = Linear(*conn_params)
+    elif conn == "conv2d":
+        # in, out, kernel, image, batch, dt, delay
+        conn_params = (1, 1, 1, (1, 1), 1, 1.0, 0)
+        conn = Conv2d(*conn_params)
+
+    out = learning_rule.reduce_connections(tensor, conn)
     assert (out == result).all()
 
 

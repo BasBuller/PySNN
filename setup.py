@@ -16,7 +16,9 @@ requirements = [
 extras = {
     "examples": [
         "gym",
-        "tensorflow>=2.0.0",
+        "tensorboard",
+        "seaborn",
+        "tqdm",
         "ray[tune]",
         "ray[debug]",
         "requests",

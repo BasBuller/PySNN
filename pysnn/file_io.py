@@ -158,7 +158,7 @@ def spike_array_to_events(spike_mat, sampling_time=1):
         t_events = spike_events[:, 3]
     else:
         raise Exception(
-            "Expected numpy array of 3 or 4 dimension. It was {}".format(spike_mat.ndim)
+            f"Expected numpy array of 3 or 4 dimension. It was {spike_mat.ndim}"
         )
 
     return Events(x_events, y_events, p_events, t_events * sampling_time)
