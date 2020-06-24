@@ -201,3 +201,85 @@ def fede_voltage_update(
     v_cur += v_delta * non_refrac.to(v_delta.dtype)
     # TODO: Check for possible inplace instead of copying operation, should be inplace for best performance
     return v_cur
+
+
+
+
+
+
+def forward(self, x, force_spike=False):
+    r"""
+    :param x: Incoming/presynaptic spikes
+
+    :return: Neuron output spikes and trace
+    """
+    x = self.fold(x)
+    self.update_voltage(x)
+    spikes = self.spiking(force_spike=force_spike)
+    self.update_trace(spikes)
+    self.refrac(spikes)
+    if self.complete_trace is not None:
+        self.concat_trace(spikes)
+    return spikes, self.trace
+
+def refrac(self, spikes):
+    r"""Basic counting version of cell refractory period.
+
+    Can be overwritten in case of the need of more refined functionality.
+    """
+    if (self.duration_refrac > 0).any():
+        self.refrac_counts[self.refrac_counts > 0] -= self.dt
+        self.refrac_counts += self.duration_refrac * self.convert_spikes(spikes)
+    self.v_cell.masked_fill_(spikes, self.v_rest)
+
+
+########################################################
+# Autgrad functions
+########################################################
+class BellecSpiking(torch.autograd.Function):
+    
+    @staticmethod
+    def forward(ctx, v, v_th):
+        ctx.v = v
+        ctx.v_th = v_th
+        return v >= v_th
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        abs_diff = torch.abs((ctx.v - ctx.v_th) / ctx.v_th)
+        grad_v = 0.3 * torch.max(0, 1 - abs_diff)
+        return grad_v, None
+
+
+class Refrac(torch.autograd.Function):
+
+    @staticmethod
+    def forward(ctx):
+        pass
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        pass
+
+
+class LIFLinearVoltageUpdate(torch.autograd.Function):
+
+    @staticmethod
+    def forward(ctx, v_cur, v_rest, v_in, alpha_v, v_decay, dt, refrac_counts, trace):
+        v_delta = (v_cur - v_rest) * v_decay + alpha_v * v_in
+        non_refrac = refrac_counts == 0
+        v_cur = v_rest + v_delta * non_refrac.to(v_delta.dtype)
+
+        ctx.trace = trace
+
+        return v_cur
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return None, None, ctx.trace, None, None, None, None, None
+
+
+########################################################
+# Apply autograd functions
+########################################################
+bellec_spiking = BellecSpiking.apply
