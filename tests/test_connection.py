@@ -6,6 +6,58 @@ import torch
 
 
 ##########################################################
+# Test ConvertSpikes autograd functions
+##########################################################
+@pytest.mark.parametrize(
+    "x, dtype",
+    [
+        (torch.ones(1, 2, 2, dtype=torch.bool), torch.float),
+        (torch.ones(1, 2, 2, dtype=torch.bool), torch.int),
+    ]
+)
+def test_convert_spikes_forward(x, dtype):
+    from pysnn.connection import convert_spikes
+
+    out_spikes = convert_spikes(x, dtype)
+    assert out_spikes.dtype == dtype
+
+
+@pytest.mark.parametrize(
+    "x, grad",
+    [
+        (torch.ones(1, 2, 2, dtype=torch.float, requires_grad=True), torch.ones(1, 2, 2)),
+        (torch.ones(2, 4, 6, dtype=torch.float, requires_grad=True), torch.ones(2, 4, 6)),
+        (torch.ones(2, 4, 6, 8, dtype=torch.float, requires_grad=True), torch.ones(2, 4, 6, 8)),
+    ]
+)
+def test_convert_spikes_backward(x, grad):
+    from pysnn.connection import convert_spikes
+
+    out_spikes = convert_spikes(x, torch.float)
+    out_spikes.backward(grad)
+    assert (x.grad == grad).all()
+
+
+##########################################################
+# Test PropagateSpikes autograd functions
+##########################################################
+@pytest.mark.parametrize(
+    "x, grad",
+    [
+        (torch.ones(1, 2, 2, dtype=torch.float, requires_grad=True), torch.ones(1, 2, 2)),
+        (torch.ones(2, 4, 6, dtype=torch.float, requires_grad=True), torch.ones(2, 4, 6)),
+        (torch.ones(2, 4, 6, 8, dtype=torch.float, requires_grad=True), torch.ones(2, 4, 6, 8)),
+    ]
+)
+def test_propagate_spikes_backward(x, grad):
+    from pysnn.connection import convert_spikes
+
+    out_spikes = convert_spikes(x, torch.float)
+    out_spikes.backward(grad)
+    assert (x.grad == grad).all()
+
+
+##########################################################
 # Test Connection: weight init, delayed propagation of spikes and spike conversion
 ##########################################################
 @pytest.fixture(

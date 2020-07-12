@@ -13,6 +13,42 @@ from pysnn.network import SpikingModule
 
 
 #########################################################
+# Functional
+#########################################################
+class ConvertSpikes(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, x, dtype):
+        ctx.x = x
+        return x.type(dtype)
+
+    @staticmethod
+    def backward(ctx, out_grads):
+        return out_grads, None
+
+convert_spikes = ConvertSpikes.apply
+
+
+class PropagateSpikes(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, x, delay, delay_init, synapse_shape):
+        ctx.x = x
+        if delay_init is not None:
+            delay[delay > 0] -= 1
+            spike_out = delay == 1
+            delay += delay_init * x
+        else:
+            # expand() to broadcast to synapse_shape, as happens when there is delay
+            spike_out = x.expand(*synapse_shape)
+        return spike_out, delay
+
+    @staticmethod
+    def backward(ctx, spike_grads, delay_grads):
+        return spike_grads, None, None, None
+
+propagate_spikes = PropagateSpikes.apply
+
+
+#########################################################
 # Linear layer
 #########################################################
 class BaseConnection(SpikingModule):
@@ -237,8 +273,11 @@ class Linear(_Linear):
         :return: (Activation potentials, Postsynaptic trace)
         """
         self.update_trace(trace_in)
-        x = self.convert_spikes(x)
-        x = self.propagate_spike(x)
+        x = convert_spikes(x, self.weight.dtype)
+        x, delay = propagate_spikes(x, self.delay, self.delay_init, self.synapse_shape)
+        self.spikes.copy_(x)
+        self.delay.copy_(delay)
+        x = convert_spikes(x, self.weight.dtype)
         return self.activation_potential(x), self.fold(self.trace)
 
 

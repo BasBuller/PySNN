@@ -193,9 +193,10 @@ class BaseNeuron(SpikingModule):
         self.register_buffer("v_rest", torch.tensor(v_rest, dtype=torch.float))
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
         self.register_buffer("duration_refrac", duration_refrac)
-        self.thresh_center = Parameter(
-            thresh * torch.ones(param_shape, dtype=torch.float), requires_grad=False
+        self.register_buffer(
+            "thresh_center", thresh * torch.ones(param_shape, dtype=torch.float)
         )
+        self.register_buffer("thresh", torch.empty(*cells_shape, dtype=torch.float))
 
         # Define dynamic parameters
         self.register_buffer("spikes", torch.empty(*cells_shape, dtype=torch.bool))
@@ -203,11 +204,6 @@ class BaseNeuron(SpikingModule):
         self.register_buffer("trace", torch.empty(*cells_shape, dtype=torch.float))
         self.register_buffer(
             "refrac_counts", torch.empty(*cells_shape, dtype=torch.float)
-        )
-
-        # Define learnable parameters
-        self.thresh = Parameter(
-            torch.empty(*cells_shape, dtype=torch.float), requires_grad=False
         )
 
         # In case of storing a complete, local copy of the activity of a neuron
@@ -428,7 +424,18 @@ class GradLIFNeuron(BaseNeuron):
         :return: Neuron output spikes and trace
         """
         x = self.fold(x)
-        self.v_cell.copy_(self.voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v, self.dt, self.refrac_counts, pre_trace))
+        self.v_cell.copy_(
+            self.voltage_update(
+                self.v_cell,
+                self.v_rest,
+                x,
+                self.alpha_v,
+                self.tau_v,
+                self.dt,
+                self.refrac_counts,
+                pre_trace,
+            )
+        )
         spikes = self.spiking(self.v_cell, self.thresh)
         self.update_trace(spikes)
         self.refrac(spikes)
@@ -1147,13 +1154,7 @@ class ReadoutNeuron(BaseNeuron):
     """
 
     def __init__(
-        self,
-        cells_shape,
-        v_rest,
-        alpha_v,
-        dt,
-        tau_v,
-        update_type="linear",
+        self, cells_shape, v_rest, alpha_v, dt, tau_v, update_type="linear",
     ):
         super(ReadoutNeuron, self).__init__(
             cells_shape, 0, v_rest, dt, 0,
@@ -1171,8 +1172,7 @@ class ReadoutNeuron(BaseNeuron):
         # Type of updates
         if update_type == "linear":
             assert (
-                (self.tau_v >= 0.0)
-                & (self.tau_v <= 1.0)
+                (self.tau_v >= 0.0) & (self.tau_v <= 1.0)
             ).all(), "Decays for linear updates should be in the interval [0, 1]."
             self.voltage_update = sf.lif_linear_voltage_update
         elif update_type == "exponential":
@@ -1226,13 +1226,7 @@ class GradReadoutNeuron(BaseNeuron):
     """
 
     def __init__(
-        self,
-        cells_shape,
-        v_rest,
-        alpha_v,
-        dt,
-        tau_v,
-        update_type="linear",
+        self, cells_shape, v_rest, alpha_v, dt, tau_v, update_type="linear",
     ):
         super(GradReadoutNeuron, self).__init__(
             cells_shape, 0, v_rest, dt, 0,
@@ -1250,8 +1244,7 @@ class GradReadoutNeuron(BaseNeuron):
         # Type of updates
         if update_type == "linear":
             assert (
-                (self.tau_v >= 0.0)
-                & (self.tau_v <= 1.0)
+                (self.tau_v >= 0.0) & (self.tau_v <= 1.0)
             ).all(), "Decays for linear updates should be in the interval [0, 1]."
             self.voltage_update = sf.LIFLinearVoltageUpdate.apply
         elif update_type == "exponential":
@@ -1263,7 +1256,7 @@ class GradReadoutNeuron(BaseNeuron):
 
         self.init_neuron()
 
-    def update_voltage(self, x):
+    def update_voltage(self, x, pre_trace):
         r"""
         :param x: Incoming/presynaptic spikes
         """
@@ -1275,6 +1268,7 @@ class GradReadoutNeuron(BaseNeuron):
             self.tau_v,
             self.dt,
             self.refrac_counts,
+            pre_trace,
         )
 
     def forward(self, x, pre_trace, force_spike=False):
@@ -1284,5 +1278,17 @@ class GradReadoutNeuron(BaseNeuron):
         :return: Neuron output spikes and trace
         """
         x = self.fold(x)
-        self.v_cell.copy_(self.voltage_update(self.v_cell, self.v_rest, x, self.alpha_v, self.tau_v, self.dt, self.refrac_counts, pre_trace))
+        # self.update_voltage(x, pre_trace)
+        self.v_cell.copy_(
+            self.voltage_update(
+                self.v_cell,
+                self.v_rest,
+                x,
+                self.alpha_v,
+                self.tau_v,
+                self.dt,
+                self.refrac_counts,
+                pre_trace,
+            )
+        )
         return self.v_cell

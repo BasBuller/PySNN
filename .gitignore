@@ -19,7 +19,6 @@ dist/
 
 # Files
 trial.py
-notes.md
 
 # Extensions
 *.code-workspace

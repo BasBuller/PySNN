@@ -203,10 +203,6 @@ def fede_voltage_update(
     return v_cur
 
 
-
-
-
-
 def forward(self, x, force_spike=False):
     r"""
     :param x: Incoming/presynaptic spikes
@@ -221,6 +217,7 @@ def forward(self, x, force_spike=False):
     if self.complete_trace is not None:
         self.concat_trace(spikes)
     return spikes, self.trace
+
 
 def refrac(self, spikes):
     r"""Basic counting version of cell refractory period.
@@ -237,7 +234,6 @@ def refrac(self, spikes):
 # Autgrad functions
 ########################################################
 class BellecSpiking(torch.autograd.Function):
-    
     @staticmethod
     def forward(ctx, v, v_th):
         ctx.v = v
@@ -245,14 +241,13 @@ class BellecSpiking(torch.autograd.Function):
         return v >= v_th
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx, spike_g):
         abs_diff = torch.abs((ctx.v - ctx.v_th) / ctx.v_th)
         grad_v = 0.3 * torch.max(0, 1 - abs_diff)
         return grad_v, None
 
 
 class Refrac(torch.autograd.Function):
-
     @staticmethod
     def forward(ctx):
         pass
@@ -263,7 +258,6 @@ class Refrac(torch.autograd.Function):
 
 
 class LIFLinearVoltageUpdate(torch.autograd.Function):
-
     @staticmethod
     def forward(ctx, v_cur, v_rest, v_in, alpha_v, v_decay, dt, refrac_counts, trace):
         v_delta = (v_cur - v_rest) * v_decay + alpha_v * v_in
@@ -275,7 +269,7 @@ class LIFLinearVoltageUpdate(torch.autograd.Function):
         return v_cur
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(ctx, v_cur_g):
         return None, None, ctx.trace, None, None, None, None, None
 
 
