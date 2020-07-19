@@ -19,6 +19,7 @@ dist/
 
 # Files
 trial.py
+todo.md
 
 # Extensions
 *.code-workspace

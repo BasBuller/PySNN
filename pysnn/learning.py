@@ -5,10 +5,44 @@ Approach correlation based learning, gradient-based learning uses PyTorch's lear
     3. Implement a hook mechanism that can modulate the update, i.e. for RL based learning rules.
 """
 
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 import numpy as np
 import torch
 from .connection import BaseConnection, _Linear, _ConvNd
+from .neuron import BaseNeuron, BaseInput
+
+
+#########################################################
+# Utilities
+#########################################################
+def _tag_tensor(tens, tag):
+    if isinstance(tens, torch.Tensor):  # TODO: unsure if this is sufficient
+        tens._parent = tag
+
+
+def _graph_tracing_pre_hook(node, input):
+    r"""Trace computational graph of a SNN using _forward_pre_hooks.
+    
+    Stores parent node in self._prev. The previous object location is stored in incoming Tensor.
+    """
+    if not hasattr(node, "_prev"):
+        node._prev = set()
+
+    for i in input:
+        if not isinstance(i, (tuple, list)):
+            i = (i,)
+        for i_sub in i:
+            if hasattr(i_sub, "_parent") and i_sub._parent:
+                node._prev.add(i_sub._parent)
+
+    # prevs = [i._parent for i in input if hasattr(i, "_parent") and i._parent]
+    # node._prev = set(prevs)
+
+
+def _graph_tracing_post_hook(node, _, output):
+    r"""Tag module outputs with the object that produced them."""
+    for i in output:
+        _tag_tensor(i, node)
 
 
 #########################################################
@@ -29,9 +63,10 @@ class LearningRule:
         exactly the same as those for PyTorch optimizers.
     """
 
-    def __init__(self, layers, defaults):
-        self.layers = layers
+    def __init__(self, network, defaults):
+        self.layers = None
         self.defaults = defaults
+        self.network = network
 
     def update_state(self):
         r"""Update state parameters of LearningRule based on latest network forward pass."""
@@ -114,6 +149,55 @@ class LearningRule:
                 raise TypeError("Provide an instance of BaseConnection.")
 
         return output
+
+    def trace_graph(self, *input, **kwargs):
+        r"""Trace complete graph by tracking the flow of data through the network."""
+
+        # Tag all connections and neurons
+        pre_hooks, post_hooks = {}, {}
+        for name, module in self.network.named_spiking_modules():
+            pre_hooks[name] = module.register_forward_pre_hook(_graph_tracing_pre_hook)
+            post_hooks[name] = module.register_forward_hook(_graph_tracing_post_hook)
+        for i in input:
+            _tag_tensor(i, ())
+
+        # Forward tracing of input
+        out = self.network.forward(*input, **kwargs)
+        out = out[0] if isinstance(out, (tuple, list)) else out
+
+        # Construct graph from output to input
+        Layer = namedtuple("Layer", ["presynaptic", "connection", "postsynaptic"])
+        layers, nodes = {}, set()
+
+        def build(node, layer=None):
+
+            if isinstance(node, (BaseNeuron, BaseInput)):
+                if layer:
+                    layers[node.name + "-" + layer["postsyn"].name] = Layer(
+                        node, layer["connections"], layer["postsyn"]
+                    )
+
+                    if node not in nodes:
+                        nodes.add(node)
+                        build(node)
+                else:
+                    for prev in node._prev:
+                        build(prev, {"postsyn": node, "connections": []})
+
+            elif isinstance(node, BaseConnection):
+                layer["connections"] = node
+                for prev in node._prev:
+                    build(prev, layer)
+
+        build(out._parent)
+
+        # Clean hooks, TODO: Make select for just the added hooks
+        for mod in self.network.spiking_modules():
+            mod._forward_pre_hooks.clear()
+            mod._forward_hooks.clear()
+        self.reset_state()
+
+        self.layers = layers
 
 
 #########################################################

@@ -25,8 +25,6 @@ class ConvertSpikes(torch.autograd.Function):
     def backward(ctx, out_grads):
         return out_grads, None
 
-convert_spikes = ConvertSpikes.apply
-
 
 class PropagateSpikes(torch.autograd.Function):
     @staticmethod
@@ -45,6 +43,11 @@ class PropagateSpikes(torch.autograd.Function):
     def backward(ctx, spike_grads, delay_grads):
         return spike_grads, None, None, None
 
+
+#########################################################
+# Instantiate
+#########################################################
+convert_spikes = ConvertSpikes.apply
 propagate_spikes = PropagateSpikes.apply
 
 
@@ -86,6 +89,10 @@ class BaseConnection(SpikingModule):
         self.register_buffer("trace", torch.empty(*shape, dtype=torch.float))
         self.register_buffer("delay", torch.empty(*shape, dtype=torch.float))
         self.register_buffer("spikes", torch.empty(*shape, dtype=torch.bool))
+
+        # Tagging for graph tracing
+        self.spikes._parent = self
+        self.trace._parent = self
 
     def convert_spikes(self, x):
         r"""Convert input from Byte Tensor to same data type as the weights."""

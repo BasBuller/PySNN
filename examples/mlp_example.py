@@ -4,6 +4,7 @@ from torchvision import transforms
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from seaborn import heatmap
+from pprint import pprint
 
 from pysnn.connection import Linear
 from pysnn.neuron import LIFNeuron, Input
@@ -102,19 +103,20 @@ train_dataloader = DataLoader(
 #########################################################
 device = torch.device("cpu")
 net = Network()
-layers, _, _, _ = net.trace_graph(next(iter(train_dataloader))[0][..., 0])
 net.mlp1_c.reset_weights("uniform", a=0.3)
 net.mlp2_c.reset_weights("uniform", a=0.5)
 w1_start, w2_start = net.mlp1_c.weight.clone(), net.mlp2_c.weight.clone()
 
-learning_rule = OnlineSTDP(layers, lr)
+learning_rule = OnlineSTDP(net, lr)
+learning_rule.trace_graph(next(iter(train_dataloader))[0][..., 0])
+pprint(learning_rule.layers)
 
-# Training loop
 sp_n0, tr_n0 = [], []
 tr_n1, tr_n2 = [], []
 sp_n1, sp_n2 = [], []
 v_n1, v_n2 = [], []
 
+# Training loop
 for batch in tqdm(train_dataloader):
     sample, label = batch[0], batch[1]
 

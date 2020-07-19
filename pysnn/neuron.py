@@ -31,6 +31,10 @@ class BaseInput(SpikingModule):
         self.register_buffer("dt", torch.tensor(dt, dtype=torch.float))
         self.register_buffer("spikes", torch.zeros(*cells_shape, dtype=torch.bool))
 
+        # Tagging for graph tracing
+        self.spikes._parent = self
+        self.trace._parent = self
+
         # In case of storing a complete, local copy of the activity of a neuron
         if store_trace:
             complete_trace = torch.zeros(*cells_shape, 1, dtype=torch.bool)
@@ -212,6 +216,10 @@ class BaseNeuron(SpikingModule):
         else:
             complete_trace = None
         self.register_buffer("complete_trace", complete_trace)
+
+        # Tagging for graph tracing
+        self.spikes._parent = self
+        self.trace._parent = self
 
     def spiking(self, force_spike=False):
         r"""Return cells that are in spiking state.
