@@ -219,12 +219,9 @@ class OnlineSTDP(LearningRule):
     def weight_update(self, layer, params, *args, **kwargs):
         pre_trace, post_trace = layer.presynaptic.trace, layer.postsynaptic.trace
         pre_spike, post_spike = layer.presynaptic.spikes, layer.postsynaptic.spikes
-        dw = params["a_plus"] * self.pre_mult_post(
-            pre_trace, post_spike, layer.connection
-        )
-        dw = params["a_plus"] * self.pre_mult_post(
-            pre_spike, post_trace, layer.connection
-        )
+
+        dw = params["a_plus"] * layer.connection.pre_post(pre_trace, post_spike)
+        dw += params["a_min"] * layer.connection.pre_post(pre_spike, post_trace)
         layer.connection.weight += params["lr"] * self.reduce_connections(
             dw, layer.connection
         )

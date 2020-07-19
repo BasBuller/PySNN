@@ -187,6 +187,11 @@ class BaseConnection(SpikingModule):
         self.delay.resize_(*n_shape)
         self.trace.resize_(*n_shape)
 
+    def pre_post(self, pre, post):
+        r"""Support function for correctly viewing/reshaping presynaptic neuron activity and postsynaptic neuron activity for use with
+        weight updates."""
+        raise NotImplementedError("Each connection needs to be able to combine presyn and postsyn activity for weight updates.")
+
 
 #########################################################
 # Linear Layers
@@ -237,6 +242,11 @@ class _Linear(BaseConnection):
         """
         # TODO: Unsure if this clone is needed or not. Might even have to use repeat()
         self.trace.copy_(t_in.expand(-1, self.out_features, -1).contiguous())
+
+    def pre_post(self, pre, post):
+        pre = pre.transpose(2, 1)
+        output = pre * post
+        return output.transpose(2, 1)
 
 
 class Linear(_Linear):
@@ -371,6 +381,11 @@ class _ConvNd(BaseConnection):
 
     def update_trace(self, trace_in):
         self.trace.copy_(trace_in.expand(-1, self.out_channels, -1, -1).contiguous())
+
+    def pre_post(self, pre, post):
+        pre = pre.transpose(2, 1)
+        post = post.view(post.shape[0], 1, post.shape[1], -1)
+        return (pre * post).transpose(2, 1)
 
 
 class Conv2d(_ConvNd):
