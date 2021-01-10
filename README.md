@@ -50,7 +50,7 @@ Installing PySNN requires a Python version of 3.6 or higher, Python 2 is not sup
 
 ## __Network Structure__
 
-Intention is to mirror most of the structure of PyTorch framework. As an example, the followig piece of code shows how much a Spiking Neural Network definition in PySNN looks like a network definition in PyTorch. The network's graph is cyclical, due to the feedback connection from the output neurons to the hidden neurons.
+Intention is to mirror most of the structure of PyTorch framework. As an example, the following piece of code shows how much a Spiking Neural Network definition in PySNN looks like a network definition in PyTorch. The network's graph is cyclical, due to the feedback connection from the output neurons to the hidden neurons.
 
 ```python
 class Network(SNNNetwork):
